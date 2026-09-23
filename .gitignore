@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+.shots/
+
+# Aset berlisensi Live2D: diunduh ulang dengan `npm run assets`,
+# bukan diedarkan lewat repositori ini.
+public/models/haru/
+public/live2dcubismcore.min.js

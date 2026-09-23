@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI VTuber</title>
+    <script src="/live2dcubismcore.min.js"></script>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        background: radial-gradient(circle at 40% 30%, #2a2f45, #0e1018 70%);
+        color: #e8eaf2;
+        font: 14px/1.5 system-ui, sans-serif;
+      }
+      #stage-wrap { display: grid; place-items: center; overflow: hidden; }
+      canvas { width: min(90vh, 100%); height: min(90vh, 100%); }
+      #panel { border-left: 1px solid #ffffff1a; padding: 16px; display: flex; flex-direction: column; min-height: 100vh; }
+      h1 { font-size: 15px; margin: 0 0 12px; font-weight: 600; }
+      .row { margin-bottom: 10px; color: #a8b0c8; }
+      .row b { color: #e8eaf2; font-weight: 600; }
+      #expr { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+      button {
+        background: #ffffff14; color: inherit; border: 1px solid #ffffff26;
+        border-radius: 6px; padding: 5px 9px; cursor: pointer; font: inherit; font-size: 12px;
+      }
+      button:hover { background: #ffffff24; }
+      button.aktif { outline: 2px solid #6ea8ff; background: #2b4a78; }
+      #log { flex: 1; overflow-y: auto; margin: 14px 0; display: flex; flex-direction: column; gap: 8px; }
+      .pesan { padding: 7px 10px; border-radius: 10px; max-width: 92%; word-wrap: break-word; }
+      .pesan.user { align-self: flex-end; background: #3b6ea5; }
+      .pesan.assistant { align-self: flex-start; background: #ffffff14; }
+      .pesan.gagal { align-self: flex-start; background: #7a2f3a; }
+      #form { display: flex; gap: 6px; }
+      #isi { flex: 1; background: #ffffff0f; border: 1px solid #ffffff26; border-radius: 6px; padding: 8px; color: inherit; font: inherit; }
+      #health { font-size: 11px; color: #7f8aa8; margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <div id="stage-wrap"><canvas id="stage"></canvas></div>
+    <aside id="panel">
+      <h1>Haru</h1>
+      <div class="row">Status: <b id="status">memuat model&hellip;</b></div>
+      <div class="row">FPS: <b id="fps">&ndash;</b></div>
+      <div class="row">Suara: <b id="suara">diam</b></div>
+      <div class="row">Ekspresi uji</div>
+      <div id="expr"></div>
+      <div id="log"></div>
+      <form id="form" autocomplete="off">
+        <input id="isi" placeholder="ketik sesuatu&hellip;" />
+        <button type="submit">kirim</button>
+      </form>
+      <div id="health"></div>
+    </aside>
+    <script>
+      // Konsol browser tidak selalu terlihat di lingkungan ini, jadi tempel error ke panel.
+      addEventListener('error', (e) => {
+        document.getElementById('status').textContent = 'error: ' + (e.message || e.type);
+      });
+      addEventListener('unhandledrejection', (e) => {
+        document.getElementById('status').textContent =
+          'error: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason));
+      });
+    </script>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

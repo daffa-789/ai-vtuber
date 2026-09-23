@@ -1,0 +1,23 @@
+{
+  "name": "ai-vtuber",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "server": "node --env-file-if-exists=.env server/index.mjs",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "assets": "node scripts/fetch-assets.mjs",
+    "verifikasi": "node scripts/verify-render.mjs"
+  },
+  "dependencies": {
+    "@google/genai": "^2.24.0",
+    "pixi-live2d-display": "0.4.0",
+    "pixi.js": "6.5.10"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3",
+    "vite": "5.4.11"
+  }
+}
