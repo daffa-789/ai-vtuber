@@ -3,6 +3,8 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { GoogleGenAI } from '@google/genai';
+import { gabungSystem, perbaruiMood, ekstrakFakta } from './memori.mjs';
+import * as vault from './obsidian.mjs';
 
 const PORT = Number(process.env.VTUBER_PORT ?? 8787);
 const MODEL = process.env.VTUBER_MODEL ?? 'gemini-3.5-flash';
@@ -12,6 +14,7 @@ const STT_MODEL = process.env.VTUBER_STT_MODEL ?? 'gemini-3.5-transcribe';
 const MAKS_AUDIO = 2 * 1024 * 1024;
 const KEY = process.env.GEMINI_API_KEY ?? '';
 const MAX_PESAN = 24;
+const JEDA_EKSTRAKSI = Number(process.env.VTUBER_JEDA_FAKTA ?? 8);
 const MAKS_KARAKTER = 4000;
 const MAKS_BODY = 64 * 1024;
 const TUNDA_COBA = [1500, 4000];
@@ -91,11 +94,22 @@ async function chat(req, res) {
     return;
   }
 
+  // Memori dibaca lebih dulu supaya yang dia ingat ikut membentuk jawaban ini.
+  let fakta = [];
+  let mood = null;
+  if (vault.tersedia()) {
+    try {
+      [fakta, mood] = await Promise.all([vault.bacaFakta(), vault.bacaMood()]);
+    } catch (err) {
+      console.warn('memori tidak terbaca:', err.message);
+    }
+  }
+
   const permintaan = {
     model: MODEL,
     contents: riwayat,
     config: {
-      systemInstruction: persona,
+      systemInstruction: gabungSystem(persona, fakta, mood),
       generationConfig: { temperature: 0.9, maxOutputTokens: 400 },
     },
   };
@@ -127,12 +141,52 @@ async function chat(req, res) {
 
   // Setelah byte pertama terkirim status tidak bisa diubah lagi, jadi
   // kegagalan di tengah stream cukup menutup aliran; frontend menampilkan parsial.
+  let mentah = '';
   try {
-    for await (const chunk of stream) res.write(chunk.text ?? '');
+    for await (const chunk of stream) {
+      const potong = chunk.text ?? '';
+      mentah += potong;
+      res.write(potong);
+    }
   } catch (err) {
     console.error('stream terputus:', err.message);
   }
   res.end();
+
+  await simpanMemori(riwayat, mentah, fakta, mood);
+}
+
+/**
+ * Ditulis setelah balasan terkirim, bukan sebelumnya: kegagalan vault atau
+ * ekstraksi fakta tidak boleh membuat percakapan yang sudah terjawab jadi rusak.
+ */
+async function simpanMemori(riwayat, mentah, faktaLama, moodLama) {
+  if (!vault.tersedia() || !mentah.trim()) return;
+
+  try {
+    const tag = mentah.match(/^\s*\[([^\]]{1,20})\]/)?.[1]?.toLowerCase() ?? null;
+    const isi = mentah.replace(/^\s*\[[^\]]{1,20}\]\s*/, '').trim();
+    const tanya = riwayat.at(-1)?.parts?.[0]?.text ?? '';
+
+    const mood = perbaruiMood(moodLama, tag);
+    await vault.catatHari(`**Daffa:** ${tanya} → **Haru:** ${isi} _(${tag ?? 'tanpa tag'})_`);
+    await vault.simpanMood(mood);
+
+    // Ekstraksi fakta menambah satu panggilan API, jadi sengaja jarang.
+    if (mood.pertukaran % JEDA_EKSTRAKSI === 0) {
+      const percakapan = riwayat.slice(-12).map((m) => ({
+        role: m.role,
+        content: m.parts.map((p) => p.text).join(' '),
+      }));
+      const baru = await ekstrakFakta(ai, MODEL, percakapan, faktaLama);
+      if (baru.length) {
+        await vault.simpanFakta([...new Set([...faktaLama, ...baru])].slice(-40));
+        console.log(`fakta baru tersimpan: ${baru.length}`);
+      }
+    }
+  } catch (err) {
+    console.warn('memori gagal ditulis:', err.message);
+  }
 }
 
 // Gemini TTS memulangkan PCM mentah tanpa header, jadi dibungkus WAV di sini.
@@ -246,9 +300,14 @@ async function stt(req, res) {
   }
 }
 
-createServer((req, res) => {
+const server = createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/api/health') {
-    json(res, 200, { ok: true, model: MODEL, key: Boolean(ai) });
+    json(res, 200, {
+      ok: true,
+      model: MODEL,
+      key: Boolean(ai),
+      memori: vault.tersedia() ? 'vault Obsidian' : vault.alasanTidakTersedia(),
+    });
   } else if (req.method === 'POST' && req.url === '/api/chat') {
     chat(req, res).catch((err) => {
       console.error(err);
@@ -270,8 +329,22 @@ createServer((req, res) => {
   } else {
     json(res, 404, { error: 'tidak ada endpoint itu' });
   }
-}).listen(PORT, '127.0.0.1', () => {
+});
+
+// Mesin ini dipakai banyak proyek sekaligus, jadi port tetap adalah asumsi yang
+// salah. Kalau port sudah dipakai proses lain, kita laporkan -- tidak mengosongkannya.
+server.on('error', (err) => {
+  if (err.code !== 'EADDRINUSE') throw err;
+  console.error(`port ${PORT} sudah dipakai proses lain; tidak kukosongkan.`);
+  console.error('jalankan di port bebas:  VTUBER_PORT=0 npm run server   (0 = acak)');
+  console.error('lalu samakan VTUBER_PORT di .env supaya proxy Vite ikut ke sana.');
+  process.exit(1);
+});
+
+server.listen(PORT, '127.0.0.1', () => {
+  const { port } = server.address();
   console.log(
-    `sidecar http://127.0.0.1:${PORT} | key=${ai ? 'siap' : 'BELUM ADA'} | chat=${MODEL} | tts=${TTS_MODEL}/${TTS_VOICE} | stt=${STT_MODEL}`,
+    `sidecar http://127.0.0.1:${port} | key=${ai ? 'siap' : 'BELUM ADA'} | chat=${MODEL} | tts=${TTS_MODEL}/${TTS_VOICE} | stt=${STT_MODEL} | memori=${vault.tersedia() ? 'vault Obsidian' : 'mati'}`,
   );
+  if (String(port) !== String(PORT)) console.log(`catatan: VTUBER_PORT di .env masih ${PORT}`);
 });

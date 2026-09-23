@@ -1,6 +1,6 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 
 /**
  * onnxruntime-web mengimpor glue-nya dengan akhiran `?import`, dan Vite menanggapi
@@ -36,13 +36,18 @@ function sajikanAsetOrt(): Plugin {
   };
 }
 
-export default defineConfig({
-  plugins: [sajikanAsetOrt()],
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': { target: 'http://127.0.0.1:8787', changeOrigin: false },
+export default defineConfig(({ mode }) => {
+  // Port sidecar dibaca dari satu tempat (.env VTUBER_PORT) supaya proxy tidak
+  // pernah menunjuk ke proses proyek lain saat portnya berpindah.
+  const env = loadEnv(mode, process.cwd(), 'VTUBER_');
+  const sidecar = env.VTUBER_PORT || '8787';
+
+  return {
+    plugins: [sajikanAsetOrt()],
+    server: {
+      port: Number(env.VTUBER_DEV_PORT) || 5173,
+      proxy: { '/api': { target: `http://127.0.0.1:${sidecar}`, changeOrigin: false } },
     },
-  },
-  assetsInclude: ['**/*.moc3'],
+    assetsInclude: ['**/*.moc3'],
+  };
 });

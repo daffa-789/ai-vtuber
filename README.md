@@ -3,8 +3,9 @@
 Teman desktop berbasis Live2D yang bisa diajak ngobrol lewat teks maupun suara,
 menjawab dengan suara, dan menggerakkan wajah serta rahang sesuai isi pembicaraannya.
 
-Status: renderer, loop chat, ekspresi, text-to-speech, dan input mikrofon sudah
-berjalan. Memori jangka panjang masih dalam pengerjaan.
+Status: renderer, loop chat, ekspresi, text-to-speech, input mikrofon, dan memori
+jangka panjang sudah berjalan. Memory karakter ditulis sebagai catatan Markdown di
+vault Obsidian, jadi bisa dibaca dan disunting langsung.
 
 ## Menjalankan
 
@@ -43,12 +44,43 @@ papan ketik ----------------------------------/                                 
 - **`src/mikrofon.ts`** — VAD berjalan di mesin ini; hanya potongan yang terdeteksi
   sebagai bicara yang dikirim untuk disalin.
 - **`src/suara.ts`** — memutar WAV dan mengukur amplitudo per frame.
+- **`server/obsidian.mjs`** — menulis/membaca catatan karakter ke vault Obsidian lewat
+  Local REST API; token diambil dari `~/.qoder/settings.json`, bukan dari berkas di repo.
+- **`server/memori.mjs`** — kebijakan memori: apa yang masuk prompt, bagaimana mood
+  bergeser dari tag ekspresi, dan kapan fakta baru diekstrak.
 - **Setengah dupleks** — mikrofon ditahan selama dia bicara, dan sengaja tidak
   menyerahkan audio yang terpotong oleh penahanan itu, supaya dia tidak menyalin
   suaranya sendiri.
 - **Gerak mulut** tidak memakai penempatan fonem per kata, melainkan amplitudo
   audio yang sedang diputar, dan ditulis pada event `afterMotionUpdate` supaya
   tidak ditimpa animasi idle.
+
+## Memori karakter
+
+Dia tidak dilatih. Yang membuatnya terasa "ingat" adalah tiga catatan Markdown di
+vault, yang dibaca ulang dan disuntikkan ke system prompt setiap kali menjawab:
+
+```
+Qoder Memory/Project/Desktop AI VTUBER/Karakter/
+  Fakta.md              daftar hal yang dia ingat tentangmu
+  Mood.md               valensi, energi, afinitas, jumlah pertukaran
+  Riwayat/2026-09-23.md percakapan hari itu, satu baris per tukaran
+```
+
+Semuanya bisa kamu buka dan sunting langsung di Obsidian. Menghapus satu baris di
+`Fakta.md` berarti dia benar-benar lupa hal itu pada balasan berikutnya.
+
+Alur penulisannya: setiap balasan selesai → tag ekspresinya dibaca → mood bergeser
+dan riwayat harian bertambah. Ekstraksi fakta memakai model dan hanya berjalan tiap
+`VTUBER_JEDA_FAKTA` pertukaran, karena ia menambah satu panggilan API.
+
+Mood bergeser dari tag yang dia pakai sendiri, tanpa panggilan tambahan: `[semangat]`
+menaikkan valensi, `[sedih]` dan `[sebal]` menurunkannya, dan setiap pertukaran
+menaikkan afinitas sedikit. Kalau valensinya jatuh, system prompt berikutnya berisi
+"kamu lagi agak berat hari ini" — itu sebabnya nadanya berubah lintas sesi.
+
+Kalau Obsidian sedang tidak jalan, memori dilewati dengan satu baris peringatan dan
+percakapan tetap berjalan.
 
 ## Batas kuota yang nyata
 
