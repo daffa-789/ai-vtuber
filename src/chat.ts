@@ -1,21 +1,10 @@
 import { EKSPRESI_DASAR, TAG_KE_EKSPRESI, kupasTag } from './ekspresi';
-import { bicarakan } from './suara';
+import { bicarakan, hentikan } from './suara';
+import { jedaMikrofon, lanjutMikrofon, nyalakanMikrofon, salinAudio } from './mikrofon';
 
 type Pesan = { role: 'user' | 'assistant'; content: string };
 
 const KUNCI_RIWAYAT = 'vtuber.riwayat';
-
-async function ucapkan(teks: string) {
-  const el = document.getElementById('suara');
-  if (!el) return;
-  el.textContent = 'menyusun suara…';
-  try {
-    await bicarakan(teks);
-    el.textContent = 'diam';
-  } catch (err) {
-    el.textContent = `gagal: ${err instanceof Error ? err.message : String(err)}`;
-  }
-}
 
 function muat(): Pesan[] {
   try {
@@ -45,7 +34,10 @@ export function pasangChat(picuEkspresi: (ekspresi: string) => void) {
   const form = document.getElementById('form') as HTMLFormElement;
   const isi = document.getElementById('isi') as HTMLInputElement;
   const health = document.getElementById('health') as HTMLElement;
+  const micStatus = document.getElementById('mikrofon') as HTMLElement;
+  const micBtn = document.getElementById('mic') as HTMLButtonElement;
   let sibuk = false;
+  let micHidup = false;
 
   fetch('/api/health')
     .then((r) => r.json())
@@ -58,13 +50,14 @@ export function pasangChat(picuEkspresi: (ekspresi: string) => void) {
 
   riwayat.forEach((p) => gelembung(p.role, p.content));
 
-  form.onsubmit = async (e) => {
-    e.preventDefault();
-    const teks = isi.value.trim();
-    if (!teks || sibuk) return;
+  async function kirim(teks: string) {
+    if (sibuk) {
+      micStatus.textContent = 'lagi sibuk, tunggu sebentar';
+      return;
+    }
 
     sibuk = true;
-    isi.value = '';
+    hentikan();
     gelembung('user', teks);
     riwayat.push({ role: 'user', content: teks });
 
@@ -108,6 +101,7 @@ export function pasangChat(picuEkspresi: (ekspresi: string) => void) {
       // Tag yang dibuang meninggalkan spasi liar di awal dan di antara kalimat.
       jawaban = jawaban.replace(/[ \t]{2,}/g, ' ').trim();
       target.textContent = jawaban;
+
       riwayat.push({ role: 'assistant', content: jawaban });
       simpan(riwayat);
       if (!adaTag) picuEkspresi(EKSPRESI_DASAR);
@@ -120,5 +114,63 @@ export function pasangChat(picuEkspresi: (ekspresi: string) => void) {
       sibuk = false;
       isi.focus();
     }
+  }
+
+  async function ucapkan(teks: string) {
+    const el = document.getElementById('suara');
+    if (!el) return;
+    // Setengah dupleks: mikrofon ditahan supaya dia tidak menyalin suaranya sendiri.
+    jedaMikrofon();
+    el.textContent = 'menyusun suara…';
+    try {
+      await bicarakan(teks);
+      el.textContent = 'diam';
+    } catch (err) {
+      el.textContent = `gagal: ${err instanceof Error ? err.message : String(err)}`;
+    } finally {
+      if (micHidup) lanjutMikrofon();
+    }
+  }
+
+  micBtn.onclick = async () => {
+    if (micHidup) return;
+    micBtn.disabled = true;
+    micStatus.textContent = 'menyalakan…';
+    try {
+      await nyalakanMikrofon(
+        async (wav) => {
+          if (sibuk) return;
+          micStatus.textContent = 'menyalin…';
+          try {
+            const teks = await salinAudio(wav);
+            if (!teks) {
+              micStatus.textContent = 'tidak terdengar';
+              return;
+            }
+            micStatus.textContent = `kamu: ${teks}`;
+            await kirim(teks);
+          } catch (err) {
+            micStatus.textContent = `STT gagal: ${err instanceof Error ? err.message : String(err)}`;
+          }
+        },
+        (s) => {
+          micStatus.textContent = s;
+        },
+      );
+      micHidup = true;
+      micStatus.textContent = 'aktif, bicara saja';
+    } catch (err) {
+      micStatus.textContent = `mikrofon ditolak: ${err instanceof Error ? err.message : String(err)}`;
+    } finally {
+      micBtn.disabled = false;
+    }
+  };
+
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    const teks = isi.value.trim();
+    if (!teks) return;
+    isi.value = '';
+    void kirim(teks);
   };
 }

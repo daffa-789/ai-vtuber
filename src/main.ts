@@ -3,6 +3,7 @@ import * as PIXI from 'pixi.js';
 import { Live2DModel, MotionPreloadStrategy } from 'pixi-live2d-display/cubism4';
 import { pasangChat } from './chat';
 import { EKSPRESI_DASAR } from './ekspresi';
+import { matikanMikrofon } from './mikrofon';
 import { tingkatMulut } from './suara';
 
 // pixi-live2d-display membaca PIXI dari global saat jalan di browser.
@@ -108,6 +109,7 @@ async function boot() {
     model,
     layout,
     setEkspresi,
+    matikanMikrofon,
     get mulut() {
       return mulutAktif;
     },

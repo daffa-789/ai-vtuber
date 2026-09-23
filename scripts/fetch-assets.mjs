@@ -1,6 +1,6 @@
 // Unduh model Haru (Cubism 4) dari aset uji pixi-live2d-display + Cubism core resmi.
 // Lihat public/models/haru/README.md untuk catatan lisensi.
-import { mkdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 
 const REPO = 'guansss/pixi-live2d-display';
@@ -37,4 +37,26 @@ for (const p of paths) {
 }
 
 bytes += await save(CORE, resolve('public/live2dcubismcore.min.js'));
-console.log(`selesai — ${paths.length + 1} file, ${(bytes / 1024 / 1024).toFixed(1)} MB`);
+
+// Salin aset VAD dari node_modules supaya aplikasi tidak bergantung ke CDN saat jalan.
+// vad-web mencari aset relatif terhadap baseAssetPath/onnxWASMBasePath yang kita set.
+const VAD = 'node_modules/@ricky0123/vad-web/dist';
+const ORT = 'node_modules/onnxruntime-web/dist';
+const salin = [];
+for (const f of ['silero_vad_v5.onnx', 'silero_vad_v6.onnx', 'silero_vad_legacy.onnx', 'vad.worklet.bundle.min.js']) {
+  salin.push([`${VAD}/${f}`, `public/vad/${f}`]);
+}
+for (const f of await readdir(ORT)) {
+  if (f.startsWith('ort-wasm-simd-threaded') && (f.endsWith('.wasm') || f.endsWith('.mjs'))) {
+    salin.push([`${ORT}/${f}`, `public/ort/${f}`]);
+  }
+}
+
+let jumlah = 0;
+for (const [src, dest] of salin) {
+  await mkdir(dirname(resolve(dest)), { recursive: true });
+  await copyFile(resolve(src), resolve(dest));
+  jumlah += 1;
+}
+
+console.log(`selesai — ${paths.length + 1} file diunduh (${(bytes / 1024 / 1024).toFixed(1)} MB), ${jumlah} aset VAD disalin`);

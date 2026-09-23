@@ -30,6 +30,19 @@ await page.addInitScript(() => {
 await page.goto('http://localhost:5173/', { waitUntil: 'load' });
 await page.waitForFunction(() => !!window.__vtuber, null, { timeout: 20000 });
 
+// Tes ini menunggu teks spesifik dari scripts/stub-stream.mjs. Kalau port 8787
+// malah dipakai sidecar asli, balasannya dari Gemini dan tidak pernah cocok --
+// jadi berhenti sekarang dengan pesan yang jelas, bukan timeout membingungkan.
+const model = await page.evaluate(async () => {
+  const h = await fetch('/api/health').then((r) => r.json());
+  return h.model;
+});
+if (model !== 'stub') {
+  console.log(`FAIL: butuh server tiruan di 8787, dapat model "${model}". Jalankan: node scripts/stub-stream.mjs`);
+  await browser.close();
+  process.exit(1);
+}
+
 const health = await page.textContent('#health');
 await page.fill('#isi', 'hai');
 await page.click('#form button[type=submit]');

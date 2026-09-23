@@ -8,6 +8,8 @@ const PORT = Number(process.env.VTUBER_PORT ?? 8787);
 const MODEL = process.env.VTUBER_MODEL ?? 'gemini-3.5-flash';
 const TTS_MODEL = process.env.VTUBER_TTS_MODEL ?? 'gemini-2.5-flash-preview-tts';
 const TTS_VOICE = process.env.VTUBER_TTS_VOICE ?? 'Kore';
+const STT_MODEL = process.env.VTUBER_STT_MODEL ?? 'gemini-3.5-transcribe';
+const MAKS_AUDIO = 2 * 1024 * 1024;
 const KEY = process.env.GEMINI_API_KEY ?? '';
 const MAX_PESAN = 24;
 const MAKS_KARAKTER = 4000;
@@ -203,6 +205,47 @@ async function tts(req, res) {
   }
 }
 
+// Body-nya WAV mentah (bukan JSON) supaya frontend tidak perlu base64 dua kali.
+async function stt(req, res) {
+  if (!ai) {
+    json(res, 501, { error: 'GEMINI_API_KEY belum diisi.' });
+    return;
+  }
+
+  const bagian = [];
+  let ukuran = 0;
+  for await (const potong of req) {
+    ukuran += potong.length;
+    if (ukuran > MAKS_AUDIO) {
+      json(res, 413, { error: 'audio terlalu besar' });
+      req.destroy();
+      return;
+    }
+    bagian.push(potong);
+  }
+
+  if (ukuran < 1000) {
+    json(res, 400, { error: 'audio terlalu pendek atau kosong' });
+    return;
+  }
+
+  try {
+    const r = await ai.models.generateContent({
+      model: STT_MODEL,
+      contents: {
+        parts: [{ inlineData: { mimeType: 'audio/wav', data: Buffer.concat(bagian).toString('base64') } }],
+      },
+    });
+
+    const part = r.candidates?.[0]?.content?.parts?.[0];
+    // Model transcribe menaruh hasil di audioTranscription, bukan di .text.
+    const teks = (part?.audioTranscription?.text ?? part?.text ?? '').trim();
+    json(res, 200, { teks });
+  } catch (err) {
+    json(res, 503, { error: bersihkanError(err) });
+  }
+}
+
 createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/api/health') {
     json(res, 200, { ok: true, model: MODEL, key: Boolean(ai) });
@@ -218,9 +261,17 @@ createServer((req, res) => {
       if (!res.headersSent) json(res, 500, { error: err.message });
       else res.end();
     });
+  } else if (req.method === 'POST' && req.url === '/api/stt') {
+    stt(req, res).catch((err) => {
+      console.error(err);
+      if (!res.headersSent) json(res, 500, { error: err.message });
+      else res.end();
+    });
   } else {
     json(res, 404, { error: 'tidak ada endpoint itu' });
   }
 }).listen(PORT, '127.0.0.1', () => {
-  console.log(`sidecar http://127.0.0.1:${PORT} | model=${MODEL} | key=${ai ? 'siap' : 'BELUM ADA'}`);
+  console.log(
+    `sidecar http://127.0.0.1:${PORT} | key=${ai ? 'siap' : 'BELUM ADA'} | chat=${MODEL} | tts=${TTS_MODEL}/${TTS_VOICE} | stt=${STT_MODEL}`,
+  );
 });
