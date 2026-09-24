@@ -23,6 +23,10 @@ const app = new PIXI.Application({
   height: canvas.clientHeight,
   backgroundAlpha: 0,
   antialias: true,
+  // Tanpa ini kanvas cuma punya sebakal piksel sebanyak CSS px, jadi di layar
+  // berskala 125% browser merentangkannya dan wajah model terlihat lembut.
+  // Ditahan di 2 supaya layar 3x tidak melipatgandakan beban GPU.
+  resolution: Math.min(window.devicePixelRatio || 1, 2),
 });
 
 function layout(model: Live2DModel) {
@@ -78,7 +82,8 @@ async function boot() {
   });
 
   const lapor = () => {
-    statusEl.textContent = `siap — ${names.length} ekspresi, ${app.screen.width}x${app.screen.height}`;
+    // app.screen dibagi resolution, jadi hasilnya pecah tanpa dibulatkan.
+    statusEl.textContent = `siap — ${names.length} ekspresi, ${Math.round(app.screen.width)}x${Math.round(app.screen.height)}`;
   };
 
   window.addEventListener('resize', () => {
