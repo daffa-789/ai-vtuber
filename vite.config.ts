@@ -47,6 +47,12 @@ export default defineConfig(({ mode }) => {
     server: {
       port: Number(env.VTUBER_DEV_PORT) || 5173,
       proxy: { '/api': { target: `http://127.0.0.1:${sidecar}`, changeOrigin: false } },
+      // Model .moc3 sering sedang dipegang Live2D Viewer / VTube Studio, dan
+      // watcher yang menabrak file terkunci membuat seluruh dev server mati
+      // (EBUSY), bukan cuma melewatkan satu file.
+      watch: {
+        ignored: ['**/public/models/**', '**/public/ort/**', '**/public/vad/**'],
+      },
     },
     assetsInclude: ['**/*.moc3'],
   };
