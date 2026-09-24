@@ -1,4 +1,4 @@
-// Pasang model karakter dari folder sumber (default: New Model/魔女) ke
+// Pasang model karakter dari folder sumber (default: New Model/penyihir) ke
 // public/models/penyihir dengan nama berkas Indonesia.
 //
 // Folder hasilnya tidak ikut ke git (aset Live2D berlisensi, lihat .gitignore),
@@ -10,7 +10,7 @@ import { copyFile, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promi
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
-const SUMBER = resolve(process.argv[2] ?? 'New Model/魔女');
+const SUMBER = resolve(process.argv[2] ?? 'New Model/penyihir');
 const TUJUAN = resolve('public/models/penyihir');
 const NAMA = 'penyihir';
 

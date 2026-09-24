@@ -14,7 +14,7 @@ Prasyarat: Node.js 20.6+ (butuh flag `--env-file-if-exists`).
 ```bash
 npm install
 npm run assets        # unduh Cubism core + contoh model Haru + salin aset VAD
-npm run pasang-model  # pasang model karakter dari New Model/魔女 (lihat Model karakter)
+npm run pasang-model  # pasang model karakter dari New Model/penyihir (lihat Model karakter)
 cp .env.example .env  # lalu isi GEMINI_API_KEY
 npm run server        # sidecar di 127.0.0.1:8787
 npm run dev           # buka http://localhost:5173
@@ -26,7 +26,7 @@ dan setelah itu cukup bicara. Mengetik tetap bisa dipakai berdampingan.
 ## Model karakter
 
 Karakternya model Live2D Cubism 4 (279 parameter, 617 art mesh, tekstur 8192),
-dipasang dari folder `New Model/魔女/` ke `public/models/penyihir/` dengan nama
+dipasang dari folder `New Model/penyihir/` ke `public/models/penyihir/` dengan nama
 berkas Indonesia:
 
 ```
