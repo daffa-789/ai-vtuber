@@ -169,7 +169,7 @@ async function simpanMemori(riwayat, mentah, faktaLama, moodLama) {
     const tanya = riwayat.at(-1)?.parts?.[0]?.text ?? '';
 
     const mood = perbaruiMood(moodLama, tag);
-    await vault.catatHari(`**Daffa:** ${tanya} → **Haru:** ${isi} _(${tag ?? 'tanpa tag'})_`);
+    await vault.catatHari(`**Master:** ${tanya} → **Haru:** ${isi} _(${tag ?? 'tanpa tag'})_`);
     await vault.simpanMood(mood);
 
     // Ekstraksi fakta menambah satu panggilan API, jadi sengaja jarang.

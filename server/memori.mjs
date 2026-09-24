@@ -42,7 +42,7 @@ function suasanaku(mood) {
 export function gabungSystem(persona, fakta, mood) {
   const bagian = [persona];
   if (fakta?.length) {
-    bagian.push(`## Yang aku ingat tentang Daffa\n${fakta.map((f) => `- ${f}`).join('\n')}`);
+    bagian.push(`## Yang aku ingat tentang Master\n${fakta.map((f) => `- ${f}`).join('\n')}`);
   }
   if (mood) {
     const s = suasanaku(mood);
@@ -57,7 +57,7 @@ export function gabungSystem(persona, fakta, mood) {
  */
 export async function ekstrakFakta(ai, model, percakapan, faktaLama) {
   const instruksi = [
-    'Dari percakapan di bawah, tuliskan FAKTA BARU yang layak diingat lama tentang Daffa:',
+    'Dari percakapan di bawah, tuliskan FAKTA BARU yang layak diingat lama tentang Master:',
     'pekerjaan, kebiasaan, orang, tanggal, preferensi, proyek, kondisi hari ini.',
     'Abaikan basa-basi dan hal yang sudah ada di daftar fakta lama.',
     'Balas HANYA array JSON berisi string pendek berbahasa Indonesia. [] kalau tidak ada.',
@@ -65,7 +65,7 @@ export async function ekstrakFakta(ai, model, percakapan, faktaLama) {
     `Fakta lama: ${JSON.stringify(faktaLama)}`,
     '',
     'Percakapan:',
-    percakapan.map((m) => `${m.role === 'user' ? 'Daffa' : 'Haru'}: ${m.content}`).join('\n'),
+    percakapan.map((m) => `${m.role === 'user' ? 'Master' : 'Haru'}: ${m.content}`).join('\n'),
   ].join('\n');
 
   const r = await ai.models.generateContent({

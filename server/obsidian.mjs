@@ -18,7 +18,7 @@ function bacaKonfig() {
 }
 
 const KONF = bacaKonfig();
-const PANGKAL = 'Qoder Memory/Project/Desktop AI VTUBER/Karakter';
+const PANGKAL = 'Waifu Memory/AI VTUBER';
 
 export const tersedia = () => Boolean(KONF);
 export const alasanTidakTersedia = () =>
@@ -38,7 +38,12 @@ async function unduh(p, method, body) {
 
 const tanggal = () => new Date().toISOString().slice(0, 10);
 
-function kerangka(nama, judul, isi) {
+// Links wajib ditulis di sini: tanpa field `links`, file hasil auto-save jadi
+// node yatim di graph view Obsidian (penyebab "Mood"/"Fakta" tidak tersambung).
+const TAUTAN_DASAR = ['haru-persona', '_Index'];
+
+function kerangka(nama, judul, isi, tautan = []) {
+  const links = [...new Set([...TAUTAN_DASAR, ...tautan])];
   return [
     '---',
     'type: memory',
@@ -50,6 +55,8 @@ function kerangka(nama, judul, isi) {
     'tags:',
     '  - "memory/karakter"',
     '  - "project/Desktop AI VTUBER"',
+    'links:',
+    ...links.map((l) => `  - "[[${l}]]"`),
     '---',
     '',
     `# ${judul}`,
@@ -62,7 +69,11 @@ function kerangka(nama, judul, isi) {
 // ── Fakta: daftar yang dia ingat tentang user.
 export async function simpanFakta(fakta) {
   const isi = fakta.length ? fakta.map((f) => `- ${f}`).join('\n') : '_Belum ada fakta tersimpan._';
-  await unduh(`${PANGKAL}/Fakta.md`, 'PUT', kerangka('fakta-haru', 'Fakta yang Haru ingat tentang Daffa', isi));
+  await unduh(
+    `${PANGKAL}/Fakta.md`,
+    'PUT',
+    kerangka('fakta-haru', 'Fakta yang Haru ingat tentang Master', isi, ['Mood', 'Quotes', 'Riwayat']),
+  );
 }
 
 export async function bacaFakta() {
@@ -80,14 +91,18 @@ export async function simpanMood(mood) {
   const isi = [
     `Valensi: ${mood.valensi.toFixed(2)} (-1 berat .. +1 senang)`,
     `Energi: ${mood.energi.toFixed(2)}`,
-    `Afinitas ke Daffa: ${mood.afinitas.toFixed(2)}`,
+    `Afinitas: ${mood.afinitas.toFixed(2)} (0 jauh .. 1 dekat)`,
     `Pertukaran tercatat: ${mood.pertukaran}`,
     `Terakhir diperbarui: ${new Date().toISOString()}`,
     mood.alasan ? `Alasan: ${mood.alasan}` : '',
   ]
     .filter(Boolean)
     .join('\n');
-  await unduh(`${PANGKAL}/Mood.md`, 'PUT', kerangka('mood-haru', 'Suasana hati Haru saat ini', isi));
+  await unduh(
+    `${PANGKAL}/Mood.md`,
+    'PUT',
+    kerangka('mood-haru', 'Suasana hati Haru saat ini', isi, ['Fakta', 'Quotes', 'Riwayat']),
+  );
 }
 
 export async function bacaMood() {
@@ -114,5 +129,13 @@ export async function catatHari(baris) {
   const lama = r.ok ? await r.text() : '';
   const badan = lama.split('\n').filter((l) => l.startsWith('- '));
   badan.push(`- ${baris}`);
-  await unduh(p, 'PUT', kerangka(`riwayat-${tanggal()}`, `Riwayat percakapan ${tanggal()}`, badan.join('\n')));
+  await unduh(
+    p,
+    'PUT',
+    kerangka(`riwayat-${tanggal()}`, `Riwayat percakapan ${tanggal()}`, badan.join('\n'), [
+      'Fakta',
+      'Mood',
+      'Quotes',
+    ]),
+  );
 }
