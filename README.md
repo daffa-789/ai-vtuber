@@ -13,7 +13,8 @@ Prasyarat: Node.js 20.6+ (butuh flag `--env-file-if-exists`).
 
 ```bash
 npm install
-npm run assets        # unduh model Live2D + salin aset VAD (tidak ikut ke git, lihat Lisensi)
+npm run assets        # unduh Cubism core + contoh model Haru + salin aset VAD
+npm run pasang-model  # pasang model karakter dari New Model/魔女 (lihat Model karakter)
 cp .env.example .env  # lalu isi GEMINI_API_KEY
 npm run server        # sidecar di 127.0.0.1:8787
 npm run dev           # buka http://localhost:5173
@@ -21,6 +22,46 @@ npm run dev           # buka http://localhost:5173
 
 Di halaman, klik **nyalakan** pada baris Mikrofon sekali — browser meminta izin mic,
 dan setelah itu cukup bicara. Mengetik tetap bisa dipakai berdampingan.
+
+## Model karakter
+
+Karakternya model Live2D Cubism 4 (279 parameter, 617 art mesh, tekstur 8192),
+dipasang dari folder `New Model/魔女/` ke `public/models/penyihir/` dengan nama
+berkas Indonesia:
+
+```
+public/models/penyihir/
+  penyihir.model3.json      daftar ekspresi + motion, ini yang dibaca aplikasi
+  penyihir.moc3             geometri yang sudah dikompilasi (jangan disunting)
+  penyihir.physics3.json    rambut, baju, perhiasan bergoyang
+  penyihir.cdi3.json        label parameter untuk editor — sudah dialihbahasakan
+  tekstur/texture_00.png    8192x8192
+  tekstur/texture_01.png    4096x8192
+  ekspresi/*.exp3.json      sembilan wajah, namanya sama dengan tag di persona.md
+  gerakan/sedih-melambai.motion3.json
+```
+
+Sembilan ekspresi itu saya susun sendiri dari lapisan parameter aslinya: model ini
+datang dengan 13 berkas ekspresi bernama singkatan pinyin Mandarin, dan sebagian
+besarnya bukan wajah melainkan aksesori. Hasil pembacaan potret (`.shots/lembar-f.png`,
+`.shots/lembar-g.png`), tersimpan juga sebagai label di `penyihir.cdi3.json`:
+
+| Singkatan | Arti sebenarnya | Dipakai untuk |
+|---|---|---|
+| `ku` | mata berair + alis naik | `sedih` |
+| `sq` | cemberut | `sebal` |
+| `h` | setetes keringat + bayangan muram di mata | `bingung` |
+| `xx` / `x` | pupil bintang / pupil hati | `semangat` / `goda` |
+| `mz` `fz` `yj` `zs1` `zs2` `cw` `hdj` | topi, tongkat sihir, kacamata, memamerkan barang, hantu kecil, tangan memeluk | tidak dipakai chat; masih ada di berkas sumber |
+
+`netral`, `senyum`, `kaget`, dan `lelah` tidak punya lapisan sendiri di model aslinya,
+jadi keempatnya saya rakit dari parameter dasar (`ParamEyeLOpen`, `ParamBrowLY`,
+`ParamMouthForm`, `Param50`). Rentang tiap parameter dibaca dari model yang sedang
+berjalan, bukan ditebak.
+
+Napass, goyang kepala, dan kedip tidak butuh berkas motion — pustaka `pixi-live2d-display`
+sudah menyetelnya sendiri, dan itu alasan `gerakan/` sengaja tidak dipasang sebagai Idle:
+kalau ada motion yang jalan, pustaka justru mematikan kedip otomatisnya.
 
 ## Cara kerja
 
@@ -114,9 +155,16 @@ sehingga jalur mic teruji tanpa merekam apa pun.
 
 Aset dan pustaka pihak ketiga yang dipakai proyek ini, beserta pemiliknya:
 
-- **Model karakter "Haru"** (`haru_greeter_t03`) — bahan gratis resmi dari
+- **Model karakter "Penyihir"** (`public/models/penyihir`) — model Cubism 4
+  buatan pihak ketiga yang tidak dibuat proyek ini; nama folder aslinya `魔女`
+  ("penyihir" dalam bahasa Mandarin). Berkasnya sengaja tidak diunduh lewat skrip
+  maupun diunggah ke repositori — hanya dipasang dari folder `New Model/` di mesin
+  ini lewat `npm run pasang-model`. Cek ulang lisensi pembuatnya sebelum dipakai
+  untuk siaran publik.
+- **Contoh model Haru** (`haru_greeter_t03`) — bahan gratis resmi dari
   [Live2D Inc.](https://www.live2d.com/en/learn/sample/), tunduk pada
-  *Live2D Free Material License Agreement*.
+  *Live2D Free Material License Agreement*. Diunduh `npm run assets`, tidak lagi
+  dipakai aplikasi tapi tetap tersedia untuk dibandingkan.
 - **Live2D Cubism Core for Web** (`live2dcubismcore.min.js`) — SDK resmi
   [Live2D Inc.](https://www.live2d.com/en/sdk/download/web/), *Cubism SDK License*.
 - **[pixi-live2d-display](https://github.com/guansss/pixi-live2d-display)**

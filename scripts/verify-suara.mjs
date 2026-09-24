@@ -55,7 +55,7 @@ const hasil = {
   suara: await page.evaluate(() => document.getElementById('suara').textContent),
 };
 
-const lolos = hasil.puncakRahang > 0.15 && hasil.wajah === 'f04' && hasil.suara === 'diam' && akhir < 0.05;
+const lolos = hasil.puncakRahang > 0.15 && hasil.wajah === 'senyum' && hasil.suara === 'diam' && akhir < 0.05;
 console.log(JSON.stringify(hasil));
 console.log(lolos ? 'PASS rahang bergerak mengikuti audio' : 'FAIL rahang tidak bergerak');
 

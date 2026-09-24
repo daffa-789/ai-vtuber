@@ -10,7 +10,7 @@ import { tingkatMulut } from './suara';
 (window as unknown as { PIXI: typeof PIXI }).PIXI = PIXI;
 Live2DModel.registerTicker(PIXI.Ticker);
 
-const MODEL_URL = '/models/haru/haru_greeter_t03.model3.json';
+const MODEL_URL = '/models/penyihir/penyihir.model3.json';
 
 const canvas = document.getElementById('stage') as HTMLCanvasElement;
 const statusEl = document.getElementById('status') as HTMLElement;
@@ -37,8 +37,8 @@ function layout(model: Live2DModel) {
 }
 
 async function boot() {
-  // motionPreload 'none': FileReferences.Motions Tap menunjuk sound ke folder
-  // shizuku yang tidak ikut terunduh; mempreload hanya memancing 404.
+  // motionPreload 'none': model ini hanya punya satu motion isyarat, jadi
+  // tidak ada gunanya menariknya sebelum benar-benar dipakai.
   const model = await Live2DModel.from(MODEL_URL, {
     autoInteract: true,
     motionPreload: MotionPreloadStrategy.NONE,

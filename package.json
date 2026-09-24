@@ -9,6 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "assets": "node scripts/fetch-assets.mjs",
+    "pasang-model": "node scripts/pasang-model.mjs",
     "verifikasi": "node scripts/verify-render.mjs"
   },
   "dependencies": {

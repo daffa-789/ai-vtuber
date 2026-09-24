@@ -1,17 +1,17 @@
-// Tag ekspresi dari model -> nama ekspresi pada model Haru.
-// Nama f00..f07 diambil dari FileReferences.Expressions di haru_greeter_t03.model3.json.
-// Maknanya dibaca dari kontak sheet wajah (.shots/kontak-besar.png), bukan dari
-// nama parameter — tebakan awal dari parameter ternyata salah di f02/f05.
+// Tag ekspresi dari model -> nama ekspresi pada model Penyihir.
+// Nama sengaja dibuat sama dengan tag di persona.md, sehingga berkas
+// public/models/penyihir/ekspresi/<nama>.exp3.json bisa dicari dengan mata.
+// Peta ini tetap dipakai sebagai gerbang: tag di luar daftar diabaikan chat.ts.
 export const TAG_KE_EKSPRESI: Record<string, string> = {
-  netral: 'f00', // mata terbuka, senyum tipis
-  semangat: 'f01', // mulut terbuka lebar
-  kaget: 'f02', // alis berkerut, mulut "o"
-  lelah: 'f03', // mata setengah terpejam, mulut datar
-  senyum: 'f04', // mata terpejam, pipi merah, senyum lebar
-  bingung: 'f05', // mata melebar, mulut datar
-  goda: 'f06', // mata setengah, pipi merah, senyum kecil
-  sebal: 'f07', // mata turun, mulut datar
-  sedih: 'f03', // model ini tidak punya wajah sedih; ini kedekatan terbaik
+  netral: 'netral', // mata terbuka, senyum tipis
+  semangat: 'semangat', // mata bintang, senyum lebar
+  kaget: 'kaget', // mata melebar, mulut terbuka
+  lelah: 'lelah', // mata setengah terpejam, alis turun
+  senyum: 'senyum', // mata menyempit, mulut melengkung jelas
+  bingung: 'bingung', // bayangan muram di mata, setetes keringat
+  goda: 'goda', // pupil berbentuk hati
+  sebal: 'sebal', // alis turun, mulut ditekuk
+  sedih: 'sedih', // mata berair, alis naik ke dalam
 };
 
 export const EKSPRESI_DASAR = TAG_KE_EKSPRESI.netral;

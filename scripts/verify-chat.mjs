@@ -27,7 +27,7 @@ await page.addInitScript(() => {
   });
 });
 
-await page.goto('http://localhost:5173/', { waitUntil: 'load' });
+await page.goto(process.argv[2] || 'http://localhost:5173/', { waitUntil: 'load' });
 await page.waitForFunction(() => !!window.__vtuber, null, { timeout: 20000 });
 
 // Tes ini menunggu teks spesifik dari scripts/stub-stream.mjs. Kalau port 8787
@@ -81,8 +81,8 @@ const hasil = await page.evaluate(() => ({
 const lolos =
   hasil.balasan === 'Halo Daffa. kok diam sih' &&
   !hasil.adaSisaKurung &&
-  hasil.pernahAktif.includes('f04') &&
-  hasil.aktif === 'f07' &&
+  hasil.pernahAktif.includes('senyum') &&
+  hasil.aktif === 'sebal' &&
   hasil.riwayat.length === 2 &&
   !hasil.riwayat[1].content.includes('[');
 

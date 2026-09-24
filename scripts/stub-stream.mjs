@@ -1,5 +1,8 @@
 // Server tiruan untuk menguji jalur streaming tanpa API key. Sementara saja.
+// Port mengikuti VTUBER_PORT supaya bisa jalan berdampingan dengan sidecar asli.
 import { createServer } from 'node:http';
+
+const PORT = Number(process.env.VTUBER_PORT ?? 8787);
 
 const POTONGAN = ['[se', 'nyum] Halo ', 'Daffa.', ' [sebal] kok', ' diam sih'];
 
@@ -18,4 +21,4 @@ createServer((req, res) => {
   };
   req.resume();
   req.on('end', kirim);
-}).listen(8787, '127.0.0.1', () => console.log('stub di 8787'));
+}).listen(PORT, '127.0.0.1', () => console.log(`stub di ${PORT}`));

@@ -76,6 +76,6 @@ const lolos =
   hasil.permintaanStt > 0 &&
   hasil.user === 'halo, kamu di sana?' &&
   hasil.balasan?.includes('iya') &&
-  hasil.wajah === 'f04';
+  hasil.wajah === 'senyum';
 console.log(lolos ? 'PASS mic -> VAD -> STT -> balasan -> wajah' : 'FAIL');
 process.exit(lolos ? 0 : 1);

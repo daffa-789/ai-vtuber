@@ -9,3 +9,7 @@ public/models/haru/
 public/live2dcubismcore.min.js
 public/vad/
 public/ort/
+
+# Model karakter sendiri: berkas sumber + hasil pasang, tetap di mesin ini.
+public/models/penyihir/
+New Model/
