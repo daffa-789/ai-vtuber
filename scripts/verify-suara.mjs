@@ -12,7 +12,7 @@ await page.route('**/api/health', (r) =>
   r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, model: 'stub', key: true }) }),
 );
 await page.route('**/api/chat', (r) =>
-  r.fulfill({ contentType: 'text/plain', body: '[senyum] Halo Daffa, ini suara asli dari Gemini TTS.' }),
+  r.fulfill({ contentType: 'text/plain', body: '[senyum] Halo Master, ini suara asli dari Gemini TTS.' }),
 );
 await page.route('**/api/tts', (r) => r.fulfill({ contentType: 'audio/wav', body: wav }));
 

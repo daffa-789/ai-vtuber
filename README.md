@@ -90,7 +90,7 @@ berkas `.exp3.json` di atas hanya hasil cetaknya. Hasil pembacaan potret
 | `sq` | cemberut | `sebal` |
 | `h` | setetes keringat + bayangan muram di mata | `bingung` |
 | `xx` / `x` | pupil bintang / pupil hati | `semangat` / `goda` |
-| `mz` `fz` `yj` `zs1` `zs2` `cw` `hdj` | topi, tongkat sihir, kacamata, memamerkan barang, hantu kecil, tangan memeluk | kanal `[prop:...]`, ditumpuk di atas wajah |
+| `mz` `fz` `yj` `zs1` `zs2` `cw` `hdj` | topi, tongkat sihir, kacamata, memamerkan barang, hantu kecil, kalung | kanal `[prop:...]`, ditumpuk di atas wajah |
 
 `netral`, `senyum`, `kaget`, dan `lelah` tidak punya lapisan sendiri di model aslinya,
 jadi keempatnya saya rakit dari parameter dasar (`ParamEyeLOpen`, `ParamBrowLY`,

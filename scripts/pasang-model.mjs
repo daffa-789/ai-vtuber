@@ -35,7 +35,7 @@ const LABEL = {
   Param61: 'memamerkan barang 1',
   Param62: 'memamerkan barang 2',
   Param64: 'hantu kecil peliharaan',
-  Param65: 'tangan memeluk',
+  Param65: 'kalung',
   Param66: 'kacamata',
   Param67: 'cemberut',
   Param68: 'mata berair',
@@ -230,6 +230,6 @@ await tulis(
 const sisa = berkasCdi.Parameters.filter((p) => /[^\x00-\x7F]/.test(p.Name));
 console.log(
   `selesai -> ${TUJUAN}\n  ${tekstur.length} tekstur (${folderTekstur}), ` +
-    `${konfig.wajah.length} wajah + ${konfig.pose.length} pose, ${dipasang.length} gerakan`,
+  `${konfig.wajah.length} wajah + ${konfig.pose.length} pose, ${dipasang.length} gerakan`,
 );
 for (const p of konfig.peringatan) console.warn(`  PERINGATAN ${p}`);

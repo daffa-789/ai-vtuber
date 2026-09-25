@@ -106,8 +106,24 @@ def _kerangka(nama: str, judul: str, isi: str, tautan: list[str] | None = None) 
 
 # ── Fakta: daftar yang dia ingat tentang user.
 def simpan_fakta(fakta: list[str]) -> None:
-    isi = "\n".join(f"- {f}" for f in fakta) if fakta else "_Belum ada fakta tersimpan._"
-    _unduh(f"{PANGKAL}/Fakta.md", "PUT", _kerangka("fakta-elaina", "Fakta yang Elaina ingat tentang Master", isi, ["Mood", "Quotes", "Riwayat"]))
+    panduan = (
+        "Setiap baris di bawah masuk ke prompt sebagai sesuatu yang **dia ingat benar**.\n"
+        "Aturannya: hanya yang pernah Master tulis sendiri di percakapan, atau yang\n"
+        "terukur dari mesin ini. Dugaan yang belum pasti pindah ke [[Dugaan]] dan tidak boleh\n"
+        "ditulis sebagai kenyataan. Selera kanonik dan preferensi lengkap dicatat di [[Preferences]],\n"
+        "suasana hati di [[Mood]], dan rekaman harian di [[Riwayat]].\n\n"
+    )
+    isi = panduan + ("\n".join(f"- {f}" for f in fakta) if fakta else "_Belum ada fakta tersimpan._")
+    _unduh(
+        f"{PANGKAL}/Fakta.md",
+        "PUT",
+        _kerangka(
+            "fakta-elaina",
+            "Fakta yang Elaina ingat tentang Master",
+            isi,
+            ["Mood", "Quotes", "Riwayat", "Dugaan", "Preferences", "Scenario_Library", "System_Documentation", "_PETUNJUK"],
+        ),
+    )
 
 
 def baca_fakta() -> list[str]:
@@ -138,7 +154,16 @@ def simpan_mood(mood: dict) -> None:
         ]
         if x
     )
-    _unduh(f"{PANGKAL}/Mood.md", "PUT", _kerangka("mood-elaina", "Suasana hati Elaina saat ini", isi, ["Fakta", "Quotes", "Riwayat"]))
+    _unduh(
+        f"{PANGKAL}/Mood.md",
+        "PUT",
+        _kerangka(
+            "mood-elaina",
+            "Suasana hati Elaina saat ini",
+            isi,
+            ["Fakta", "Quotes", "Riwayat", "Preferences", "Dugaan", "Scenario_Library", "System_Documentation", "_PETUNJUK"],
+        ),
+    )
 
 
 def baca_mood() -> dict | None:
@@ -175,6 +200,6 @@ def catat_hari(baris: str) -> None:
             f"riwayat-{_tanggal()}",
             f"Riwayat percakapan {_tanggal()}",
             "\n".join(badan),
-            ["Fakta", "Mood", "Quotes"],
+            ["Fakta", "Mood", "Quotes", "Riwayat", "Preferences", "Dugaan"],
         ),
     )
