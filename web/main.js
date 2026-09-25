@@ -168,6 +168,7 @@ async function boot() {
   for (const nama of setelan.awalPose) pose.ubah(nama, true);
 
   const tombolWajah = new Map();
+  const rautEl = document.getElementById('raut');
   const setEkspresi = (nama) => {
     if (!terpasang.has(nama)) {
       console.warn(`ekspresi "${nama}" tidak terpasang`);
@@ -175,6 +176,10 @@ async function boot() {
     }
     model.expression(nama);
     tombolWajah.forEach((btn, key) => btn.classList.toggle('aktif', key === nama));
+    // Meteran "raut" dibaca sekilas dari seberang ruangan; daftar chip tidak.
+    // Ditulis di sini, BUKAN di tombolnya, karena wajah juga berganti dari tag
+    // chat dan dari ekspresi dasar saat balasan tidak memakai tag.
+    if (rautEl) rautEl.textContent = nama;
   };
 
   const tombolPose = new Map();

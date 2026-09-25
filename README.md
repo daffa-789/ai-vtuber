@@ -178,6 +178,37 @@ Kalau GPU mulai kalah, turunkan `VITE_RENDER_SKALA_MAKS` atau paksa satu angka l
 `VITE_RENDER_SKALA`. Status halaman menampilkan `738×738 css · 886×886 px · 1.25×` —
 kalau angka CSS dan piksel tidak sebanding, kanvas sedang diregangkan.
 
+## Rupa panel
+
+Rel kiri adalah dia; rel kanan adalah buku catatannya. Elaina menyendiri di jalan
+dan mencatat apa yang dia lihat, dan memori build ini pun sungguh-sungguh berupa
+catatan Markdown di vault — jadi panelnya sebuah ledger lapangan, bukan dashboard.
+
+- **Warna.** Langit di atas laut awan (`#0d1119` → `#1e2739`) dengan satu aksen
+  lampu minyak `#e8b673`. Amber dipakai hanya untuk yang hidup: raut aktif,
+  cincin fokus, dan lampu bicara. `#c2707c` khusus galat.
+- **Tipografi tanpa jaringan.** Palatino/Georgia untuk kepala, Segoe UI untuk baca,
+  Cascadia/Consolas untuk angka mesin — semuanya sudah ada di Windows. Sengaja
+  tidak ada tautan webfont: halaman ini harus tetap sama rupanya saat offline.
+- **Lampu = `#suara`.** Titik di kanan atas menyala amber saat dia menyusun suara
+  dan memerah saat TTS gugur. `chat.js` menulis teks *dan* `data-keadaan` lewat
+  satu fungsi (`setSuara`) supaya keduanya tidak bisa berbeda; `verify-suara`
+  tetap membaca `textContent`.
+- **Meteran `raut`.** Nama wajah yang sedang tampil, dibaca langsung dari
+  `setEkspresi` — bukan dari tombol yang ditekan, karena wajah juga berganti lewat
+  tag chat dan lewat ekspresi dasar.
+- **Tidak ada animasi berulang.** Transisi 120–180ms saja, dan semuanya dimatikan
+  untuk `prefers-reduced-motion`. Yang boleh bergerak terus cuma avatar-nya — dan
+  `web/iriama.js` justru merampas hak itu saat dia tidak dilihat.
+
+`node scripts/cek-rancangan.mjs` menjaga keempat hal yang pernah salah dan lolos
+tanpa ketahuan: gugus yang track-nya menyusut ke nol (tiga baris chip saling
+menimpa di 430px), `outline: none` pada `#isi:focus` yang menghapus cincin
+keyboard, teks diagnostik 3.63:1, dan composer lengket yang tembus pandang.
+Skripnya mengukur Tab sungguhan (`el.focus()` tidak menampilkan `:focus-visible`
+di Chromium — itu bukan bug halaman), kontras tiap peran teks terhadap kedua ujung
+latar, dan ia berhenti kalau port yang dituju bukan sisi tiruan.
+
 ## Cara kerja
 
 ```
@@ -297,6 +328,7 @@ node scripts/verify-render.mjs    # framing, FPS GPU asli, ketajaman saat di-zoo
 node scripts/verify-gerak.mjs     # tombol gerakan benar-benar memulai motion + pamer-barang saling eksklusif
 node scripts/verify-chat.mjs      # rantai tag -> wajah (butuh mode tiruan, lihat di bawah)
 node scripts/verify-suara.mjs     # rahang mengikuti audio
+node scripts/cek-rancangan.mjs    # rupa panel: tindihan, cincin keyboard, kontras, lampu (butuh stub)
 node scripts/kontak-ekspresi.mjs  # kontak sheet semua ekspresi untuk koreksi peta wajah
 ```
 

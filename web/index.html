@@ -13,64 +13,281 @@
     <script src="/lib/pixi.min.js"></script>
     <script src="/lib/cubism4.min.js"></script>
     <!-- Ganti dengan `window.__VTUBER_ENV__ = {...}` oleh server_py saat menyajikan
-         berkas ini; isinya kunci VITE_* dari .env, parser-nya web/konfigurasi.js. -->
+         berkas ini; isinya kunci VITE_* dari .env, parser-nya web/konfigurasi.mjs. -->
     <!--VTUBER_ENV-->
     <style>
-      :root { color-scheme: dark; }
+      /* =========================================================================
+         Rancangan: rel kiri adalah dia, rel kanan adalah buku catatannya.
+         Elaina menyendiri di jalan dan menulis apa yang dia lihat; memori build ini
+         pun sungguh-sungguh berupa catatan Markdown di vault. Jadi panelnya sebuah
+         ledger lapangan -- bukan dashboard.
+
+         Palette: langit di atas laut awan + lampu minyak. Amber (#e8b673) sengaja
+         dipakai HANYA untuk hal yang hidup: raut aktif, cincin fokus, dan lampu
+         bicara. Yang diam tetap arang.
+         Tipografi tanpa unduhan jaringan: halaman ini harus tetap sama rupa saat
+         offline. Palatino/Georgia untuk kepala (ada di Windows), Cascadia/Consolas
+         untuk angka mesin, Segoe UI untuk baca.
+         Tidak ada animasi berulang di sini: satu-satunya yang boleh bergerak
+         terus itu avatar-nya, dan web/iriama.js justru mematikan gambar saat
+         tidak dilihat. Jadi transisi cuma 120-180ms, dan dimatikan penuh untuk
+         pengguna yang minta reduced motion.
+         ========================================================================= */
+      :root {
+        color-scheme: dark;
+        --malam: #0d1119;
+        --selimut: #141a26;
+        --kabut: #222b3d;
+        --arang: #8d97ad;
+        --kapur: #e9edf5;
+        --lampu: #e8b673;
+        --mawar: #c2707c;
+        --display: "Palatino Linotype", "Book Antiqua", Palatino, "Iowan Old Style", Georgia, serif;
+        --teks: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+        --mesin: "Cascadia Mono", Consolas, ui-monospace, monospace;
+        --aturan: 1px solid #ffffff14;
+      }
       * { box-sizing: border-box; }
+      html, body { height: 100%; }
       body {
         margin: 0;
-        min-height: 100vh;
         display: grid;
-        grid-template-columns: 1fr 320px;
-        background: radial-gradient(circle at 40% 30%, #2a2f45, #0e1018 70%);
-        color: #e8eaf2;
-        font: 14px/1.5 system-ui, sans-serif;
+        grid-template-columns: 1fr minmax(296px, 340px);
+        background:
+          radial-gradient(115% 80% at 20% 6%, #1e2739 0%, transparent 58%),
+          linear-gradient(178deg, var(--malam) 0%, #090c12 72%);
+        color: var(--kapur);
+        font: 14px/1.55 var(--teks);
+        -webkit-font-smoothing: antialiased;
       }
-      #stage-wrap { display: grid; place-items: center; overflow: hidden; }
+
+      /* ---------------------------------------------------------------- avatar */
+      #stage-wrap {
+        display: grid; place-items: center; overflow: hidden; min-width: 0;
+        /* Tanah pijakan: satu cahaya lembut di bawah kakinya, supaya dia berdiri
+           di suatu tempat dan bukan melayang di kolom kosong. DOM layer di balik
+           kanvas transparan -- nol biaya GPU. */
+        background: radial-gradient(58% 26% at 50% 88%, #2a3550 0%, transparent 72%);
+      }
       /* Ukurannya datang dari .env (VITE_PANGGUNG_*); nilai bawaan tetap min(). */
-      canvas { width: var(--panggung-lebar, min(90vh, 100%)); height: var(--panggung-tinggi, min(90vh, 100%)); }
-      #panel { border-left: 1px solid #ffffff1a; padding: 16px; display: flex; flex-direction: column; min-height: 100vh; }
-      h1 { font-size: 15px; margin: 0 0 12px; font-weight: 600; }
-      .row { margin-bottom: 10px; color: #a8b0c8; }
-      .row b { color: #e8eaf2; font-weight: 600; }
-      #expr, #pose, #gerak { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-      button {
-        background: #ffffff14; color: inherit; border: 1px solid #ffffff26;
-        border-radius: 6px; padding: 5px 9px; cursor: pointer; font: inherit; font-size: 12px;
+      canvas {
+        width: var(--panggung-lebar, min(90vh, 100%));
+        height: var(--panggung-tinggi, min(90vh, 100%));
       }
-      button:hover { background: #ffffff24; }
-      button.aktif { outline: 2px solid #6ea8ff; background: #2b4a78; }
-      #log { flex: 1; overflow-y: auto; margin: 14px 0; display: flex; flex-direction: column; gap: 8px; }
-      .pesan { padding: 7px 10px; border-radius: 10px; max-width: 92%; word-wrap: break-word; }
-      .pesan.user { align-self: flex-end; background: #3b6ea5; }
-      .pesan.assistant { align-self: flex-start; background: #ffffff14; }
-      .pesan.gagal { align-self: flex-start; background: #7a2f3a; }
+
+      /* ----------------------------------------------------------------- ledger */
+      #panel {
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
+        display: grid;
+        /* kepala / meter / tiga gugus kontrol / log (yang ini yang tumbuh) /
+           composer / health */
+        grid-template-rows: auto auto auto auto auto 1fr auto auto;
+        gap: 13px;
+        padding: 18px 16px 14px;
+        border-left: var(--aturan);
+        background: linear-gradient(180deg, #171f2e, #10151f 60%);
+      }
+      #kepala { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+      h1 { margin: 0; font: 600 21px/1.05 var(--display); letter-spacing: .012em; }
+      #gelar {
+        margin: 3px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        font: 10.5px/1.3 var(--mesin); letter-spacing: .06em; color: var(--arang);
+      }
+
+      /* Lampu bicara = #suara. Titiknya menyala saat dia menyusun suara, merah
+         mawar saat TTS gugur. Satu-satunya tempat amber berkedip, karena itu
+         memang satu-satunya pertanyaan yang dijawabnya: "lagi ngomong, nggak?" */
+      #suara {
+        display: inline-flex; align-items: center; gap: 6px; flex: none;
+        margin-top: 2px; padding: 5px 9px 5px 8px;
+        font: 11px/1 var(--mesin); color: var(--arang);
+        background: #ffffff08; border: var(--aturan); border-radius: 999px;
+        transition: color .18s ease, border-color .18s ease;
+      }
+      #suara::before {
+        content: ""; width: 7px; height: 7px; border-radius: 50%;
+        background: #47526a; transition: background .18s ease, box-shadow .18s ease;
+      }
+      #suara[data-keadaan="berbicara"] { color: var(--lampu); border-color: #e8b67340; }
+      #suara[data-keadaan="berbicara"]::before { background: var(--lampu); box-shadow: 0 0 10px 2px #e8b67355; }
+      #suara[data-keadaan="gagal"] { color: var(--mawar); border-color: #c2707c40; }
+      #suara[data-keadaan="gagal"]::before { background: var(--mawar); }
+
+      #meter {
+        display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 1px 10px;
+        padding-bottom: 12px; border-bottom: var(--aturan);
+        font: 11px/1.5 var(--mesin); color: #8791a5;
+      }
+      #meter .k { letter-spacing: .05em; }
+      #meter b { color: #c3ccdc; font-weight: 500; justify-self: start; }
+      #raut { color: var(--lampu); }
+      #status {
+        grid-column: 1 / -1; margin: 5px 0 0;
+        font: 10.5px/1.45 var(--mesin); color: #8a94a8; overflow-wrap: anywhere;
+      }
+
+      .gugus { display: grid; gap: 7px; }
+      .gugus h2 {
+        display: flex; align-items: center; gap: 9px; margin: 0;
+        font: 600 10.5px/1 var(--display); letter-spacing: .17em; text-transform: uppercase;
+        color: var(--arang);
+      }
+      /* Garis penghubungnya nyata: kepala gugus dan tubuhnya satu berkas,
+         bukan hiasan. Eyebrow-nya ke kanan supaya judul dan keterangan tidak
+         terbaca sebagai satu kalimat yang kepanjangan. */
+      .gugus h2::after { content: ""; order: 1; flex: 1; height: 1px; background: linear-gradient(90deg, #ffffff1f, transparent); }
+      .gugus h2 i {
+        order: 2; font: 10px/1 var(--mesin); letter-spacing: .04em;
+        text-transform: none; color: #8b95a9; font-style: normal;
+      }
+      #expr, #pose, #gerak { display: flex; flex-wrap: wrap; gap: 5px; }
+
+      button {
+        position: relative; padding: 5px 9px 5px 13px;
+        font: 11.5px/1.25 var(--teks); color: #bfc8d8;
+        background: #ffffff0a; border: var(--aturan); border-radius: 5px; cursor: pointer;
+        transition: background .14s ease, color .14s ease, border-color .14s ease;
+      }
+      /* Centang kiri: kosong saat mati, tumbuh saat nyala. Kelas .aktif dipasang
+         main.js, jadi selektornya tidak boleh berubah dari `button.aktif`. */
+      button::before {
+        content: ""; position: absolute; left: 5px; top: 50%; translate: 0 -50%;
+        width: 3px; height: 0; border-radius: 2px; background: var(--lampu);
+        transition: height .14s ease;
+      }
+      button:hover { background: #ffffff16; color: var(--kapur); }
+      button.aktif { background: #e8b67318; border-color: #e8b6734d; color: #f3e2c4; }
+      button.aktif::before { height: 58%; }
+      :focus-visible { outline: 2px solid var(--lampu); outline-offset: 2px; }
+
+      /* -------------------------------------------------------------- percakapan */
+      /* Baris yang tumbuh DAN menyusut: cuma log-nya. min-height:0 di sini
+         perlu supaya #log bisa punya scrollbar sendiri; di gugus lain atribut itu
+         justru membiarkan track grid remuk ke nol. */
+      #catatan { grid-row: 6; min-height: 0; }
+      #log {
+        min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 9px;
+        padding: 2px 3px 2px 0; scrollbar-width: thin; scrollbar-color: #ffffff26 transparent;
+      }
+      /* Layar kosong = undangan, bukan lubang. Murni CSS: hilang sendiri begitu
+         ada gelembung pertama. */
+      #log:empty::before {
+        content: "Belum ada catatan. Mulai bicara di bawah.";
+        margin: auto; padding: 0 8px; text-align: center;
+        font: 11.5px/1.5 var(--mesin); color: #8791a5;
+      }
+      .pesan {
+        max-width: 92%; padding: 8px 11px; overflow-wrap: anywhere; word-break: normal;
+      }
+      /* Setiap baris diikat ke dinding yang benar: catatan dia di kiri dengan
+         rambut amber, kata-kata Master di kanan. Tanpa gelembing berekor. */
+      .pesan.assistant {
+        align-self: flex-start; border-left: 2px solid #e8b6733d;
+        border-radius: 0 7px 7px 0; background: #ffffff0d;
+      }
+      .pesan.user {
+        align-self: flex-end; border-right: 2px solid #47536b;
+        border-radius: 7px 0 0 7px; background: #222c3d; color: #dfe6f2;
+      }
+      .pesan.gagal { border-left-color: var(--mawar); background: #c2707c14; color: #efd6da; }
+
       #form { display: flex; gap: 6px; }
-      #isi { flex: 1; background: #ffffff0f; border: 1px solid #ffffff26; border-radius: 6px; padding: 8px; color: inherit; font: inherit; }
-      #health { font-size: 11px; color: #7f8aa8; margin-top: 8px; }
+      #isi {
+        flex: 1; min-width: 0; padding: 9px 11px; color: var(--kapur);
+        font: 13.5px/1.4 var(--teks); background: #ffffff0a;
+        border: var(--aturan); border-radius: 5px; transition: border-color .14s ease;
+      }
+      #isi::placeholder { color: #7f8aa0; }
+      /* Jangan pasang outline:none di sini: cincin :focus-visible-nya ikut
+         hilang dan keyboard jadi tidak kelihatan. Border amber cuma penguat. */
+      #isi:focus { border-color: #e8b67355; }
+      /* Tombol kirim bukan chip raut: dia aksi, jadi diisi penuh dan tanpa centang. */
+      #form > button[type="submit"] {
+        flex: none; padding: 5px 13px; font-weight: 600; color: #1c1608;
+        background: var(--lampu); border-color: transparent;
+      }
+      #form > button[type="submit"]::before { display: none; }
+      #form > button[type="submit"]:hover { background: #f0c286; color: #1c1608; }
+      #health { margin: 0; font: 10.5px/1.4 var(--mesin); color: #828da3; overflow-wrap: anywhere; }
+
+      /* -------------------------------------------------------------- kecil / gerak */
+      @media (max-width: 860px) {
+        body { grid-template-columns: 1fr; grid-template-rows: minmax(38vh, 50vh) 1fr; }
+        #panel {
+          height: auto; overflow-y: auto; border-left: 0;
+          border-top: var(--aturan); grid-template-rows: none;
+          align-content: start;   /* jangan regas/rems track saat isi lebih tinggi */
+        }
+        /* Tanpa ini log runtuh ke tinggi kontennya sendiri: nol pesan = nol piksel. */
+        #catatan { min-height: 26vh; }
+        #log { max-height: 34vh; }
+        #gelar { white-space: normal; }
+        /* health naik ke atas, form jadi yang terakhir dan menempel dasar:
+           di ponsel mengetik harus bisa dilakukan tanpa menggulir dulu. */
+        #health { order: 1; }
+        #form {
+          order: 2; position: sticky; bottom: 0; z-index: 2;
+          margin: 0 -16px; padding: 9px 16px 11px;
+          /* Hampir pekat: composer lengket yang tembus pandang membuat teks log
+             terbaca di baliknya, dan itu tampak seperti tabrakan layout. */
+          background: #121722f5; border-top: var(--aturan);
+          backdrop-filter: blur(3px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; animation: none !important; }
+      }
     </style>
   </head>
   <body>
     <div id="stage-wrap"><canvas id="stage"></canvas></div>
+
     <aside id="panel">
-      <h1>Elaina</h1>
-      <div class="row">Status: <b id="status">memuat model&hellip;</b></div>
-      <div class="row">FPS: <b id="fps">&ndash;</b></div>
-      <div class="row">Suara: <b id="suara">diam</b></div>
-      <div class="row">Ekspresi uji</div>
-      <div id="expr"></div>
-      <div class="row">Pose &amp; aksesoris</div>
-      <div id="pose"></div>
-      <div class="row">Gerakan uji</div>
-      <div id="gerak"></div>
-      <div id="log"></div>
+      <header id="kepala">
+        <div>
+          <h1>Elaina</h1>
+          <p id="gelar">penyihir keliling</p>
+        </div>
+        <!-- Teks elemen ini ditulis chat.js ('diam' / 'menyusun suara…' /
+             'gagal: ...'), dan data-keadaan ikut ditulis supaya lampu bisa
+             membedakan tanpa membaca isi teks. verify-suara masih membaca
+             textContent-nya, jadi keduanya jangan diubah salah satunya. -->
+        <b id="suara" data-keadaan="diam">diam</b>
+      </header>
+
+      <div id="meter">
+        <span class="k">frame</span><b id="fps">&ndash;</b>
+        <span class="k">raut</span><b id="raut">&ndash;</b>
+        <p id="status">memuat model&hellip;</p>
+      </div>
+
+      <section class="gugus">
+        <h2>Raut <i>tag chat</i></h2>
+        <div id="expr"></div>
+      </section>
+      <section class="gugus">
+        <h2>Lapisan <i>di atas raut</i></h2>
+        <div id="pose"></div>
+      </section>
+      <section class="gugus">
+        <h2>Gerak</h2>
+        <div id="gerak"></div>
+      </section>
+
+      <section class="gugus" id="catatan">
+        <h2>Catatan</h2>
+        <div id="log" role="log" aria-live="polite"></div>
+      </section>
+
       <form id="form" autocomplete="off">
-        <input id="isi" placeholder="ketik sesuatu&hellip;" />
-        <button type="submit">kirim</button>
+        <input id="isi" aria-label="Pesan untuk Elaina" placeholder="Katakan sesuatu&hellip;" />
+        <button type="submit">Kirim</button>
       </form>
-      <div id="health"></div>
+      <p id="health"></p>
     </aside>
+
     <script>
       // Konsol browser tidak selalu terlihat di lingkungan ini, jadi tempel error ke panel.
       addEventListener('error', (e) => {

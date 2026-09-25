@@ -37,6 +37,21 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
   // per menit bisa jadi alasan untuk mematikannya: VTUBER_TTS_PER_KALIMAT=false.
   let perKalimat = true;
   const suaraEl = document.getElementById('suara');
+  /**
+   * Satu-satunya tempat keadaan suara ditulis. Teksnya dibaca verify-suara lewat
+   * textContent; atribut data-keadaan dibaca lampu di index.html. Lewat satu
+   * fungsi begini keduanya tidak bisa saling meninggalkan -- dulu "gagal:" harus
+   * ditebak dari teks di dua tempat.
+   */
+  const setSuara = (teks) => {
+    if (!suaraEl) return;
+    suaraEl.textContent = teks;
+    suaraEl.dataset.keadaan = teks.startsWith('gagal')
+      ? 'gagal'
+      : teks === 'diam'
+        ? 'diam'
+        : 'berbicara';
+  };
 
   fetch('/api/health')
     .then((r) => r.json())
@@ -117,7 +132,7 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
         if (!siap.length) return;
         bolehPotongAwal = false;
         terucap += sisaDari.length - sisa.length;
-        if (suaraEl) suaraEl.textContent = 'menyusun suara…';
+        setSuara('menyusun suara…');
         for (const potongan of siap) {
           antrean += 1;
           antre(potongan).catch(catat);
@@ -141,7 +156,7 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
       // Potongan penutup, lalu tunggu antrean habis terputar. Semua potongan
       // gugur = suara mati total dan itu harus kelihatan di layar; satu-dua yang
       // gugur cukup masuk log.
-      if (suaraEl) suaraEl.textContent = 'menyusun suara…';
+      setSuara('menyusun suara…');
       if (perKalimat) {
         const sisa = jawaban.slice(terucap);
         if (sisa.trim()) {
@@ -150,14 +165,14 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
         }
         await selesai();
         const matiTotal = antrean > 0 && potonganGagal === antrean;
-        if (suaraEl) suaraEl.textContent = matiTotal ? `gagal: ${pesanGagal}` : 'diam';
+        setSuara(matiTotal ? `gagal: ${pesanGagal}` : 'diam');
         if (potonganGagal && !matiTotal) console.warn(`${potonganGagal} dari ${antrean} potongan suara gugur`);
       } else {
         try {
           await bicarakan(jawaban);
-          if (suaraEl) suaraEl.textContent = 'diam';
+          setSuara('diam');
         } catch (err) {
-          if (suaraEl) suaraEl.textContent = `gagal: ${err instanceof Error ? err.message : String(err)}`;
+          setSuara(`gagal: ${err instanceof Error ? err.message : String(err)}`);
         }
       }
     } catch (err) {
