@@ -12,13 +12,12 @@ __pycache__/
 # Log sementara (mis. sidecar yang dijalankan dari skrip uji).
 *.log
 
-# Aset berlisensi Live2D: diunduh ulang dengan `node scripts/fetch-assets.mjs`,
+# Aset berlisensi Live2D: diunduh ulang dengan `node scripts/fetch-assets.js`,
 # bukan diedarkan lewat repositori ini.
-public/models/haru/
 public/live2dcubismcore.min.js
 public/vad/
 public/ort/
 
 # Model karakter sendiri: berkas sumber + hasil pasang, tetap di mesin ini.
 public/models/penyihir/
-New Model/
+

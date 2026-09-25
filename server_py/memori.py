@@ -1,6 +1,5 @@
 """Kebijakan memori: apa yang masuk prompt, bagaimana mood bergeser, kapan fakta
-baru diekstrak. Terjemahan langsung dari server/memori.mjs -- angkanya sengaja
-tidak diubah supaya kedua sisi menghasilkan state yang sama.
+baru diekstrak.
 """
 
 from __future__ import annotations

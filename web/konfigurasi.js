@@ -6,7 +6,7 @@
  *
  * Browser memanggil bacaKonfigurasi(import.meta.env), skrip Node memanggil
  * bacaKonfigurasi(process.env) -- kedua-duanya record string yang sama, dan
- * skrip perkakas di scripts/ memuat .env sendiri (scripts/env.mjs).
+ * skrip perkakas di scripts/ memuat .env sendiri (scripts/env.js).
  *
  * Aturan penulisan di .env
  *   VITE_WAJAH_<NAMA>   resep ekspresi wajah  -> token `Id=Nilai` dipisah spasi
@@ -350,7 +350,7 @@ export function bacaKonfigurasi(env = {}) {
 
 /**
  * Bentuk berkas exp3.json dari satu resep. Dipakai browser (untuk menyuntik
- * ekspresi tanpa menulis berkas) DAN scripts/pasang-model.mjs (untuk menulis
+ * ekspresi tanpa menulis berkas) DAN scripts/pasang-model.js (untuk menulis
  * berkasnya), jadi format ekspresi tidak mungkin beda di dua tempat.
  * @param {Ekspresi} e
  * @param {number} pudarDetik

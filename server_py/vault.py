@@ -1,9 +1,5 @@
 """Transport catatan karakter ke vault Obsidian lewat Local REST API.
 
-Bentuk keluarannya disamakan dengan server/obsidian.mjs: kedua sisi menulis berkas
-yang sama, dan `baca_mood` di sisi mana pun membaca angka lewat regex -- beda
-label sedikit saja, mood tidak terbaca balik dan karakter mulai dari nol tiap sesi.
-
 Token dibaca dari ~/.qoder/settings.json (mcpServers.obsidian). Jangan pernah
 memindahkannya ke .env atau ke repo.
 """

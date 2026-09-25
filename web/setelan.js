@@ -3,8 +3,8 @@
 // Dulu bacaannya `import.meta.env` (punya Vite). Sekarang halaman ini disajikan
 // Python tanpa bundler, jadi .env disuntikkan ke `window.__VTUBER_ENV__` lewat
 // index.html -- isinya tetap kunci VITE_* yang sama, parser-nya tetap
-// konfigurasi.mjs yang sama dengan yang dipakai `node scripts/pasang-model.mjs`.
-import { bacaKonfigurasi } from './konfigurasi.mjs';
+// konfigurasi.js yang sama dengan yang dipakai `node scripts/pasang-model.js`.
+import { bacaKonfigurasi } from './konfigurasi.js';
 
 export const setelan = bacaKonfigurasi(window.__VTUBER_ENV__ || {});
 

@@ -59,13 +59,17 @@ export function hentikan() {
   berbicara = false;
 }
 
+const API_BASE = typeof window !== 'undefined' && window.location?.protocol === 'file:'
+  ? 'http://127.0.0.1:8787'
+  : '';
+
 /**
  * Satu potongan audio diunduh DAN diputar. Unduhannya dimulai begitu dipanggil,
  * pemutarannya menunggu potongan sebelumnya selesai -- jadi kalimat kedua sudah
  * di jalur saat kalimat pertama masih terdengar.
  */
 async function putarPotongan(teks, angka) {
-  const res = await fetch('/api/tts', {
+  const res = await fetch(`${API_BASE}/api/tts`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ text: teks }),

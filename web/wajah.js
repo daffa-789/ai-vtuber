@@ -4,7 +4,7 @@
 // Kenapa disuntik saat runtime dan bukan dibaca dari berkas ekspresi saja:
 // supaya nilai bisa dityetel di .env, halaman dimuat ulang, dan hasilnya
 // langsung terlihat -- tanpa menjalankan ulang pemasangan model.
-import { ekspresiKeJson, periksaTerhadapModel } from './konfigurasi.mjs';
+import { ekspresiKeJson, periksaTerhadapModel } from './konfigurasi.js';
 import { setelan } from './setelan.js';
 
 /**

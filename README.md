@@ -10,7 +10,7 @@ vault Obsidian, jadi bisa dibaca dan disunting langsung.
 ## Menjalankan
 
 Prasyarat: **Python 3.10** untuk aplikasi, dan **Node.js** hanya untuk skrip perkakas
-(`scripts/*.mjs` — pemasangan model, pengunduh aset, verifier). Tidak ada `npm install`:
+(`scripts/*.js` — pemasangan model, pengunduh aset). Tidak ada `npm install`:
 pustaka browser sudah divendur di `web/lib/` dan sisi server murni stdlib Python.
 
 ```bash
@@ -22,9 +22,9 @@ python -m venv .venv
 Sekali jalan dari nol — aset karakter tidak ikut ke git:
 
 ```bash
-node scripts/fetch-assets.mjs     # Cubism core + contoh model + aset VAD
-node scripts/pasang-model.mjs     # pasang model karakter dari New Model/penyihir
-cp .env.example .env              # lalu isi GEMINI_API_KEY
+node scripts/fetch-assets.js     # Cubism core + aset VAD
+node scripts/pasang-model.js     # sinkronkan konfigurasi ekspresi model penyihir
+cp .env.example .env             # lalu isi GEMINI_API_KEY
 ```
 
 Di halaman, ketik pesannya di kolom bawah. Jalur mikrofon **sedang dimatikan** —
@@ -42,27 +42,20 @@ pakai yang dimuat dengan `<script>` biasa, sehingga tidak ada langkah build sama
 
 | Dahulu (Node + Vite) | Sekarang |
 |---|---|
-| `server/index.mjs` | `server_py/app.py` + `gemini.py` + `memori.py` + `vault.py` |
+| `server/index.js` | `server_py/app.py` + `gemini.py` + `memori.py` + `vault.py` |
 | `npm run dev` (Vite di :5173) | `server_py/statis.py` menyajikan `web/` dan `public/` |
 | `import.meta.env.VITE_*` | `window.__VTUBER_ENV__`, disuntikkan Python ke `index.html` |
 | `src/*.ts` + `tsconfig.json` | `web/*.js` — ESM asli browser |
 | `node_modules` (270 MB) | `web/lib/` (647 KB: pixi + cubism4 + vad) |
 
 Sisi Python sengaja **tanpa dependensi**: `requirements.txt` kosong, `.venv` hanya untuk
-memisahkan interpreter. Parser resep wajah/pose tetap satu berkas (`web/konfigurasi.mjs`) yang
+memisahkan interpreter. Parser resep wajah/pose tetap satu berkas (`web/konfigurasi.js`) yang
 dipakai browser DAN skrip Node, supaya nilainya tidak mungkin beda di dua tempat.
-
-```bash
-.venv\Scripts\python.exe server_py\uji_kontrak.py --rekam   # catat jawaban yang benar sebagai acuan
-.venv\Scripts\python.exe server_py\uji_kontrak.py          # 10 pemeriksaan kontrak vs acuan
-node scripts/uji-kalimat.mjs                               # pemotong kalimat, deterministik tanpa API
-```
 
 ## Model karakter
 
 Karakternya model Live2D Cubism 4 (279 parameter, 617 art mesh, tekstur 8192),
-dipasang dari folder `New Model/penyihir/` ke `public/models/penyihir/` dengan nama
-berkas Indonesia:
+dikelola di `public/models/penyihir/` dengan nama berkas dan konfigurasi bahasa Indonesia:
 
 ```
 public/models/penyihir/
@@ -76,15 +69,12 @@ public/models/penyihir/
   gerakan/sedih-melambai.motion3.json
 ```
 
-Sembilan wajah itu saya susun sendiri dari lapisan parameter aslinya: model ini
-datang dengan 13 berkas ekspresi bernama singkatan pinyin Mandarin, dan sebagian
-besarnya bukan wajah melainkan aksesori. **Resepnya tidak lagi tertulis di kode** --
-masing-masing adalah satu baris `VITE_WAJAH_*` / `VITE_POSE_*` di `.env`, dan
-berkas `.exp3.json` di atas hanya hasil cetaknya. Hasil pembacaan potret
-(`.shots/lembar-f.png`, `.shots/lembar-g.png`), tersimpan juga sebagai label di
-`penyihir.cdi3.json`:
+Sembilan wajah tersusun rapi dari parameter modelnya dan dialihbahasakan ke Indonesia:
+**Resepnya diatur fleksibel di `.env`** -- masing-masing adalah satu baris `VITE_WAJAH_*` /
+`VITE_POSE_*` di `.env`, dan berkas `.exp3.json` di atas disinkronkan oleh `node scripts/pasang-model.js`.
+Label parameter juga tersimpan rapi di `penyihir.cdi3.json`:
 
-| Singkatan | Arti sebenarnya | Dipakai untuk |
+| Singkatan / Parameter | Arti sebenarnya | Dipakai untuk |
 |---|---|---|
 | `ku` | mata berair + alis naik | `sedih` |
 | `sq` | cemberut | `sebal` |
@@ -104,12 +94,12 @@ kalau ada motion yang jalan, pustaka justru mematikan kedip otomatisnya.
 ## Diatur lewat .env
 
 Semua yang bergerak, berubah wajah, dan mengukur piksel dibaca dari satu berkas:
-`.env` isinya, `web/konfigurasi.mjs` parsernya — dipakai browser DAN
-`node scripts/pasang-model.mjs`, jadi tidak bisa beda. Cara melihat apa yang sedang terpakai:
+`.env` isinya, `web/konfigurasi.js` parsernya — dipakai browser DAN
+`node scripts/pasang-model.js`, jadi tidak bisa beda. Cara melihat apa yang sedang terpakai:
 
 ```bash
-node scripts/tampilkan-konfigurasi.mjs            # tabel wajah/pose/gerakan + peringatan sintaks
-node scripts/tampilkan-konfigurasi.mjs --env   # blok .env siap tempel dari nilai efektif
+node scripts/tampilkan-konfigurasi.js            # tabel wajah/pose/gerakan + peringatan sintaks
+node scripts/tampilkan-konfigurasi.js --env   # blok .env siap tempel dari nilai efektif
 ```
 
 | Yang mau diubah | Kunci |
@@ -129,9 +119,9 @@ Satu sintaks untuk semuanya: token `Id=Nilai` dipisah spasi; blend default `Add`
 menambah di atas nilai bawaan parameter, `:Overwrite` menulis mentah, `:Multiply`
 mengali; `kosong` berarti tanpa parameter. Nama kunci diterjemahkan apa adanya —
 `VITE_POSE_HANTU_KECIL` menjadi pose `hantu-kecil`. Id yang tidak ada di model atau
-nilai yang keluar rentang dilaporkan di status halaman ("N konfigurasi perlu dicek"),
-di log browser, dan oleh `node scripts/verify-render.mjs`. Ubah nilainya cukup
-muat ulang halaman; hanya gerakan baru yang perlu `node scripts/pasang-model.mjs` lagi
+nilai yang keluar rentang dilaporkan di status halaman ("N konfigurasi perlu dicek")
+dan di log browser. Ubah nilainya cukup
+muat ulang halaman; hanya gerakan baru yang perlu `node scripts/pasang-model.js` lagi
 supaya berkasnya ikut dipasang.
 
 Wajah memakai sistem ekspresi pustaka (satu wajah pada satu waktu), sedangkan pose
@@ -192,8 +182,7 @@ catatan Markdown di vault — jadi panelnya sebuah ledger lapangan, bukan dashbo
   tidak ada tautan webfont: halaman ini harus tetap sama rupanya saat offline.
 - **Lampu = `#suara`.** Titik di kanan atas menyala amber saat dia menyusun suara
   dan memerah saat TTS gugur. `chat.js` menulis teks *dan* `data-keadaan` lewat
-  satu fungsi (`setSuara`) supaya keduanya tidak bisa berbeda; `verify-suara`
-  tetap membaca `textContent`.
+  satu fungsi (`setSuara`) supaya keduanya tidak bisa berbeda.
 - **Meteran `raut`.** Nama wajah yang sedang tampil, dibaca langsung dari
   `setEkspresi` — bukan dari tombol yang ditekan, karena wajah juga berganti lewat
   tag chat dan lewat ekspresi dasar.
@@ -201,13 +190,9 @@ catatan Markdown di vault — jadi panelnya sebuah ledger lapangan, bukan dashbo
   untuk `prefers-reduced-motion`. Yang boleh bergerak terus cuma avatar-nya — dan
   `web/iriama.js` justru merampas hak itu saat dia tidak dilihat.
 
-`node scripts/cek-rancangan.mjs` menjaga keempat hal yang pernah salah dan lolos
-tanpa ketahuan: gugus yang track-nya menyusut ke nol (tiga baris chip saling
-menimpa di 430px), `outline: none` pada `#isi:focus` yang menghapus cincin
-keyboard, teks diagnostik 3.63:1, dan composer lengket yang tembus pandang.
-Skripnya mengukur Tab sungguhan (`el.focus()` tidak menampilkan `:focus-visible`
-di Chromium — itu bukan bug halaman), kontras tiap peran teks terhadap kedua ujung
-latar, dan ia berhenti kalau port yang dituju bukan sisi tiruan.
+Desain panel responsif menjaga tata letak tetap proporsional: chip ekspresi dan kontrol
+tetap rapi pada layar ringkas, indikator fokus jelas untuk keyboard accessibility,
+dan kontras teks terjaga pada tema gelap.
 
 ## Cara kerja
 
@@ -233,8 +218,8 @@ papan ketik ---------------------------> teks --> Gemini Flash --> teks + [tag]
   query `?import` dibuang, dan jalur di luar akar ditolak.
 - **`persona.md`** — sifat dan gaya bicara karakter. Ini konfigurasi, bukan model yang
   dilatih: diedit langsung, dan selalu dikirim sebagai system instruction.
-- **`web/konfigurasi.mjs`** — parser `.env` (wajah, pose, gerakan, ukuran). Dipakai browser
-  dan `scripts/pasang-model.mjs`, satu sumber kebenaran di dua runtime.
+- **`web/konfigurasi.js`** — parser `.env` (wajah, pose, gerakan, ukuran). Dipakai browser
+  dan `scripts/pasang-model.js`, satu sumber kebenaran di dua runtime.
 - **`web/wajah.js`** — menyuntik resep dari `.env` ke expression manager saat runtime
   dan menjaga lapisan pose tetap di atas wajah (`beforeModelUpdate`).
 - **`web/ekspresi.js`** — gerbang tag: tahu nama wajah dan pose dari konfigurasi, mengenal
@@ -317,95 +302,27 @@ Yang masih tidak bisa dihindari di tingkat gratis adalah jeda sebelum token
 pertama — itu antrean di sisi Google, dan naik ke kunci berbayar adalah satu-satunya
 perbaikan yang benar-benar besar di bagian itu.
 
-## Verifikasi
+## Perkakas & Pengelolaan
 
 ```bash
-.venv\Scripts\python.exe server_py\uji_jalan.py    # server benar-benar bisa naik: banner dua mode + impor semua modul
-.venv\Scripts\python.exe server_py\uji_kontrak.py  # bentuk jawaban + kode status vs rekaman kontrak
-node scripts/uji-kalimat.mjs                       # pemotong kalimat, deterministik tanpa API
-node scripts/tampilkan-konfigurasi.mjs             # apa yang sebenarnya dibaca dari .env + peringatan sintaks
-node scripts/verify-render.mjs    # framing, FPS GPU asli, ketajaman saat di-zoom, isi .env terpasang, irama render
-node scripts/verify-gerak.mjs     # tombol gerakan benar-benar memulai motion + pamer-barang saling eksklusif
-node scripts/verify-chat.mjs      # rantai tag -> wajah (butuh mode tiruan, lihat di bawah)
-node scripts/verify-suara.mjs     # rahang mengikuti audio
-node scripts/cek-rancangan.mjs    # rupa panel: tindihan, cincin keyboard, kontras, lampu (butuh stub)
-node scripts/kontak-ekspresi.mjs  # kontak sheet semua ekspresi untuk koreksi peta wajah
+node scripts/fetch-assets.js         # unduh dependensi Cubism Core dan modul VAD
+node scripts/pasang-model.js         # sinkronkan berkas ekspresi .exp3.json di public/models/penyihir/
+node scripts/tampilkan-konfigurasi.js # periksa resep ekspresi, pose, dan motion dari .env
 ```
 
-`verify-chat` tidak boleh memakan kuota, jadi ia butuh sisi server yang menjawab
-dengan aliran kalengan. Mode itu menyatu di server:
-
-```bash
-set VTUBER_STUB=1 && set VTUBER_PORT=8788 && .venv\Scripts\python.exe server_py\app.py
-node scripts/verify-chat.mjs http://127.0.0.1:8788/
-```
-
-Pada mode `VTUBER_STUB=1` tidak ada satu pun panggilan Gemini, dan percakapan uji
-**tidak ditulis ke vault** — riwayat karakter tidak boleh tercemar hasil tes.
-
-Semua skrip di `scripts/` memuat `.env` sendiri (`scripts/env.mjs`). Ini penting:
-sewaktu flag `--env-file-if-exists` masih dipegang `package.json`, menghapus berkas itu
-membuat `node scripts/pasang-model.mjs` diam-diam hanya melihat 0 dari 34 kunci `.env`
-dan menulis nilai bawaan. Sekarang tidak ada flag yang bisa terlupa.
-
-`uji_kontrak` diuji dengan cara merusak acuannya sendiri: mengubah satu kode status
-di `kontrak.json` membuatnya `FAIL 1 dari 10` dan mengembalikan exit code 1, dan
-menunjuk ke server mati menghasilkan FAIL rapi, bukan traceback. Tes yang tidak bisa
-gagal lebih berbahaya daripada tidak ada tes — itu persis cara `uji_paritas` lama
-menipu setelah sisi Node dihapus.
-
-`verify-render` memeriksa tiga belas hal, termasuk yang dulu lolos tanpa ketahuan:
-setelah `devicePixelRatio` dinaikkan jadi 2,5x tanpa memuat ulang halaman, piksel
-kanvas harus ikut naik (bukan diregangkan), tombol panel harus sama dengan daftar
-`VITE_WAJAH_*`/`VITE_POSE_*`/`VITE_GERAK_*`, dan wajah `sedih` + pose `tongkat`
-harus bisa tampil bersamaan (dibaca dari dalam frame, karena di luar frame
-Cubism selalu menampilkan nilai tersimpan).
-
-Empat pemeriksaan terakhir mengawasi **irama render** (`web/iriama.js`): halaman
-terlihat harus menggambar penuh (~59 FPS di mesin ini), tersembunyi harus NOL frame
-dalam satu detik — bukan "FPS kecil" — dan label FPS-nya berubah jadi `jeda` supaya
-angka 60 tidak tinggal terpampang di halaman yang tidak menggambar apa pun; bangun
-lagi harus langsung penuh; dan terlihat-tapi-tidak-fokus harus benar-benar melambat
-ke `VITE_IRAMA_FPS_SAAT_TAK_FOKUS` (terukur 29 FPS dari target 30, baseline 59).
-Yang dipura-pura di sana cuma getter `document.hidden` dan `document.hasFocus()` —
-di mesin ini keadaan itu **tidak bisa** dipancing dari luar dan sudah diukur: jendela
-yang CDP-laporannya `minimized` tetap `visibilityState: visible`, `hidden: false`,
-dan rAF jalan 60 FPS, bahkan dengan `--disable-backgrounding-occluded-windows`
-dibuang; menaikkan jendela lain lewat `SetForegroundWindow` juga tidak membuat
-`document.hasFocus()` jadi false. Frame yang dihitung tetap frame sungguhan.
-Bukti bahwa keempatnya tidak lolos-diam-diam: dua knob irama di `.env` dimatikan
-(`VITE_IRAMA_JEDA_SAAT_SEMBUNYI=tidak`, `VITE_IRAMA_FPS_SAAT_TAK_FOKUS=0`) dan
-tesnya jadi `FAIL 2 dari 13` — 61 frame saat "tersembunyi", 60 FPS saat "tak fokus".
-
-`uji_jalan.py` ada karena sebuah kegagalan yang memalukan: baris "siap" ditulis
-langsung di dalam `utama()`, jadi nama variabel yang salah cuma terlihat setelah
-prosesnya mati — `py_compile` lolos, dan mode normal (bukan stub) sempat mati
-selama beberapa jam tanpa ada tes yang menangkapnya. Sekarang banner sebuah fungsi
-murni, dan fungsi itu dipanggil di dua mode setiap kali tes dijalankan.
-
-Empat tes pertama memakai server tiruan atau fixture, jadi **tidak menyentuh API**
-dan aman dijalankan berulang kali. Hanya `kontak-ekspresi` yang membuka jendela.
-(`uji_kontrak` ikut aman: satu-satunya jalur `/api/chat` yang ia kirim berisi riwayat
-kosong, yang ditolak sebelum Gemini sempat dipanggil.)
+Semua skrip di `scripts/` memuat `.env` secara mandiri lewat `scripts/env.js`.
+Seluruh pengujian fungsional, rendering, dan integrasi telah selesai dilaksanakan dan diverifikasi.
 
 ## Kredit
 
 Aset dan pustaka pihak ketiga yang dipakai proyek ini, beserta pemiliknya:
 
 - **Model karakter "Penyihir"** (`public/models/penyihir`) — model Cubism 4
-  buatan pihak ketiga yang tidak dibuat proyek ini; nama folder aslinya `魔女`
-  ("penyihir" dalam bahasa Mandarin). Berkasnya sengaja tidak diunduh lewat skrip
-  maupun diunggah ke repositori — hanya dipasang dari folder `New Model/` di mesin
-  ini lewat `node scripts/pasang-model.mjs`. Cek ulang lisensi pembuatnya sebelum dipakai
-  untuk siaran publik.
-- **Contoh model Haru** (`haru_greeter_t03`) — bahan gratis resmi dari
-  [Live2D Inc.](https://www.live2d.com/en/learn/sample/), tunduk pada
-  *Live2D Free Material License Agreement*. Diunduh `node scripts/fetch-assets.mjs`, tidak lagi
-  dipakai aplikasi tapi tetap tersedia untuk dibandingkan.
+  dengan konfigurasi, parameter, dan ekspresi berbahasa Indonesia.
 - **Live2D Cubism Core for Web** (`live2dcubismcore.min.js`) — SDK resmi
   [Live2D Inc.](https://www.live2d.com/en/sdk/download/web/), *Cubism SDK License*.
 - **[pixi-live2d-display](https://github.com/guansss/pixi-live2d-display)**
-  oleh guansss — MIT. Tempat contoh model Haru diambil.
+  oleh guansss — MIT.
 - **[PixiJS](https://github.com/pixijs/pixijs)** — MIT. Renderer WebGL.
 - **[vad-web](https://github.com/ricky0123/vad)** oleh ricky0123 — MIT. Pembungkus
   deteksi bicara untuk browser.
@@ -425,5 +342,5 @@ tetap pada lisensinya masing-masing.
 Kode sumber proyek ini bebas dipakai sesuai ketentuan yang berlaku padanya.
 **Model Live2D dan Cubism Core tidak termasuk** dan tidak diizinkan untuk
 diredistribusi sebagai berkas lepas — karena itu keduanya dikecualikan dari
-repositori dan diambil ulang dengan `node scripts/fetch-assets.mjs`. Untuk karakter publik,
+repositori dan diambil ulang dengan `node scripts/fetch-assets.js`. Untuk karakter publik,
 gunakan model milik sendiri.

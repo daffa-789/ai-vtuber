@@ -1,7 +1,7 @@
 // Muat .env sendiri.
 //
 // Dulu flag `--env-file-if-exists=.env` di package.json yang mengurus ini. Setelah
-// package.json dihapus, `node scripts/pasang-model.mjs` tetap jalan TAPI tidak melihat
+// package.json dihapus, `node scripts/pasang-model.js` tetap jalan TAPI tidak melihat
 // satu pun kunci VITE_ (terukur: 0 tanpa flag, 34 dengan flag) sehingga semua resep di
 // .env diabaikan diam-diam dan yang tertulis ke berkas adalah nilai bawaan.
 //

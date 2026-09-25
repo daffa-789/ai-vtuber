@@ -1,12 +1,12 @@
 // Tampilkan konfigurasi avatar yang AKAN dipakai, dibaca dari .env lewat parser
 // yang sama dengan browser. Berguna sebelum menyalahkan model atau kode:
 //
-//   node scripts/tampilkan-konfigurasi.mjs          -- tabel ringkas
-//   node scripts/tampilkan-konfigurasi.mjs --env    -- blok .env siap tempel
+//   node scripts/tampilkan-konfigurasi.js          -- tabel ringkas
+//   node scripts/tampilkan-konfigurasi.js --env    -- blok .env siap tempel
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
-import { envDariDisk } from './env.mjs';
-import { bacaKonfigurasi, blokEnv } from '../web/konfigurasi.mjs';
+import { envDariDisk } from './env.js';
+import { bacaKonfigurasi, blokEnv } from '../web/konfigurasi.js';
 
 const konfig = bacaKonfigurasi(envDariDisk());
 const mentah = (() => {

@@ -1,5 +1,5 @@
 import { EKSPRESI_DASAR, NAMA_POSE, NAMA_WAJAH, kupasTag } from './ekspresi.js';
-import { kalimatSiap } from './kalimat.mjs';
+import { kalimatSiap } from './kalimat.js';
 import { antre, bicarakan, hentikan, selesai } from './suara.js';
 
 const KUNCI_RIWAYAT = 'vtuber.riwayat';
@@ -27,6 +27,10 @@ function gelembung(role, teks) {
   return el;
 }
 
+const API_BASE = typeof window !== 'undefined' && window.location?.protocol === 'file:'
+  ? 'http://127.0.0.1:8787'
+  : '';
+
 export function pasangChat(picuEkspresi, picuPose = () => {}) {
   const riwayat = muat();
   const form = document.getElementById('form');
@@ -38,10 +42,9 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
   let perKalimat = true;
   const suaraEl = document.getElementById('suara');
   /**
-   * Satu-satunya tempat keadaan suara ditulis. Teksnya dibaca verify-suara lewat
-   * textContent; atribut data-keadaan dibaca lampu di index.html. Lewat satu
-   * fungsi begini keduanya tidak bisa saling meninggalkan -- dulu "gagal:" harus
-   * ditebak dari teks di dua tempat.
+   * Satu-satunya tempat keadaan suara ditulis. Teksnya ditampilkan di UI dan
+   * atribut data-keadaan dibaca lampu indikator di index.html. Lewat satu
+   * fungsi begini keduanya tidak bisa saling meninggalkan.
    */
   const setSuara = (teks) => {
     if (!suaraEl) return;
@@ -53,7 +56,7 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
         : 'berbicara';
   };
 
-  fetch('/api/health')
+  fetch(`${API_BASE}/api/health`)
     .then((r) => r.json())
     .then((h) => {
       perKalimat = h?.tts?.perKalimat ?? true;
@@ -95,7 +98,7 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
     });
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ messages: riwayat }),

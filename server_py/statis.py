@@ -1,7 +1,7 @@
 """Sajian berkas statis: web/ (halaman + modul) lalu public/ (model, core, aset).
 
 Menggantikan Vite dev server. Yang dulu dikerjakan Vite dan harus ditiru di sini:
-  * `?import` pada berkas .mjs (onnxruntime-web memakainya) -- cukup dibuang,
+  * `?import` pada modul JS (onnxruntime-web memakainya) -- cukup dibuang,
     karena berkasnya sendiri sudah benar adanya di disk;
   * MIME `.wasm` dan `.moc3` -- salah tipe bikin Cubism menolak memuat model;
   * kunci VITE_* dari .env disuntik ke index.html, karena `import.meta.env`
@@ -56,6 +56,10 @@ def cari(url_path: str) -> Path | None:
             continue  # percobaan path traversal
         if calon.is_file():
             return calon
+        if bersih.endswith(".mjs"):
+            calon_js = (akar / (bersih[:-4] + ".js")).resolve()
+            if calon_js.is_file() and str(calon_js).startswith(str(akar.resolve())):
+                return calon_js
     return None
 
 

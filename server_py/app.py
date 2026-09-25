@@ -1,4 +1,4 @@
-"""Sidecar Python: pengganti server/index.mjs dengan kontrak HTTP yang sama.
+"""Sidecar Python: penyaji backend dengan kontrak HTTP.
 
 Frontend tidak diubah sedikit pun -- /api/health, /api/chat (aliran teks),
 /api/tts (WAV), /api/stt (body WAV mentah) punya bentuk permintaan dan jawaban
@@ -103,11 +103,23 @@ class Sidecar(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.0"  # tanpa keep-alive: aliran diakhiri oleh close
 
     # ── helpers ─────────────────────────────────────────────────────────────
+    def _tambah_cors(self) -> None:
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Range, Authorization")
+
+    def do_OPTIONS(self):  # noqa: N802
+        self.send_response(204)
+        self._tambah_cors()
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def _json(self, kode: int, data: dict) -> None:
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(kode)
         self.send_header("content-type", "application/json; charset=utf-8")
         self.send_header("content-length", str(len(body)))
+        self._tambah_cors()
         self.end_headers()
         self.wfile.write(body)
 
@@ -161,6 +173,7 @@ class Sidecar(BaseHTTPRequestHandler):
         self.send_header("content-length", str(len(isi)))
         self.send_header("cache-control", kendali)
         self.send_header("etag", etag)
+        self._tambah_cors()
         self.end_headers()
         self.wfile.write(isi)
 
@@ -226,6 +239,7 @@ class Sidecar(BaseHTTPRequestHandler):
         self.send_header("cache-control", "no-store")
         self.send_header("x-accel-buffering", "no")
         self.send_header("x-model", terpakai)
+        self._tambah_cors()
         self.end_headers()
 
         # Setelah byte pertama terkirim status tidak bisa diubah lagi, jadi
@@ -249,6 +263,7 @@ class Sidecar(BaseHTTPRequestHandler):
         self.send_header("content-type", "text/plain; charset=utf-8")
         self.send_header("cache-control", "no-store")
         self.send_header("x-model", "stub")
+        self._tambah_cors()
         self.end_headers()
         try:
             for potong in POTONGAN_STUB:
@@ -307,6 +322,7 @@ class Sidecar(BaseHTTPRequestHandler):
         self.send_header("content-length", str(len(wav)))
         self.send_header("cache-control", "no-store")
         self.send_header("x-tts-model", terpakai)
+        self._tambah_cors()
         self.end_headers()
         self.wfile.write(wav)
 
