@@ -4,9 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Elaina</title>
-    <!-- Tanpa ini browser meminta /favicon.ico sendiri dan dapat 404; noise itu
-     menyamarkan galat sungguhan saat halaman diperiksa skrip verifikasi. -->
-    <link rel="icon" href="data:," />
+    <!-- Ikon tab ikut jadi identitas: topi penyihir + lampu amber di atas langit
+         panel. Tetap inline (data URI) karena tanpa ini browser meminta
+         /favicon.ico sendiri, dapat 404, dan noise itu menyamarkan galat
+         sungguhan saat halaman diperiksa skrip verifikasi. -->
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzE0MWEyNiIvPjxwYXRoIGQ9Ik01LjUgMTkuMmM2LjUtMi40IDE0LjUtMi40IDIxIDAtLjkgMi42LTUuMiA0LTEwLjUgNHMtOS42LTEuNC0xMC41LTR6IiBmaWxsPSIjZThiNjczIi8+PHBhdGggZD0iTTEyLjIgMTkuNGMuOS02LjQgMi45LTEwLjIgNC45LTEyLjMgMS4yIDMuMyAyLjIgNy42IDMgMTIuM3oiIGZpbGw9IiNlOGI2NzMiLz48Y2lyY2xlIGN4PSIyNC42IiBjeT0iOC40IiByPSIxLjciIGZpbGw9IiM5ZmQwYzAiLz48L3N2Zz4=" />
+    <meta name="theme-color" content="#0d1119" />
+    <meta name="description" content="Elaina — penyihir keliling yang diajak mengobrol." />
     <!-- Urutan wajib: Cubism core -> Pixi -> pixi-live2d (menempel ke PIXI.live2d).
          Ketiganya berkas UMD di web/lib, tidak ada bundler lagi. -->
     <script src="/live2dcubismcore.min.js"></script>

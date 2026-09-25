@@ -116,19 +116,17 @@ const UKUR = () => {
    tidak menampilkan cincin untuk focus programatik -- diukur dulu, ternyata
    "3px none" untuk tombol yang sama yang berlingkar penuh saat di-Tab. */
 async function jejakTab(page) {
-  // Mulai dari chip pertama. `blur()` saja tidak cukup: setelah sebuah tombol
-  // diklik, kursor fokus keyboard sudah berada di tengah daftar, jadi baris
-  // pertama (raut) terlewat dan pemeriksaan menyangka chip tidak bisa di-Tab.
-  await page.evaluate(() => document.querySelector('#expr button')?.focus());
-  const jejak = [];
-  const terlihat = new Set();
-  for (let i = 0; i < 26; i += 1) {
-    await page.keyboard.press('Tab');
-    const e = await page.evaluate(() => {
-      const el = document.activeElement;
-      if (!el || el === document.body) return null;
+  // Jejaknya diambil dari peristiwa focusin, BUKAN dari membaca activeElement
+  // setelah tiap penekanan. Cara baca-per-tekan sempat melewatkan #isi satu kali:
+  // fokus berpindah lebih cepat daripada sampelnya, jadi jejaknya melompat dari
+  // chip ke Kirim dan tes menyangka input tidak bisa di-Tab.
+  await page.evaluate(() => {
+    window.__jejak = [];
+    document.addEventListener('focusin', (e) => {
+      const el = e.target;
+      if (!el || el === document.body) return;
       const g = getComputedStyle(el);
-      return {
+      window.__jejak.push({
         siapa: el.id || `${el.tagName.toLowerCase()}:${el.textContent.trim().slice(0, 12)}`,
         golongan:
           el.id === 'isi' ? 'isi'
@@ -139,13 +137,18 @@ async function jejakTab(page) {
             : 'lain',
         lingkar: `${g.outlineWidth} ${g.outlineStyle}`,
         cocok: el.matches(':focus-visible'),
-      };
+      });
     });
-    if (!e) break;
-    jejak.push(e);
-    if (e.cocok && /solid/.test(e.lingkar) && parseFloat(e.lingkar) >= 2) terlihat.add(e.siapa);
-  }
-  return { jejak, terlihat: [...terlihat] };
+    // Mulai dari chip pertama: setelah sebuah tombol diklik, kursor fokus sudah di
+    // tengah daftar sehingga baris raut terlewat oleh Tab berikutnya.
+    document.querySelector('#expr button')?.focus();
+  });
+  for (let i = 0; i < 22; i += 1) await page.keyboard.press('Tab');
+  const jejak = await page.evaluate(() => window.__jejak.slice(1));
+  const terlihat = jejak
+    .filter((e) => e.cocok && /solid/.test(e.lingkar) && parseFloat(e.lingkar) >= 2)
+    .map((e) => e.siapa);
+  return { jejak, terlihat };
 }
 
 const daftar = [
