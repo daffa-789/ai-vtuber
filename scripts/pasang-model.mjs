@@ -1,82 +1,31 @@
 // Pasang model karakter dari folder sumber (default: New Model/penyihir) ke
 // public/models/penyihir dengan nama berkas Indonesia.
 //
-// Folder hasilnya tidak ikut ke git (aset Live2D berlisensi, lihat .gitignore),
-// jadi skrip ini yang menyimpan resep pemasangannya: berkas mana yang disalin,
-// sembilan ekspresi yang dirakit dari parameter mentah, dan terjemahan labelnya.
+// Resep wajah, pose, dan gerakan TIDAK lagi ditulis di sini: semuanya dibaca
+// dari .env lewat web/konfigurasi.mjs -- modul yang sama dipakai browser.
+// Berkas .exp3.json hasil skrip ini cuma salinan supaya alat luar (VTube Studio,
+// Cubism Editor) menampilkan wajah yang sama dengan aplikasi.
 //
 //   node scripts/pasang-model.mjs [folder-sumber]
+//
+// Folder hasilnya tidak ikut ke git (aset Live2D berlisensi, lihat .gitignore),
+// jadi skrip inilah yang merekam pemasangannya: berkas mana yang disalin dan
+// bagaimana label Mandarin diterjemahkan.
 import { copyFile, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
+import { envDariDisk } from './env.mjs';
+import { bacaKonfigurasi, ekspresiKeJson } from '../web/konfigurasi.mjs';
 
 const SUMBER = resolve(process.argv[2] ?? 'New Model/penyihir');
 const TUJUAN = resolve('public/models/penyihir');
 const NAMA = 'penyihir';
 
+const konfig = bacaKonfigurasi(envDariDisk());
+const semuaEkspresi = [...konfig.wajah, ...konfig.pose];
+
 // Berkas sumber yang memang tidak dibutuhkan browser.
 const DIABAIKAN = ['Thumbs.db', 'items_pinned_to_model.json'];
-
-// Sembilan wajah untuk sembilan tag di persona.md. Nilainya rentang asli tiap
-// parameter: Param59..72 lapisan model (0..30), sisanya parameter dasar (-1..1).
-const EKSPRESI = {
-  netral: [],
-  senyum: [
-    ['ParamMouthForm', 1],
-    ['ParamEyeLSmile', 1],
-    ['ParamEyeRSmile', 1],
-    ['ParamEyeLOpen', -0.35],
-    ['ParamEyeROpen', -0.35],
-    ['ParamBrowLY', 0.2],
-  ],
-  semangat: [
-    ['Param59', 30], // pupil bintang
-    ['ParamMouthForm', 1],
-    ['ParamEyeLSmile', 0.6],
-    ['ParamEyeRSmile', 0.6],
-    ['ParamEyeLOpen', 0.2],
-    ['ParamEyeROpen', 0.2],
-    ['ParamBrowLY', 0.5],
-  ],
-  kaget: [
-    ['ParamEyeLOpen', 0.4],
-    ['ParamEyeROpen', 0.4],
-    ['ParamBrowLY', 1],
-    ['ParamMouthForm', -0.6],
-    ['Param50', 0.7], // rahang turun
-  ],
-  bingung: [
-    ['Param69', 30], // keringat + bayangan muram
-    ['ParamMouthForm', -0.4],
-    ['ParamBrowLForm', -0.5],
-    ['ParamBrowLY', -0.4],
-  ],
-  lelah: [
-    ['ParamEyeLOpen', -0.7],
-    ['ParamEyeROpen', -0.7],
-    ['ParamBrowLY', -0.5],
-    ['ParamBrowLForm', -0.6],
-    ['ParamMouthForm', -0.3],
-  ],
-  goda: [
-    ['Param60', 30], // pupil hati
-    ['ParamMouthForm', 0.8],
-    ['ParamEyeLOpen', -0.3],
-    ['ParamEyeROpen', -0.3],
-    ['ParamEyeLSmile', 0.7],
-    ['ParamEyeRSmile', 0.7],
-  ],
-  sebal: [
-    ['Param67', 30], // cemberut
-    ['ParamBrowLForm', -0.879],
-    ['ParamBrowLY', -0.727],
-  ],
-  sedih: [
-    ['Param68', 30], // mata berair
-    ['ParamBrowLForm', 1],
-    ['ParamBrowLY', -0.788],
-  ],
-};
 
 // Label parameter Mandarin -> Indonesia, hanya untuk pembaca di editor/Cubism.
 // Id tidak pernah disentuh: physics3.json, moc3, dan ekspresi menunjuk ke Id.
@@ -189,18 +138,50 @@ await rm(TUJUAN, { recursive: true, force: true });
 const moc = await cari(/\.moc3$/);
 const physics = await cari(/\.physics3\.json$/);
 const cdi = await cari(/\.cdi3\.json$/);
-const scene = await cari(/\.motion3\.json$/);
 const akar = moc.replace(/\.moc3$/, '');
-const folderTekstur = `${akar}.8192`;
+
+// Tekstur: model ini datang dengan atlas 8192. Kalau nanti ada atlas ukuran
+// lain di folder sumber, pilih lewat VITE_TEKSTUR di .env -- tidak usah edit kode.
+const kandidat = [`${akar}.${konfig.tekstur}`, konfig.tekstur].filter((f) => existsSync(join(SUMBER, f)));
+if (!kandidat.length) {
+  const ada = (await readdir(SUMBER)).filter((f) => /\.\d{3,5}$/.test(f));
+  throw new Error(
+    `VITE_TEKSTUR="${konfig.tekstur}" tidak ada di ${SUMBER}; yang tersedia: ${ada.join(', ') || '(tidak ada folder tekstur)'}`,
+  );
+}
+const folderTekstur = kandidat[0];
 
 await salin(moc, `${NAMA}.moc3`);
 await salin(physics, `${NAMA}.physics3.json`);
-await salin(scene, 'gerakan/sedih-melambai.motion3.json');
 
 const tekstur = (await readdir(join(SUMBER, folderTekstur))).filter(
   (f) => f.endsWith('.png') && !DIABAIKAN.includes(f),
 );
 for (const t of tekstur) await salin(`${folderTekstur}/${t}`, `tekstur/${t}`);
+
+// Gerakan. Motion aslinya Loop:true; kalau dibiarkan, memotongnya paksa dengan
+// stopAllMotifs membuat parameter terakhir yang ia tulis membeku -- air matanya
+// tetap mengalir terus. Dengan loop dimatikan (bawaan), motion selesai sendiri,
+// memudar, dan parameter kembali ke default.
+const isiSumber = await readdir(SUMBER);
+/** @type {{grup: string, file: string}[]} */
+const dipasang = [];
+for (const g of konfig.gerakan) {
+  const namaSumber = [g.sumber, basename(g.berkas)].filter(Boolean).find((f) => isiSumber.includes(f));
+  if (!namaSumber) {
+    console.warn(
+      `  LEWAT  ${g.nama}: tidak menemukan ${[g.sumber, basename(g.berkas)].join(' / ')} di ${SUMBER}`,
+    );
+    continue;
+  }
+  const json = JSON.parse(await readFile(join(SUMBER, namaSumber), 'utf8'));
+  if (json.Meta && !g.ulang) json.Meta.Loop = false;
+  await tulis(g.berkas, JSON.stringify(json, null, 2) + '\n');
+  dipasang.push({ grup: g.grup, file: g.berkas });
+}
+/** @type {Record<string, {File: string}[]>} */
+const Motions = {};
+for (const p of dipasang) (Motions[p.grup] ??= []).push({ File: p.file });
 
 // Label cdi3 dialihbahasakan; Id + GroupId dibiarkan.
 const berkasCdi = JSON.parse(await readFile(join(SUMBER, cdi), 'utf8'));
@@ -214,17 +195,10 @@ for (const p of berkasCdi.Parameters) {
 }
 await tulis(`${NAMA}.cdi3.json`, JSON.stringify(berkasCdi, null, 2) + '\n');
 
-for (const [nama, isi] of Object.entries(EKSPRESI)) {
+for (const e of semuaEkspresi) {
   await tulis(
-    `ekspresi/${nama}.exp3.json`,
-    JSON.stringify(
-      {
-        Type: 'Live2D Expression',
-        Parameters: isi.map(([id, value]) => ({ Id: id, Value: value, Blend: 'Add' })),
-      },
-      null,
-      2,
-    ) + '\n',
+    `ekspresi/${e.nama}.exp3.json`,
+    JSON.stringify(ekspresiKeJson(e, konfig.pudarDetik), null, 2) + '\n',
   );
 }
 
@@ -238,10 +212,10 @@ await tulis(
         Textures: tekstur.map((t) => `tekstur/${t}`),
         Physics: `${NAMA}.physics3.json`,
         DisplayInfo: `${NAMA}.cdi3.json`,
-        Expressions: Object.keys(EKSPRESI).map((n) => ({ Name: n, File: `ekspresi/${n}.exp3.json` })),
+        Expressions: semuaEkspresi.map((e) => ({ Name: e.nama, File: `ekspresi/${e.nama}.exp3.json` })),
         // Sengaja BUKAN grup "Idle": pustaka mematikan kedip otomatis begitu ada
         // motion yang berjalan, dan napas/goyang kepala sudah disetel di dalamnya.
-        Motions: { isyarat: [{ File: 'gerakan/sedih-melambai.motion3.json' }] },
+        Motions,
       },
       Groups: [
         { Target: 'Parameter', Name: 'EyeBlink', Ids: ['ParamEyeLOpen', 'ParamEyeROpen'] },
@@ -255,6 +229,7 @@ await tulis(
 
 const sisa = berkasCdi.Parameters.filter((p) => /[^\x00-\x7F]/.test(p.Name));
 console.log(
-  `selesai -> ${TUJUAN}\n  ${tekstur.length} tekstur, ${Object.keys(EKSPRESI).length} ekspresi, ` +
-    `${berkasCdi.Parameters.length} label parameter (${sisa.length} masih memakai karakter CJK)`,
+  `selesai -> ${TUJUAN}\n  ${tekstur.length} tekstur (${folderTekstur}), ` +
+    `${konfig.wajah.length} wajah + ${konfig.pose.length} pose, ${dipasang.length} gerakan`,
 );
+for (const p of konfig.peringatan) console.warn(`  PERINGATAN ${p}`);

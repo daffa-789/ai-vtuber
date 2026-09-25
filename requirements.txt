@@ -1,0 +1,12 @@
+# Sisi server Python TIDAK butuh paket apa pun -- semuanya stdlib Python 3.10
+# (http.server, urllib, struct, json, base64). Jadi `pip install -r requirements.txt`
+# sengaja kosong: tidak ada yang bisa busuk, tidak ada yang perlu di-update.
+#
+# Tempat ini tetap disiapkan karena jalur training/ekspor dataset nanti pasti
+# membutuhkan paket. Yang belum dipasang dan memang belum perlu:
+#   python-dotenv   -> tidak perlu, konfig.py punya parser .env sendiri
+#   requests        -> tidak perlu, urllib sudah cukup
+#   webview         -> baru perlu kalau halaman dibuka dari jendela Python (pywebview)
+#   datasets / torch-> baru perlu kalau benar-benar mulai melatih; di mesin ini
+#                      (Iris Xe, tanpa GPU NVIDIA) torch hanya jalan di CPU dan itu
+#                      lambat untuk fine-tune -- ukur dulu sebelum menginstal 2 GB.

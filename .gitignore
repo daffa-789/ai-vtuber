@@ -1,9 +1,18 @@
 node_modules/
 dist/
+# Lingkungan Python: interpreter + salinan paket, bukan sumber.
+.venv/
+__pycache__/
+*.pyc
 .env
+# Salinan .env (mis. cadangan saat menguji) berisi API key yang sama.
+.env.*
+!.env.example
 .shots/
+# Log sementara (mis. sidecar yang dijalankan dari skrip uji).
+*.log
 
-# Aset berlisensi Live2D: diunduh ulang dengan `npm run assets`,
+# Aset berlisensi Live2D: diunduh ulang dengan `node scripts/fetch-assets.mjs`,
 # bukan diedarkan lewat repositori ini.
 public/models/haru/
 public/live2dcubismcore.min.js

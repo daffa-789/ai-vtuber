@@ -3,25 +3,60 @@
 Teman desktop berbasis Live2D yang bisa diajak ngobrol lewat teks maupun suara,
 menjawab dengan suara, dan menggerakkan wajah serta rahang sesuai isi pembicaraannya.
 
-Status: renderer, loop chat, ekspresi, text-to-speech, input mikrofon, dan memori
-jangka panjang sudah berjalan. Memory karakter ditulis sebagai catatan Markdown di
+Status: renderer, loop chat, ekspresi, text-to-speech, dan memori jangka panjang sudah
+berjalan. Memory karakter ditulis sebagai catatan Markdown di
 vault Obsidian, jadi bisa dibaca dan disunting langsung.
 
 ## Menjalankan
 
-Prasyarat: Node.js 20.6+ (butuh flag `--env-file-if-exists`).
+Prasyarat: **Python 3.10** untuk aplikasi, dan **Node.js** hanya untuk skrip perkakas
+(`scripts/*.mjs` — pemasangan model, pengunduh aset, verifier). Tidak ada `npm install`:
+pustaka browser sudah divendur di `web/lib/` dan sisi server murni stdlib Python.
 
 ```bash
-npm install
-npm run assets        # unduh Cubism core + contoh model Haru + salin aset VAD
-npm run pasang-model  # pasang model karakter dari New Model/penyihir (lihat Model karakter)
-cp .env.example .env  # lalu isi GEMINI_API_KEY
-npm run server        # sidecar di 127.0.0.1:8787
-npm run dev           # buka http://localhost:5173
+python -m venv .venv
+.venv\Scripts\python.exe server_py\app.py    # satu-satunya proses yang perlu dijalankan
+# buka http://127.0.0.1:8787/  (port ikut VTUBER_PORT di .env)
 ```
 
-Di halaman, klik **nyalakan** pada baris Mikrofon sekali — browser meminta izin mic,
-dan setelah itu cukup bicara. Mengetik tetap bisa dipakai berdampingan.
+Sekali jalan dari nol — aset karakter tidak ikut ke git:
+
+```bash
+node scripts/fetch-assets.mjs     # Cubism core + contoh model + aset VAD
+node scripts/pasang-model.mjs     # pasang model karakter dari New Model/penyihir
+cp .env.example .env              # lalu isi GEMINI_API_KEY
+```
+
+Di halaman, ketik pesannya di kolom bawah. Jalur mikrofon **sedang dimatikan** —
+pipingnya masih ada (`web/mikrofon.js`, `/api/stt`, aset VAD), tinggal disambung lagi.
+
+## Arsitektur setelah rombakan Python
+
+Yang dulu Node sekarang Python: satu proses `server_py/app.py` memegang API key, memanggil
+Gemini (chat stream / TTS / STT), menulis memori ke vault, **dan** menyajikan halaman beserta
+aset model. Tidak ada bundler, tidak ada dev server terpisah.
+
+Yang tetap JavaScript: `web/*.js`. Bukan karena pilih — Live2D hanya bisa digambar di browser,
+jadi Cubism Core, Pixi, dan `pixi-live2d-display` adalah JS/WASM. Ketiganya berkas UMD siap
+pakai yang dimuat dengan `<script>` biasa, sehingga tidak ada langkah build sama sekali.
+
+| Dahulu (Node + Vite) | Sekarang |
+|---|---|
+| `server/index.mjs` | `server_py/app.py` + `gemini.py` + `memori.py` + `vault.py` |
+| `npm run dev` (Vite di :5173) | `server_py/statis.py` menyajikan `web/` dan `public/` |
+| `import.meta.env.VITE_*` | `window.__VTUBER_ENV__`, disuntikkan Python ke `index.html` |
+| `src/*.ts` + `tsconfig.json` | `web/*.js` — ESM asli browser |
+| `node_modules` (270 MB) | `web/lib/` (647 KB: pixi + cubism4 + vad) |
+
+Sisi Python sengaja **tanpa dependensi**: `requirements.txt` kosong, `.venv` hanya untuk
+memisahkan interpreter. Parser resep wajah/pose tetap satu berkas (`web/konfigurasi.mjs`) yang
+dipakai browser DAN skrip Node, supaya nilainya tidak mungkin beda di dua tempat.
+
+```bash
+.venv\Scripts\python.exe server_py\uji_kontrak.py --rekam   # catat jawaban yang benar sebagai acuan
+.venv\Scripts\python.exe server_py\uji_kontrak.py          # 10 pemeriksaan kontrak vs acuan
+node scripts/uji-kalimat.mjs                               # pemotong kalimat, deterministik tanpa API
+```
 
 ## Model karakter
 
@@ -37,14 +72,17 @@ public/models/penyihir/
   penyihir.cdi3.json        label parameter untuk editor — sudah dialihbahasakan
   tekstur/texture_00.png    8192x8192
   tekstur/texture_01.png    4096x8192
-  ekspresi/*.exp3.json      sembilan wajah, namanya sama dengan tag di persona.md
+  ekspresi/*.exp3.json      salinan dari resep di .env, untuk alat luar (VTube/Cubism)
   gerakan/sedih-melambai.motion3.json
 ```
 
-Sembilan ekspresi itu saya susun sendiri dari lapisan parameter aslinya: model ini
+Sembilan wajah itu saya susun sendiri dari lapisan parameter aslinya: model ini
 datang dengan 13 berkas ekspresi bernama singkatan pinyin Mandarin, dan sebagian
-besarnya bukan wajah melainkan aksesori. Hasil pembacaan potret (`.shots/lembar-f.png`,
-`.shots/lembar-g.png`), tersimpan juga sebagai label di `penyihir.cdi3.json`:
+besarnya bukan wajah melainkan aksesori. **Resepnya tidak lagi tertulis di kode** --
+masing-masing adalah satu baris `VITE_WAJAH_*` / `VITE_POSE_*` di `.env`, dan
+berkas `.exp3.json` di atas hanya hasil cetaknya. Hasil pembacaan potret
+(`.shots/lembar-f.png`, `.shots/lembar-g.png`), tersimpan juga sebagai label di
+`penyihir.cdi3.json`:
 
 | Singkatan | Arti sebenarnya | Dipakai untuk |
 |---|---|---|
@@ -52,7 +90,7 @@ besarnya bukan wajah melainkan aksesori. Hasil pembacaan potret (`.shots/lembar-
 | `sq` | cemberut | `sebal` |
 | `h` | setetes keringat + bayangan muram di mata | `bingung` |
 | `xx` / `x` | pupil bintang / pupil hati | `semangat` / `goda` |
-| `mz` `fz` `yj` `zs1` `zs2` `cw` `hdj` | topi, tongkat sihir, kacamata, memamerkan barang, hantu kecil, tangan memeluk | tidak dipakai chat; masih ada di berkas sumber |
+| `mz` `fz` `yj` `zs1` `zs2` `cw` `hdj` | topi, tongkat sihir, kacamata, memamerkan barang, hantu kecil, tangan memeluk | kanal `[prop:...]`, ditumpuk di atas wajah |
 
 `netral`, `senyum`, `kaget`, dan `lelah` tidak punya lapisan sendiri di model aslinya,
 jadi keempatnya saya rakit dari parameter dasar (`ParamEyeLOpen`, `ParamBrowLY`,
@@ -63,35 +101,123 @@ Napass, goyang kepala, dan kedip tidak butuh berkas motion — pustaka `pixi-liv
 sudah menyetelnya sendiri, dan itu alasan `gerakan/` sengaja tidak dipasang sebagai Idle:
 kalau ada motion yang jalan, pustaka justru mematikan kedip otomatisnya.
 
+## Diatur lewat .env
+
+Semua yang bergerak, berubah wajah, dan mengukur piksel dibaca dari satu berkas:
+`.env` isinya, `web/konfigurasi.mjs` parsernya — dipakai browser DAN
+`node scripts/pasang-model.mjs`, jadi tidak bisa beda. Cara melihat apa yang sedang terpakai:
+
+```bash
+node scripts/tampilkan-konfigurasi.mjs            # tabel wajah/pose/gerakan + peringatan sintaks
+node scripts/tampilkan-konfigurasi.mjs --env   # blok .env siap tempel dari nilai efektif
+```
+
+| Yang mau diubah | Kunci |
+|---|---|
+| Raut wajah (9) | `VITE_WAJAH_<NAMA>="ParamMouthForm=1 ParamEyeLOpen=-0.35"` |
+| Pose / aksesoris (7) | `VITE_POSE_<NAMA>="Param72=30"`, tag `[prop:tongkat]` dan `[prop:tongkat=mati]` |
+| Wajah saat dibuka dan lama pudarnya | `VITE_EKSPRESI_DASAR`, `VITE_PUDAR_WAJAH_MS` |
+| Gerakan (motion) | `VITE_GERAK_<NAMA>="grup=isyarat berkas=... sumber=... ulang=false"` |
+| Ukuran kotak avatar (CSS px) | `VITE_PANGGUNG_UKURAN`, `VITE_PANGGUNG_LEBAR`, `VITE_PANGGUNG_TINGGI` |
+| Seberapa besar karakter mengisi kotak | `VITE_AVATAR_ZOOM`, `VITE_AVATAR_X`, `VITE_AVATAR_JANGKAR` |
+| Jumlah piksel nyata / ketajaman | `VITE_RENDER_SKALA`, `VITE_RENDER_SKALA_MAKS`, `VITE_RENDER_HALUS` |
+| Kedip, napas, kepala ikut kursor | `VITE_KEDIP`, `VITE_NAPAS`, `VITE_IKUTI_KURSOR` |
+| Atlas tekstur yang dipasang | `VITE_TEKSTUR` (model ini sudah 8192, maksimum dari aslinya) |
+| Berapa lama dia boleh menggambar (hemat GPU) | `VITE_IRAMA_JEDA_SAAT_SEMBUNYI`, `VITE_IRAMA_FPS_SAAT_TAK_FOKUS` |
+
+Satu sintaks untuk semuanya: token `Id=Nilai` dipisah spasi; blend default `Add`
+menambah di atas nilai bawaan parameter, `:Overwrite` menulis mentah, `:Multiply`
+mengali; `kosong` berarti tanpa parameter. Nama kunci diterjemahkan apa adanya —
+`VITE_POSE_HANTU_KECIL` menjadi pose `hantu-kecil`. Id yang tidak ada di model atau
+nilai yang keluar rentang dilaporkan di status halaman ("N konfigurasi perlu dicek"),
+di log browser, dan oleh `node scripts/verify-render.mjs`. Ubah nilainya cukup
+muat ulang halaman; hanya gerakan baru yang perlu `node scripts/pasang-model.mjs` lagi
+supaya berkasnya ikut dipasang.
+
+Wajah memakai sistem ekspresi pustaka (satu wajah pada satu waktu), sedangkan pose
+ditulis sebagai lapisan parameter paling akhir setiap frame — sehingga tongkat,
+kacamata, atau hantu kecil tetap menempel walau wajahnya sedang sedih.
+
+### Irama render: jangan menggambar untuk orang yang tidak melihat
+
+Sebelum ada `web/iriama.js`, kanvas meminta frame secepat mungkin terus-menerus —
+termasuk saat jendelanya tertutup jendela lain atau jadi overlay selalu-di-depan
+yang sedang tidak dipandang. Pada Iris Xe itu berarti panas dan baterai. Dua knob:
+
+| Knob | Arti | Bawaan |
+|---|---|---|
+| `VITE_IRAMA_JEDA_SAAT_SEMBUNYI` | `document.hidden` (tab latar, jendela diminimakan) → `ticker.stop()`: nol frame, tidak ada `requestAnimationFrame` yang tertinggal di antrean | `true` |
+| `VITE_IRAMA_FPS_SAAT_TAK_FOKUS` | terlihat tapi tidak fokus → `ticker.maxFPS` dipasang ke angka ini; `0` = tidak dibatasi | `30` |
+
+Yang **tidak** tersentuh suara: audio diputar elemen `<audio>` dan rahang dibaca
+dari posisi audio itu, jadi saat halaman tersembunyi mulutnya membeku sementara
+suaranya tetap jalan, dan begitu muncul lagi rahangnya langsung berada di fase yang
+benar — bukan mengulang dari nol. `app.ticker` juga bukan ticker global, dan model
+Live2D terdaftar di ticker itu, jadi satu `stop()` menghentikan pembaruan parameter
+sekaligus penggambaran (terukur: 0 kali `internalModel.update` dalam 600 ms).
+
+Satu temuan yang mengubah cara baca angka lama: "tab latar cuma 1 FPS" bukan
+pencapaian hemat — itu Chromium yang memotong sendiri, dan dia melakukannya hanya
+untuk tab. Jendela yang terlihat-tapi-tidak-fokus tetap 60 FPS, dan di mesin ini
+Chrome bahkan tidak pernah melaporkan `hidden` untuk jendela yang diminimakan
+(terukur `windowState=minimized`, `visibilityState=visible`, rAF tetap 60).
+Jadi bagian yang benar-benar bekerja di hardware ini adalah batas 30 FPS saat tidak
+fokus — itu juga yang dibutuhkan Fase 5, karena overlay selalu-di-depan tidak akan
+pernah "tersembunyi".
+
+### Kenapa avatar pernah terlihat burik saat di-zoom
+
+Bukan tekstur: atlas model ini 8192 px, jauh di atas ukuran layar. Penyebabnya
+kanvas WebGL — jumlah pikselnya ditetapkan sekali saat halaman dibuka, sementara
+zoom browser mengubah `devicePixelRatio` setelahnya; browser kemudian merentangkan
+gambar lama. Kini resolusinya dihitung ulang tiap rasio piksel berubah (media query
+yang dipasang ulang setiap kali) dan tiap resize, jadi piksel nyata kanvas selalu
+`ukuran CSS × devicePixelRatio`.
+
+Kalau GPU mulai kalah, turunkan `VITE_RENDER_SKALA_MAKS` atau paksa satu angka lewat
+`VITE_RENDER_SKALA`. Status halaman menampilkan `738×738 css · 886×886 px · 1.25×` —
+kalau angka CSS dan piksel tidak sebanding, kanvas sedang diregangkan.
+
 ## Cara kerja
 
 ```
-mikrofon -> VAD Silero (lokal) -> WAV -> STT  -\
-                                                >-- teks --> Gemini Flash --> teks + [tag]
-papan ketik ----------------------------------/                                    |
-                                                                              ekspresi Live2D
-                                                              Gemini TTS -> WAV 24kHz
-                                                                       |
-                                                        AnalyserNode -> ParamMouthOpenY
+papan ketik ---------------------------> teks --> Gemini Flash --> teks + [tag]
+                                                                    |
+                                                              ekspresi Live2D
+                                                Gemini TTS -> WAV 24kHz
+                                                         |
+                                          AnalyserNode -> ParamMouthOpenY
+
+(mikrofon -> VAD Silero -> STT masih terpasang di sisi server, tapi belum
+ ada tombolnya di halaman — lihat catatan di bagian Menjalankan)
 ```
 
-- **`server/index.mjs`** — sidecar Node. Satu-satunya pemegang API key, hanya
-  listen di `127.0.0.1`, dan membungkus PCM mentah dari Gemini menjadi WAV.
-  Sudah dilengkapi percobaan ulang berjenjang untuk 503/429.
-- **`persona.md`** — sifat dan gaya bicara karakter. Ini konfigurasi, bukan model
-  yang dilatih: diedit langsung, dan selalu dikirim sebagai system instruction.
-- **`src/ekspresi.ts`** — menerjemahkan tag dari model menjadi nama ekspresi
-  Live2D, sekaligus mengupas tag itu dari layar saat teks masih mengalir.
-- **`src/mikrofon.ts`** — VAD berjalan di mesin ini; hanya potongan yang terdeteksi
-  sebagai bicara yang dikirim untuk disalin.
-- **`src/suara.ts`** — memutar WAV dan mengukur amplitudo per frame.
-- **`server/obsidian.mjs`** — menulis/membaca catatan karakter ke vault Obsidian lewat
-  Local REST API; token diambil dari `~/.qoder/settings.json`, bukan dari berkas di repo.
-- **`server/memori.mjs`** — kebijakan memori: apa yang masuk prompt, bagaimana mood
+- **`server_py/app.py`** — satu proses untuk semuanya: API key, Gemini (chat/TTS/STT),
+  memori, dan sajian halaman. Hanya listen di `127.0.0.1`, membungkus PCM mentah jadi WAV,
+  dan mencoba berjenjang saat model utama kena 503/429.
+- **`server_py/gemini.py`** — REST Gemini lewat stdlib. `alir()` membuka koneksi SEBELUM
+  mengembalikan iterator; kalau tidak, kegagalan model utama tidak tertangkap dan fallback
+  cadangan tidak pernah jalan.
+- **`server_py/statis.py`** — pengganti dev server: `web/` lalu `public/`, MIME benar,
+  query `?import` dibuang, dan jalur di luar akar ditolak.
+- **`persona.md`** — sifat dan gaya bicara karakter. Ini konfigurasi, bukan model yang
+  dilatih: diedit langsung, dan selalu dikirim sebagai system instruction.
+- **`web/konfigurasi.mjs`** — parser `.env` (wajah, pose, gerakan, ukuran). Dipakai browser
+  dan `scripts/pasang-model.mjs`, satu sumber kebenaran di dua runtime.
+- **`web/wajah.js`** — menyuntik resep dari `.env` ke expression manager saat runtime
+  dan menjaga lapisan pose tetap di atas wajah (`beforeModelUpdate`).
+- **`web/ekspresi.js`** — gerbang tag: tahu nama wajah dan pose dari konfigurasi, mengenal
+  kanal `[prop:...]`, dan mengupas tag itu dari layar saat teks masih mengalir.
+- **`web/main.js`** — kanvas + resolusi (ikut `devicePixelRatio` terus-menerus), tombol
+  panel dari `.env`, dan gerakan ulang parameter setelah motion selesai.
+- **`web/mikrofon.js`** — VAD Silero di mesin ini; hanya potongan yang terdeteksi sebagai
+  bicara yang dikirim untuk disalin. **Belum tersambung ke halaman** — tidak ada modul yang
+  mengimpornya, jadi aset `public/vad` dan `public/ort` tidak pernah diunduh browser.
+- **`web/suara.js`** — memutar WAV dan mengukur amplitudo per frame.
+- **`server_py/vault.py`** — menulis/membaca catatan karakter ke vault Obsidian lewat Local
+  REST API; token diambil dari `~/.qoder/settings.json`, bukan dari berkas di repo.
+- **`server_py/memori.py`** — kebijakan memori: apa yang masuk prompt, bagaimana mood
   bergeser dari tag ekspresi, dan kapan fakta baru diekstrak.
-- **Setengah dupleks** — mikrofon ditahan selama dia bicara, dan sengaja tidak
-  menyerahkan audio yang terpotong oleh penahanan itu, supaya dia tidak menyalin
-  suaranya sendiri.
 - **Gerak mulut** tidak memakai penempatan fonem per kata, melainkan amplitudo
   audio yang sedang diputar, dan ditulis pada event `afterMotionUpdate` supaya
   tidak ditimpa animasi idle.
@@ -125,31 +251,110 @@ percakapan tetap berjalan.
 
 ## Batas kuota yang nyata
 
-Dengan kunci API tingkat gratis, terukur langsung dari jawaban server:
+Angka di bawah diukur langsung dengan kunci tingkat gratis ini, bukan asumsi.
+Model mana yang "boleh" tergantung kunci: `models.list()` bisa memperlihatkan
+model yang ternyata 404 saat dipakai.
 
-| Model | Kepentingan | Batas terukur |
+| Model | Kepentingan | Terukur 2026-09-24 |
 |---|---|---|
 | `gemini-3.5-transcribe` | penyalin suara | **3 permintaan per menit** |
-| `gemini-3.5-flash` | otak percakapan | lolos, tapi pernah 503 "high demand" |
-| `gemini-2.5-flash-preview-tts` | suara | lolos, 8-31 detik per kalimat |
+| `gemini-3.5-flash` | otak percakapan | **0/3 gagal** — 503 "high demand" |
+| `gemini-3.5-flash-lite` | otak percakapan | 0/3 gagal — 503 |
+| `gemini-flash-lite-latest` | otak percakapan | 1/3, dan yang lolos butuh 61 dtk |
+| `gemini-2.5-flash`, `-lite` | otak percakapan | 404 — tidak dibuka untuk akun ini |
+| **`gemini-3-flash-preview`** | otak percakapan | **3/3**, 3,7 / 4,2 / 21,9 dtk <- dipakai |
+| `gemini-2.5-flash-preview-tts` | suara | **49-77 dtk** untuk 5 dtk audio <- ditinggalkan |
+| **`gemini-3.8-flash-lite-tts`** | suara | **2,6-3,8 dtk** untuk 5 dtk audio <- dipakai |
+| `gemini-3.8-flash-tts` | suara | 3,3-3,9 dtk (jadi `VTUBER_TTS_CADANGAN`) |
 
-Angka itu membuat mode "selalu mendengarkan" tidak nyaman dipakai sebelum akunmu
-naik tingkat. Ganti model lewat `VTUBER_STT_MODEL` di `.env` jika mentok.
+## Berapa lama sampai dia bersuara
+
+Dulu: teks 5-25 dtk (sering 503) **lalu** sintesis 49-77 dtk = belasan sampai
+puluhan detik diam. Sekarang `/api/chat` mencoba `VTUBER_MODEL` lalu setiap
+`VTUBER_MODEL_CADANGAN` sampai ada yang menjawab (503 itu antrean sementara dan
+berbeda per model), dan setiap kalimat yang sudah selesai langsung disintesis
+tanpa menunggu jawaban lengkap:
+
+```
+token pertama  --->  SUARA PERTAMA TERDENGAR     selesai
+   10,0 dtk                13,3 dtk            15,1 dtk   (2 potongan)
+```
+
+Mode per kalimat itu menambah satu panggilan TTS per kalimat. Kalau kunci sering
+kena batas permintaan per menit, matikan dengan `VTUBER_TTS_PER_KALIMAT=false`.
+Yang masih tidak bisa dihindari di tingkat gratis adalah jeda sebelum token
+pertama — itu antrean di sisi Google, dan naik ke kunci berbayar adalah satu-satunya
+perbaikan yang benar-benar besar di bagian itu.
 
 ## Verifikasi
 
 ```bash
-node scripts/verify-render.mjs      # framing, FPS pada GPU asli, ketahanan setelah resize
-node scripts/verify-chat.mjs        # rantai tag -> wajah
-node scripts/verify-suara.mjs       # rahang mengikuti audio
-node scripts/verify-mikrofon.mjs    # mic -> VAD -> STT -> balasan -> wajah
-node scripts/kontak-ekspresi.mjs    # kontak sheet 8 ekspresi untuk koreksi peta wajah
+.venv\Scripts\python.exe server_py\uji_jalan.py    # server benar-benar bisa naik: banner dua mode + impor semua modul
+.venv\Scripts\python.exe server_py\uji_kontrak.py  # bentuk jawaban + kode status vs rekaman kontrak
+node scripts/uji-kalimat.mjs                       # pemotong kalimat, deterministik tanpa API
+node scripts/tampilkan-konfigurasi.mjs             # apa yang sebenarnya dibaca dari .env + peringatan sintaks
+node scripts/verify-render.mjs    # framing, FPS GPU asli, ketajaman saat di-zoom, isi .env terpasang, irama render
+node scripts/verify-gerak.mjs     # tombol gerakan benar-benar memulai motion + pamer-barang saling eksklusif
+node scripts/verify-chat.mjs      # rantai tag -> wajah (butuh mode tiruan, lihat di bawah)
+node scripts/verify-suara.mjs     # rahang mengikuti audio
+node scripts/kontak-ekspresi.mjs  # kontak sheet semua ekspresi untuk koreksi peta wajah
 ```
+
+`verify-chat` tidak boleh memakan kuota, jadi ia butuh sisi server yang menjawab
+dengan aliran kalengan. Mode itu menyatu di server:
+
+```bash
+set VTUBER_STUB=1 && set VTUBER_PORT=8788 && .venv\Scripts\python.exe server_py\app.py
+node scripts/verify-chat.mjs http://127.0.0.1:8788/
+```
+
+Pada mode `VTUBER_STUB=1` tidak ada satu pun panggilan Gemini, dan percakapan uji
+**tidak ditulis ke vault** — riwayat karakter tidak boleh tercemar hasil tes.
+
+Semua skrip di `scripts/` memuat `.env` sendiri (`scripts/env.mjs`). Ini penting:
+sewaktu flag `--env-file-if-exists` masih dipegang `package.json`, menghapus berkas itu
+membuat `node scripts/pasang-model.mjs` diam-diam hanya melihat 0 dari 34 kunci `.env`
+dan menulis nilai bawaan. Sekarang tidak ada flag yang bisa terlupa.
+
+`uji_kontrak` diuji dengan cara merusak acuannya sendiri: mengubah satu kode status
+di `kontrak.json` membuatnya `FAIL 1 dari 10` dan mengembalikan exit code 1, dan
+menunjuk ke server mati menghasilkan FAIL rapi, bukan traceback. Tes yang tidak bisa
+gagal lebih berbahaya daripada tidak ada tes — itu persis cara `uji_paritas` lama
+menipu setelah sisi Node dihapus.
+
+`verify-render` memeriksa tiga belas hal, termasuk yang dulu lolos tanpa ketahuan:
+setelah `devicePixelRatio` dinaikkan jadi 2,5x tanpa memuat ulang halaman, piksel
+kanvas harus ikut naik (bukan diregangkan), tombol panel harus sama dengan daftar
+`VITE_WAJAH_*`/`VITE_POSE_*`/`VITE_GERAK_*`, dan wajah `sedih` + pose `tongkat`
+harus bisa tampil bersamaan (dibaca dari dalam frame, karena di luar frame
+Cubism selalu menampilkan nilai tersimpan).
+
+Empat pemeriksaan terakhir mengawasi **irama render** (`web/iriama.js`): halaman
+terlihat harus menggambar penuh (~59 FPS di mesin ini), tersembunyi harus NOL frame
+dalam satu detik — bukan "FPS kecil" — dan label FPS-nya berubah jadi `jeda` supaya
+angka 60 tidak tinggal terpampang di halaman yang tidak menggambar apa pun; bangun
+lagi harus langsung penuh; dan terlihat-tapi-tidak-fokus harus benar-benar melambat
+ke `VITE_IRAMA_FPS_SAAT_TAK_FOKUS` (terukur 29 FPS dari target 30, baseline 59).
+Yang dipura-pura di sana cuma getter `document.hidden` dan `document.hasFocus()` —
+di mesin ini keadaan itu **tidak bisa** dipancing dari luar dan sudah diukur: jendela
+yang CDP-laporannya `minimized` tetap `visibilityState: visible`, `hidden: false`,
+dan rAF jalan 60 FPS, bahkan dengan `--disable-backgrounding-occluded-windows`
+dibuang; menaikkan jendela lain lewat `SetForegroundWindow` juga tidak membuat
+`document.hasFocus()` jadi false. Frame yang dihitung tetap frame sungguhan.
+Bukti bahwa keempatnya tidak lolos-diam-diam: dua knob irama di `.env` dimatikan
+(`VITE_IRAMA_JEDA_SAAT_SEMBUNYI=tidak`, `VITE_IRAMA_FPS_SAAT_TAK_FOKUS=0`) dan
+tesnya jadi `FAIL 2 dari 13` — 61 frame saat "tersembunyi", 60 FPS saat "tak fokus".
+
+`uji_jalan.py` ada karena sebuah kegagalan yang memalukan: baris "siap" ditulis
+langsung di dalam `utama()`, jadi nama variabel yang salah cuma terlihat setelah
+prosesnya mati — `py_compile` lolos, dan mode normal (bukan stub) sempat mati
+selama beberapa jam tanpa ada tes yang menangkapnya. Sekarang banner sebuah fungsi
+murni, dan fungsi itu dipanggil di dua mode setiap kali tes dijalankan.
 
 Empat tes pertama memakai server tiruan atau fixture, jadi **tidak menyentuh API**
 dan aman dijalankan berulang kali. Hanya `kontak-ekspresi` yang membuka jendela.
-`verify-mikrofon` memakai mikrofon palsu Chromium yang memutar `test/fixture-suara.wav`,
-sehingga jalur mic teruji tanpa merekam apa pun.
+(`uji_kontrak` ikut aman: satu-satunya jalur `/api/chat` yang ia kirim berisi riwayat
+kosong, yang ditolak sebelum Gemini sempat dipanggil.)
 
 ## Kredit
 
@@ -159,11 +364,11 @@ Aset dan pustaka pihak ketiga yang dipakai proyek ini, beserta pemiliknya:
   buatan pihak ketiga yang tidak dibuat proyek ini; nama folder aslinya `魔女`
   ("penyihir" dalam bahasa Mandarin). Berkasnya sengaja tidak diunduh lewat skrip
   maupun diunggah ke repositori — hanya dipasang dari folder `New Model/` di mesin
-  ini lewat `npm run pasang-model`. Cek ulang lisensi pembuatnya sebelum dipakai
+  ini lewat `node scripts/pasang-model.mjs`. Cek ulang lisensi pembuatnya sebelum dipakai
   untuk siaran publik.
 - **Contoh model Haru** (`haru_greeter_t03`) — bahan gratis resmi dari
   [Live2D Inc.](https://www.live2d.com/en/learn/sample/), tunduk pada
-  *Live2D Free Material License Agreement*. Diunduh `npm run assets`, tidak lagi
+  *Live2D Free Material License Agreement*. Diunduh `node scripts/fetch-assets.mjs`, tidak lagi
   dipakai aplikasi tapi tetap tersedia untuk dibandingkan.
 - **Live2D Cubism Core for Web** (`live2dcubismcore.min.js`) — SDK resmi
   [Live2D Inc.](https://www.live2d.com/en/sdk/download/web/), *Cubism SDK License*.
@@ -175,9 +380,10 @@ Aset dan pustaka pihak ketiga yang dipakai proyek ini, beserta pemiliknya:
 - **[Silero VAD](https://github.com/snakers4/silero-vad)** — MIT. Model deteksi
   suara yang benar-benar berjalan di mesinmu.
 - **[ONNX Runtime Web](https://github.com/microsoft/onnxruntime)** — MIT.
-- **[@google/genai](https://github.com/googleapis/js-genai)** — Apache-2.0, SDK
-  resmi Google untuk Gemini API, Gemini TTS, dan penyalinan suara.
-- **[Vite](https://github.com/vitejs/vite)** dan **[TypeScript](https://github.com/microsoft/TypeScript)** — MIT.
+
+Gemini API dipanggil langsung lewat REST dari stdlib Python, jadi tidak ada SDK yang
+ikut ke proyek. Vite, TypeScript, dan `@google/genai` dipakai pada fase awal dan sudah
+dihapus bersama `node_modules`, jadi tidak lagi menjadi bagian dari daftar ini.
 
 Kode di repositori ini adalah karya proyek; seluruh aset dan pustaka di atas
 tetap pada lisensinya masing-masing.
@@ -187,5 +393,5 @@ tetap pada lisensinya masing-masing.
 Kode sumber proyek ini bebas dipakai sesuai ketentuan yang berlaku padanya.
 **Model Live2D dan Cubism Core tidak termasuk** dan tidak diizinkan untuk
 diredistribusi sebagai berkas lepas — karena itu keduanya dikecualikan dari
-repositori dan diambil ulang dengan `npm run assets`. Untuk karakter publik,
+repositori dan diambil ulang dengan `node scripts/fetch-assets.mjs`. Untuk karakter publik,
 gunakan model milik sendiri.

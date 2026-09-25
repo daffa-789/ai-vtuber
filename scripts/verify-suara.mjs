@@ -16,7 +16,7 @@ await page.route('**/api/chat', (r) =>
 );
 await page.route('**/api/tts', (r) => r.fulfill({ contentType: 'audio/wav', body: wav }));
 
-await page.goto('http://localhost:5173/', { waitUntil: 'load' });
+await page.goto(process.argv[2] || 'http://127.0.0.1:8787/', { waitUntil: 'load' });
 await page.waitForFunction(() => !!window.__vtuber, null, { timeout: 20000 });
 await page.evaluate(() => localStorage.removeItem('vtuber.riwayat'));
 await page.reload({ waitUntil: 'load' });

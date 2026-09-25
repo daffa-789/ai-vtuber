@@ -1,0 +1,84 @@
+{
+ "asset halaman": {
+  "ctype": "text/html",
+  "panjang_min_1": true,
+  "status": 200
+ },
+ "asset model": {
+  "ctype": "application/json",
+  "kunci": [
+   "FileReferences",
+   "Groups",
+   "Version"
+  ],
+  "punya_error": false,
+  "status": 200
+ },
+ "asset modul": {
+  "ctype": "text/javascript",
+  "panjang_min_1": true,
+  "status": 200
+ },
+ "chat body bukan json": {
+  "ctype": "application/json",
+  "kunci": [
+   "error"
+  ],
+  "punya_error": true,
+  "status": 400
+ },
+ "chat riwayat kosong": {
+  "ctype": "application/json",
+  "kunci": [
+   "error"
+  ],
+  "punya_error": true,
+  "status": 400
+ },
+ "endpoint tak dikenal POST": {
+  "ctype": "application/json",
+  "kunci": [
+   "error"
+  ],
+  "punya_error": true,
+  "status": 404
+ },
+ "health": {
+  "ctype": "application/json",
+  "kunci": [
+   "cadangan",
+   "key",
+   "memori",
+   "model",
+   "ok",
+   "sisi",
+   "tts"
+  ],
+  "punya_error": false,
+  "status": 200
+ },
+ "stt audio pendek": {
+  "ctype": "application/json",
+  "kunci": [
+   "error"
+  ],
+  "punya_error": true,
+  "status": 400
+ },
+ "tts tanpa teks": {
+  "ctype": "application/json",
+  "kunci": [
+   "error"
+  ],
+  "punya_error": true,
+  "status": 400
+ },
+ "tts teks kosong": {
+  "ctype": "application/json",
+  "kunci": [
+   "error"
+  ],
+  "punya_error": true,
+  "status": 400
+ }
+}

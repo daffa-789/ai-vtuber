@@ -27,10 +27,10 @@ await page.addInitScript(() => {
   });
 });
 
-await page.goto(process.argv[2] || 'http://localhost:5173/', { waitUntil: 'load' });
+await page.goto(process.argv[2] || 'http://127.0.0.1:8787/', { waitUntil: 'load' });
 await page.waitForFunction(() => !!window.__vtuber, null, { timeout: 20000 });
 
-// Tes ini menunggu teks spesifik dari scripts/stub-stream.mjs. Kalau port 8787
+// Tes ini menunggu teks spesifik dari mode VTUBER_STUB=1. Kalau port 8787
 // malah dipakai sidecar asli, balasannya dari Gemini dan tidak pernah cocok --
 // jadi berhenti sekarang dengan pesan yang jelas, bukan timeout membingungkan.
 const model = await page.evaluate(async () => {
@@ -38,7 +38,7 @@ const model = await page.evaluate(async () => {
   return h.model;
 });
 if (model !== 'stub') {
-  console.log(`FAIL: butuh server tiruan di 8787, dapat model "${model}". Jalankan: node scripts/stub-stream.mjs`);
+  console.log(`FAIL: butuh server tiruan (VTUBER_STUB=1) di port itu, dapat model "${model}". Jalankan: set VTUBER_STUB=1 && python server_py/app.py`);
   await browser.close();
   process.exit(1);
 }
@@ -79,7 +79,7 @@ const hasil = await page.evaluate(() => ({
 }));
 
 const lolos =
-  hasil.balasan === 'Halo Daffa. kok diam sih' &&
+  hasil.balasan === 'Halo Master. kok diam sih' &&
   !hasil.adaSisaKurung &&
   hasil.pernahAktif.includes('senyum') &&
   hasil.aktif === 'sebal' &&

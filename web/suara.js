@@ -1,11 +1,14 @@
 // Suara + gerak mulut. Mulut tidak ditebak dari teks, tapi dari amplitudo audio
 // yang sedang diputar, jadi tidak perlu pelurusan fonem bahasa Indonesia.
-let ctx: AudioContext | null = null;
-let analyser: AnalyserNode | null = null;
-let sampel: Uint8Array | null = null;
-let sumber: AudioBufferSourceNode | null = null;
+let ctx = null;
+let analyser = null;
+let sampel = null;
+let sumber = null;
 let berbicara = false;
 let mulut = 0;
+/** Ekor antrean putar + nomor generasi supaya "hentikan" membatalkan yang belum mulai. */
+let ekor = Promise.resolve();
+let generasi = 0;
 
 const LANTAI_NOISE = 0.012;
 const PENGUAT = 7;
@@ -23,7 +26,7 @@ async function pastikanKonteks() {
   return ctx;
 }
 
-export function tingkatMulut(): number {
+export function tingkatMulut() {
   if (!berbicara || !analyser || !sampel) {
     mulut *= 0.6;
     return mulut;
@@ -44,6 +47,7 @@ export function tingkatMulut(): number {
 }
 
 export function hentikan() {
+  generasi += 1; // antrean yang belum kebagian tempat ikut gugur
   if (!sumber) return;
   sumber.onended = null;
   try {
@@ -55,7 +59,12 @@ export function hentikan() {
   berbicara = false;
 }
 
-export async function bicarakan(teks: string): Promise<void> {
+/**
+ * Satu potongan audio diunduh DAN diputar. Unduhannya dimulai begitu dipanggil,
+ * pemutarannya menunggu potongan sebelumnya selesai -- jadi kalimat kedua sudah
+ * di jalur saat kalimat pertama masih terdengar.
+ */
+async function putarPotongan(teks, angka) {
   const res = await fetch('/api/tts', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -69,14 +78,13 @@ export async function bicarakan(teks: string): Promise<void> {
 
   const audio = await pastikanKonteks();
   const buffer = await audio.decodeAudioData(await res.arrayBuffer());
+  if (generasi !== angka) return; // sudah keburu dipotong
 
-  hentikan();
   berbicara = true;
-
-  await new Promise<void>((selesai) => {
+  await new Promise((selesai) => {
     const src = audio.createBufferSource();
     src.buffer = buffer;
-    src.connect(analyser!);
+    src.connect(analyser);
     src.onended = () => {
       berbicara = false;
       sumber = null;
@@ -85,4 +93,28 @@ export async function bicarakan(teks: string): Promise<void> {
     src.start();
     sumber = src;
   });
+}
+
+/** Antre satu kalimat. Rantainya sendiri menahan kegagalan supaya satu potongan
+ *  yang gagal tidak menghentikan sisa jawaban. */
+export function antre(teks) {
+  const potongan = teks.trim();
+  if (!potongan) return Promise.resolve();
+  const angka = generasi;
+  const diunduh = putarPotongan(potongan, angka);
+  ekor = ekor.then(() => diunduh).catch((err) => {
+    if (angka === generasi) console.warn('potongan suara gugur:', err instanceof Error ? err.message : err);
+  });
+  return diunduh;
+}
+
+/** Semua yang sudah diantre sudah selesai diputar. */
+export function selesai() {
+  return ekor;
+}
+
+export async function bicarakan(teks) {
+  hentikan();
+  await antre(teks);
+  await ekor;
 }
