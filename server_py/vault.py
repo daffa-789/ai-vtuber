@@ -46,7 +46,16 @@ def _alamat(path: str) -> str:
     return f"{_K['base']}/vault/{urllib.parse.quote(path, safe='/')}"
 
 
+_TERAKHIR_GAGAL = 0.0
+
+
 def _unduh(path: str, metode: str = "GET", isi: str | None = None) -> tuple[int, str]:
+    global _TERAKHIR_GAGAL
+    import time
+
+    if time.time() - _TERAKHIR_GAGAL < 30:
+        raise OSError("Obsidian sedang offline (cooldown 30s)")
+
     perm = urllib.request.Request(
         _alamat(path),
         method=metode,
@@ -57,10 +66,14 @@ def _unduh(path: str, metode: str = "GET", isi: str | None = None) -> tuple[int,
         },
     )
     try:
-        with urllib.request.urlopen(perm, timeout=30) as r:
+        with urllib.request.urlopen(perm, timeout=1.5) as r:
+            _TERAKHIR_GAGAL = 0.0
             return r.status, r.read().decode("utf-8")
     except urllib.error.HTTPError as err:
         return err.code, err.read().decode("utf-8", "replace")
+    except (urllib.error.URLError, TimeoutError, OSError) as err:
+        _TERAKHIR_GAGAL = time.time()
+        raise
 
 
 # Links wajib ditulis: tanpa field `links`, file hasil auto-save jadi node yatim

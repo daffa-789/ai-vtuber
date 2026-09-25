@@ -15,7 +15,7 @@ import urllib.request
 from typing import Iterator
 
 ALAMAT = "https://generativelanguage.googleapis.com/v1beta/models"
-TIMEOUT = 180
+TIMEOUT = 15
 
 
 class Ditolak(Exception):
@@ -34,7 +34,7 @@ class Ditolak(Exception):
         satu panggilan lagi.
         """
         return bool(
-            re.search(r"503|429|UNAVAILABLE|RESOURCE_EXHAUSTED|high demand|rate", self.pesan, re.I)
+            re.search(r"503|429|timeout|timed out|UNAVAILABLE|RESOURCE_EXHAUSTED|high demand|rate", self.pesan, re.I)
         )
 
 
@@ -51,7 +51,7 @@ def bersihkan_error(pesan: str) -> str:
     return re.sub(r"\s+", " ", pesan).strip()
 
 
-def _kirim(model: str, aksi: str, body: dict, key: str, query: str = ""):
+def _kirim(model: str, aksi: str, body: dict, key: str, query: str = "", timeout: int = TIMEOUT):
     url = f"{ALAMAT}/{model}:{aksi}?key={key}{query}"
     perm = urllib.request.Request(
         url,
@@ -60,11 +60,11 @@ def _kirim(model: str, aksi: str, body: dict, key: str, query: str = ""):
         headers={"content-type": "application/json"},
     )
     try:
-        return urllib.request.urlopen(perm, timeout=TIMEOUT)
+        return urllib.request.urlopen(perm, timeout=timeout)
     except urllib.error.HTTPError as err:
         raise Ditolak(bersihkan_error(err.read().decode("utf-8", "replace")), err.code) from err
-    except urllib.error.URLError as err:
-        raise Ditolak(f"tidak bisa menghubungi Gemini: {err.reason}") from err
+    except (urllib.error.URLError, TimeoutError, OSError) as err:
+        raise Ditolak(f"{model} tidak bisa dihubungi: {err}") from err
 
 
 def generate(model: str, body: dict, key: str) -> dict:

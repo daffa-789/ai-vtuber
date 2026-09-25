@@ -16,6 +16,7 @@ import json
 import re
 import struct
 import sys
+import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -255,7 +256,11 @@ class Sidecar(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             print("halaman menutup aliran", file=sys.stderr)
 
-        simpan_memori(riwayat, mentah, fakta, mood)
+        threading.Thread(
+            target=simpan_memori,
+            args=(riwayat, mentah, fakta, mood),
+            daemon=True,
+        ).start()
 
     def _chat_stub(self) -> None:
         """Aliran kalengan: menguji rantai stream -> tag -> wajah tanpa kuota."""
