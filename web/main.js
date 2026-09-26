@@ -28,6 +28,7 @@ const app = new PIXI.Application({
   height: canvas.clientHeight,
   backgroundAlpha: 0,
   antialias: setelan.render.halus,
+  powerPreference: 'high-performance',
   // Tanpa mengikuti devicePixelRatio, backing store cuma punya sebakal piksel
   // sebanyak CSS px dan browser merentangkannya -- wajah model terlihat lembut.
   resolution: skalaRender(),

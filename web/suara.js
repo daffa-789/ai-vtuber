@@ -9,9 +9,14 @@ let mulut = 0;
 /** Ekor antrean putar + nomor generasi supaya "hentikan" membatalkan yang belum mulai. */
 let ekor = Promise.resolve();
 let generasi = 0;
+let cbStatus = null;
 
 const LANTAI_NOISE = 0.012;
 const PENGUAT = 7;
+
+export function pasangStatusSuara(cb) {
+  cbStatus = cb;
+}
 
 async function pastikanKonteks() {
   if (!ctx) {
@@ -48,6 +53,7 @@ export function tingkatMulut() {
 
 export function hentikan() {
   generasi += 1; // antrean yang belum kebagian tempat ikut gugur
+  if (cbStatus) cbStatus('diam');
   if (!sumber) return;
   sumber.onended = null;
   try {
@@ -64,11 +70,9 @@ const API_BASE = typeof window !== 'undefined' && window.location?.protocol === 
   : '';
 
 /**
- * Satu potongan audio diunduh DAN diputar. Unduhannya dimulai begitu dipanggil,
- * pemutarannya menunggu potongan sebelumnya selesai -- jadi kalimat kedua sudah
- * di jalur saat kalimat pertama masih terdengar.
+ * Mengunduh satu potongan audio dari backend. Backend memproses RVC hingga selesai.
  */
-async function putarPotongan(teks, angka) {
+async function unduhPotongan(teks) {
   const res = await fetch(`${API_BASE}/api/tts`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -81,10 +85,17 @@ async function putarPotongan(teks, angka) {
   }
 
   const audio = await pastikanKonteks();
-  const buffer = await audio.decodeAudioData(await res.arrayBuffer());
-  if (generasi !== angka) return; // sudah keburu dipotong
+  return await audio.decodeAudioData(await res.arrayBuffer());
+}
 
+/**
+ * Memutar buffer audio yang sudah selesai didekode dan menyelaraskan gerak mulut.
+ */
+async function putarBuffer(buffer, angka) {
+  if (generasi !== angka) return;
+  const audio = await pastikanKonteks();
   berbicara = true;
+  if (cbStatus) cbStatus('berbicara');
   await new Promise((selesai) => {
     const src = audio.createBufferSource();
     src.buffer = buffer;
@@ -92,6 +103,7 @@ async function putarPotongan(teks, angka) {
     src.onended = () => {
       berbicara = false;
       sumber = null;
+      if (cbStatus) cbStatus('diam');
       selesai();
     };
     src.start();
@@ -99,17 +111,34 @@ async function putarPotongan(teks, angka) {
   });
 }
 
-/** Antre satu kalimat. Rantainya sendiri menahan kegagalan supaya satu potongan
- *  yang gagal tidak menghentikan sisa jawaban. */
+/**
+ * Antre satu kalimat. Download dan konversi RVC dilakukan terlebih dahulu,
+ * tetapi audio dan gerak mulut TIDAK AKAN dimulai sebelum audio RVC tersebut
+ * selesai diselaraskan secara penuh dan giliran pemutaran tiba.
+ */
 export function antre(teks) {
   const potongan = teks.trim();
   if (!potongan) return Promise.resolve();
   const angka = generasi;
-  const diunduh = putarPotongan(potongan, angka);
-  ekor = ekor.then(() => diunduh).catch((err) => {
-    if (angka === generasi) console.warn('potongan suara gugur:', err instanceof Error ? err.message : err);
-  });
-  return diunduh;
+
+  // 1. Unduh dan selaraskan audio RVC di latar belakang
+  const unduh = unduhPotongan(potongan);
+
+  // 2. Putar sekuensial hanya setelah audio siap dan giliran tiba di ekor
+  ekor = ekor
+    .then(async () => {
+      if (generasi !== angka) return;
+      const buffer = await unduh;
+      if (generasi !== angka) return;
+      await putarBuffer(buffer, angka);
+    })
+    .catch((err) => {
+      if (angka === generasi) {
+        console.warn('potongan suara gugur:', err instanceof Error ? err.message : err);
+      }
+    });
+
+  return unduh;
 }
 
 /** Semua yang sudah diantre sudah selesai diputar. */
@@ -119,6 +148,6 @@ export function selesai() {
 
 export async function bicarakan(teks) {
   hentikan();
-  await antre(teks);
+  antre(teks);
   await ekor;
 }

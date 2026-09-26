@@ -27,7 +27,6 @@ from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import tts_gemini
 import tts_piper
 import tts_rvc
 from konfig import AKAR
@@ -93,11 +92,6 @@ TAHAP: dict[str, Tahap] = {
         "rvc", "wav",
         lambda audio, sisa: tts_rvc.ubah(audio, "rvc", sisa),
         tts_rvc.hidup, tts_rvc.patokan_cache,
-    ),
-    "gemini": Tahap(
-        "gemini", "teks",
-        lambda teks, sisa: tts_gemini.sintesis(teks, int(max(sisa, 1))),
-        tts_gemini.tersedia, tts_gemini.label,
     ),
 }
 

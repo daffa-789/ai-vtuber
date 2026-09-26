@@ -42,12 +42,10 @@ def cek(nama: str, fungsi) -> None:
 def utama() -> int:
     # ── 1. impor semua modul sisi server ────────────────────────────────────
     def impor_semua():
-        import gemini  # noqa: F401
         import jalur_suara  # noqa: F401
         import konfig  # noqa: F401
         import memori  # noqa: F401
         import statis  # noqa: F401
-        import tts_gemini  # noqa: F401
         import tts_piper  # noqa: F401
         import tts_rvc  # noqa: F401
         import vault  # noqa: F401

@@ -19,10 +19,11 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-import gemini
 import jalur_suara
 import konfig
 import memori
+import model_lokal
+import ollama_client
 import statis
 import tts_rvc
 import vault
@@ -33,8 +34,6 @@ from konfig import (
     MAKS_BODY,
     MAKS_KARAKTER,
     MAKS_PESAN,
-    MODEL,
-    MODEL_CADANGAN,
     PORT,
     STT_MODEL,
 )
@@ -111,13 +110,24 @@ class Sidecar(BaseHTTPRequestHandler):
     # ── routes ─────────────────────────────────────────────────────────────
     def do_GET(self):  # noqa: N802
         if self.path == "/api/health":
+            if konfig.STUB:
+                model_info = "stub"
+            elif konfig.LLM_PROVIDER in ("local", "llama_cpp"):
+                berkas_m = model_lokal.cari_model(konfig.LOCAL_MODEL_PATH)
+                model_info = f"local/{berkas_m.name}" if berkas_m else "local/belum-ada-model"
+            elif konfig.LLM_PROVIDER == "ollama":
+                model_info = f"ollama/{konfig.OLLAMA_MODEL}"
+            else:
+                model_info = MODEL
+
+            is_offline = konfig.LLM_PROVIDER in ("local", "llama_cpp", "ollama")
             return self._json(
                 200,
                 {
                     "ok": True,
-                    "model": "stub" if konfig.STUB else MODEL,
-                    "cadangan": MODEL_CADANGAN,
-                    "key": bool(konfig.KUNCI),
+                    "model": model_info,
+                    "cadangan": [] if is_offline else MODEL_CADANGAN,
+                    "key": True if is_offline else bool(konfig.KUNCI),
                     "tts": jalur_suara.ringkasan(),
                     "memori": "vault Obsidian" if vault.tersedia() else vault.alasan_tidak_tersedia(),
                     "sisi": "python",
@@ -166,12 +176,6 @@ class Sidecar(BaseHTTPRequestHandler):
     def chat(self) -> None:
         if konfig.STUB:
             return self._chat_stub()
-        if not konfig.KUNCI:
-            return self._json(
-                501,
-                {"error": "GEMINI_API_KEY belum diisi. Salin .env.example jadi .env lalu isi."},
-            )
-
         try:
             riwayat = rapikan_riwayat(json.loads(self._tubuh(MAKS_BODY).decode("utf-8")).get("messages"))
         except json.JSONDecodeError:
@@ -188,24 +192,43 @@ class Sidecar(BaseHTTPRequestHandler):
             except Exception as err:
                 print(f"memori tidak terbaca: {err}", file=sys.stderr)
 
-        body = gemini.body_chat(riwayat, memori.gabung_system(PERSONA, fakta, mood))
+        aliran, terpakai = None, ""
+        if konfig.LLM_PROVIDER in ("local", "llama_cpp"):
+            pesan_lokal = [{"role": "system", "content": memori.gabung_system_lokal(fakta, mood)}]
+            for m in riwayat:
+                peran = "assistant" if m.get("role") in ("assistant", "model") else "user"
+                isi_pesan = " ".join(p.get("text", "") for p in m.get("parts", [])) if "parts" in m else m.get("content", "")
+                pesan_lokal.append({"role": peran, "content": isi_pesan})
 
-        # Jawaban pertama yang datang menang. Antrean 503 berpindah-pindah antar
-        # model, jadi pindah kursi lebih murah daripada menunggu bangku.
-        aliran, terpakai, error_terakhir = None, "", ""
-        for model in dict.fromkeys([MODEL, *MODEL_CADANGAN]):
             try:
-                aliran = gemini.alir(model, body, konfig.KUNCI)
-                terpakai = model
-                break
-            except gemini.Ditolak as err:
-                error_terakhir = err.pesan
-                if not err.layak_dicoba:
-                    break  # 400 = permintaannya yang salah, model lain percuma
-                print(f"chat {model} sedang penuh: {err.pesan[:70]}", file=sys.stderr)
+                aliran = model_lokal.alir(
+                    pesan_lokal,
+                    jalur_kandidat=konfig.LOCAL_MODEL_PATH,
+                    threads=konfig.LOCAL_MODEL_THREADS,
+                    n_ctx=konfig.LOCAL_MODEL_CTX,
+                )
+                berkas_terpakai = model_lokal.cari_model(konfig.LOCAL_MODEL_PATH)
+                terpakai = f"local/{berkas_terpakai.name if berkas_terpakai else 'gguf'}"
+            except model_lokal.ModelLokalError as err:
+                return self._json(503, {"error": err.pesan})
 
-        if aliran is None:
-            return self._json(503, {"error": error_terakhir or "Gemini menolak permintaan"})
+        elif konfig.LLM_PROVIDER == "ollama":
+            pesan_ollama = [{"role": "system", "content": memori.gabung_system(PERSONA, fakta, mood)}]
+            for m in riwayat:
+                peran = "assistant" if m["role"] == "assistant" else "user"
+                isi_pesan = " ".join(p.get("text", "") for p in m.get("parts", [])) if "parts" in m else m.get("content", "")
+                pesan_ollama.append({"role": peran, "content": isi_pesan})
+
+            try:
+                aliran = ollama_client.alir(konfig.OLLAMA_MODEL, pesan_ollama, konfig.OLLAMA_URL)
+                terpakai = f"ollama/{konfig.OLLAMA_MODEL}"
+            except ollama_client.OllamaError as err:
+                return self._json(503, {"error": err.pesan})
+        else:
+            return self._json(
+                400,
+                {"error": f"Provider '{konfig.LLM_PROVIDER}' tidak dikenal. Sistem berjalan offline: gunakan 'local' atau 'ollama'."},
+            )
 
         self.send_response(200)
         self.send_header("content-type", "text/plain; charset=utf-8")
@@ -223,10 +246,10 @@ class Sidecar(BaseHTTPRequestHandler):
                 mentah += potong
                 self.wfile.write(potong.encode("utf-8"))
                 self.wfile.flush()
-        except gemini.Ditolak as err:
-            print(f"aliran terputus: {err.pesan}", file=sys.stderr)
         except (BrokenPipeError, ConnectionResetError):
             print("halaman menutup aliran", file=sys.stderr)
+        except Exception as err:
+            print(f"aliran terputus: {err}", file=sys.stderr)
 
         threading.Thread(
             target=simpan_memori,
@@ -292,19 +315,8 @@ class Sidecar(BaseHTTPRequestHandler):
 
     # ── stt ─────────────────────────────────────────────────────────────────
     def stt(self) -> None:
-        if not konfig.KUNCI:
-            return self._json(501, {"error": "GEMINI_API_KEY belum diisi."})
-        audio = self._tubuh(MAKS_AUDIO)
-        if len(audio) < 1000:
-            return self._json(400, {"error": "audio terlalu pendek atau kosong"})
-
-        try:
-            hasil = gemini.generate(
-                STT_MODEL, gemini.body_audio(base64.b64encode(audio).decode()), konfig.KUNCI
-            )
-            self._json(200, {"teks": gemini.transkrip_dari(hasil)})
-        except gemini.Ditolak as err:
-            self._json(503, {"error": err.pesan})
+        # Sistem offline: STT ditangani di browser lewat Web Speech API (web/mikrofon.js)
+        return self._json(200, {"teks": ""})
 
 
 def simpan_memori(
@@ -315,53 +327,44 @@ def simpan_memori(
     if konfig.STUB or not vault.tersedia() or not mentah.strip():
         return  # STUB: percakapan uji tidak boleh menodai riwayat karakter
     try:
-        # Model kadang membungkus tag dengan backtick (`[lelah]`) walau dilarang di
-        # persona.md. Sisi browser tetap menemukannya (kupasTag mencari di mana pun),
-        # tapi mood dan riwayat membaca dari sini -- jadi pembungkusnya ikut dilepas.
         tag_cocok = re.match(r"\s*[`'\"“”]*\s*\[([^\]]{1,20})\]", mentah)
         tag = tag_cocok.group(1).lower() if tag_cocok else None
         isi = re.sub(r"^\s*[`'\"“”]*\s*\[[^\]]{1,20}\][`'\"“”]*\s*", "", mentah).strip()
-        tanya = riwayat[-1]["parts"][0]["text"]
+        tanya = ""
+        if riwayat and isinstance(riwayat[-1], dict):
+            if "parts" in riwayat[-1] and riwayat[-1]["parts"]:
+                tanya = riwayat[-1]["parts"][0].get("text", "")
+            else:
+                tanya = riwayat[-1].get("content", "")
 
         mood = memori.perbarui_mood(mood_lama, tag)
         vault.catat_hari(f"**Master:** {tanya} → **Elaina:** {isi} _({tag or 'tanpa tag'})_")
         vault.simpan_mood(mood)
-
-        # Ekstraksi fakta menambah satu panggilan API, jadi sengaja jarang.
-        if mood["pertukaran"] % JEDA_FAKTA == 0:
-            percakapan = [
-                {"role": m["role"], "content": " ".join(p["text"] for p in m["parts"])}
-                for m in riwayat[-12:]
-            ]
-            baru = memori.ekstrak_fakta(MODEL, percakapan, fakta_lama, konfig.KUNCI)
-            if baru:
-                vault.simpan_fakta(list(dict.fromkeys([*fakta_lama, *baru]))[-40:])
-                print(f"fakta baru tersimpan: {len(baru)}")
     except Exception as err:
         print(f"memori gagal ditulis: {err}", file=sys.stderr)
 
 
 def baris_banner(nomor: int) -> str:
-    """Satu baris "siap" yang dicetak saat server naik -- sengaja fungsi murni, bukan
-    print di dalam utama(), supaya bisa diuji dua-dua mode tanpa mengikat port.
+    """Satu baris "siap" yang dicetak saat server naik -- mode 100% offline."""
+    if konfig.STUB:
+        model_chat = "stub"
+    elif konfig.LLM_PROVIDER in ("local", "llama_cpp"):
+        berkas_m = model_lokal.cari_model(konfig.LOCAL_MODEL_PATH)
+        model_chat = f"local/{berkas_m.name if berkas_m else 'belum ada di folder model/'}"
+    elif konfig.LLM_PROVIDER == "ollama":
+        model_chat = f"ollama/{konfig.OLLAMA_MODEL}"
+    else:
+        model_chat = konfig.LLM_PROVIDER
 
-    Mode stub wajib bilang stub: riwayat karakter tidak disentuh di sana, dan banner
-    yang mengklaim "memori=vault Obsidian" bikin orang mencari fakta uji yang memang
-    tidak pernah ada.
-    """
-    model_chat = "stub (Gemini tidak dipanggil)" if konfig.STUB else MODEL
     memori = "vault Obsidian" if vault.tersedia() else vault.alasan_tidak_tersedia()
     if konfig.STUB:
         memori += " (diam, tidak ditulis)"
     siap = jalur_suara.rantai_aktif()
     tts = "stub (hening 0,2 dtk)" if konfig.STUB else (",".join(siap) or "TIDAK ADA")
     baris = (
-        f"sidecar python http://127.0.0.1:{nomor} | key={'siap' if konfig.KUNCI else 'KOSONG'} | "
-        f"chat={model_chat} | tts={tts} | stt={STT_MODEL} | memori={memori}"
+        f"sidecar python http://127.0.0.1:{nomor} | mode=100% OFFLINE | "
+        f"chat={model_chat} | tts={tts} | memori={memori}"
     )
-    # RVC yang dimatikan diam-diam adalah kelas bug yang sama dengan "suara hilang
-    # tanpa error" di wav.py. Kalau Master minta RVC tapi asetnya belum ada, itu
-    # harus terbaca di baris pertama, bukan tidak muncul sama sekali.
     kalau = jalur_suara.peringatan()
     if konfig.STUB:
         return baris

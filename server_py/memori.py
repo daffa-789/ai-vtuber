@@ -7,8 +7,6 @@ from __future__ import annotations
 import json
 import re
 
-import gemini
-
 NILAI_TAG = {
     "senyum": 0.25,
     "semangat": 0.35,
@@ -68,38 +66,25 @@ def gabung_system(persona: str, fakta: list[str], mood: dict | None) -> str:
     return "\n\n".join(bagian)
 
 
-def ekstrak_fakta(model: str, percakapan: list[dict], fakta_lama: list[str], kunci: str) -> list[str]:
-    """Satu panggilan API tambahan, jadi pemanggilnya menyetel kapan ini layak."""
-    instruksi = "\n".join(
-        [
-            "Dari percakapan di bawah, tuliskan FAKTA BARU yang layak diingat lama tentang Master:",
-            "pekerjaan, kebiasaan, orang, tanggal, preferensi, proyek, kondisi hari ini.",
-            "Abaikan basa-basi dan hal yang sudah ada di daftar fakta lama.",
-            "Balas HANYA array JSON berisi string pendek berbahasa Indonesia. [] kalau tidak ada.",
-            "",
-            f"Fakta lama: {json.dumps(fakta_lama, ensure_ascii=False)}",
-            "",
-            "Percakapan:",
-            "\n".join(
-                f"{'Master' if m['role'] == 'user' else 'Elaina'}: {m['content']}" for m in percakapan
-            ),
-        ]
-    )
+def gabung_system_lokal(fakta: list[str], mood: dict | None) -> str:
+    """System prompt ringkas khusus model lokal CPU agar inferensi super cepat (<4 detik)."""
+    bagian = [
+        "Kamu adalah Elaina (18 tahun), si Penyihir Abu dari Wandering Witch. "
+        "Kamu tinggal di laptop Master. Sifatmu: tenang, mandiri, cerdas, agak narsis, "
+        "realistis, sedikit sinis tapi tetap peduli dan santun. Bicara dalam bahasa Indonesia yang anggun "
+        "dan selalu panggil lawan bicaramu dengan sebutan 'Master'. "
+        "Jawab dengan ringkas dan padat (1 sampai 3 kalimat). "
+        "WAJIB: Awali setiap balasanmu dengan satu tag emosi Live2D di paling depan: "
+        "[senyum], [senang], [semangat], [kaget], [bingung], [lelah], [goda], [sebal], [sedih], atau [netral]."
+    ]
+    if fakta:
+        bagian.append("Fakta tentang Master:\n" + "\n".join(f"- {f}" for f in fakta[-5:]))
+    suasana = suasanaku(mood)
+    if suasana:
+        bagian.append(f"Suasana hatimu saat ini: {suasana}")
+    return "\n\n".join(bagian)
 
-    hasil = gemini.generate(
-        model,
-        {
-            "contents": [{"role": "user", "parts": [{"text": instruksi}]}],
-            "generationConfig": {"temperature": 0, "maxOutputTokens": 500},
-        },
-        kunci,
-    )
-    teks = gemini.teks_dari(hasil)
-    potongan = re.search(r"\[.*\]", teks, re.S)
-    if not potongan:
-        return []
-    try:
-        data = json.loads(potongan.group(0))
-    except ValueError:
-        return []
-    return [s.strip() for s in data if isinstance(s, str) and s.strip()]
+
+def ekstrak_fakta(model: str = "", percakapan: list[dict] | None = None, fakta_lama: list[str] | None = None, kunci: str = "") -> list[str]:
+    """Ekstraksi fakta offline (stub saat ini agar tidak memanggil API luar)."""
+    return []

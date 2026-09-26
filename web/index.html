@@ -148,6 +148,26 @@
       }
       #expr, #pose, #gerak { display: flex; flex-wrap: wrap; gap: 5px; }
 
+      #chat-baru {
+        order: 3;
+        padding: 3px 8px;
+        font: 10px/1.2 var(--mesin);
+        letter-spacing: .04em;
+        text-transform: none;
+        color: var(--arang);
+        background: #ffffff0a;
+        border: var(--aturan);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: color .14s ease, background .14s ease, border-color .14s ease;
+      }
+      #chat-baru::before { display: none; }
+      #chat-baru:hover {
+        color: var(--kapur);
+        background: #ffffff18;
+        border-color: #ffffff2e;
+      }
+
       button {
         position: relative; padding: 5px 9px 5px 13px;
         font: 11.5px/1.25 var(--teks); color: #bfc8d8;
@@ -208,6 +228,22 @@
          hilang dan keyboard jadi tidak kelihatan. Border amber cuma penguat. */
       #isi:focus { border-color: #e8b67355; }
       /* Tombol kirim bukan chip raut: dia aksi, jadi diisi penuh dan tanpa centang. */
+      #btn-mic {
+        flex: none; padding: 5px 11px; font-size: 15px; color: var(--kapur);
+        background: #ffffff0a; border: var(--aturan); border-radius: 5px;
+        cursor: pointer; transition: background .18s ease, border-color .18s ease, color .18s ease;
+        display: inline-flex; align-items: center; justify-content: center;
+      }
+      #btn-mic::before { display: none; }
+      #btn-mic:hover { background: #ffffff18; border-color: #e8b67366; }
+      #btn-mic[data-mendengar="true"] {
+        background: #c2707c2a; border-color: var(--mawar); color: #ff8595;
+        animation: pulsa-mic 1.2s infinite ease-in-out;
+      }
+      @keyframes pulsa-mic {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(194, 112, 124, 0.4); }
+        50% { box-shadow: 0 0 0 6px rgba(194, 112, 124, 0); }
+      }
       #form > button[type="submit"] {
         flex: none; padding: 5px 13px; font-weight: 600; color: #1c1608;
         background: var(--lampu); border-color: transparent;
@@ -281,12 +317,13 @@
       </section>
 
       <section class="gugus" id="catatan">
-        <h2>Catatan</h2>
+        <h2>Catatan <button type="button" id="chat-baru" title="Mulai obrolan baru dan hapus riwayat">+ Chat Baru</button></h2>
         <div id="log" role="log" aria-live="polite"></div>
       </section>
 
       <form id="form" autocomplete="off">
         <input id="isi" aria-label="Pesan untuk Elaina" placeholder="Katakan sesuatu&hellip;" />
+        <button type="button" id="btn-mic" aria-label="Bicara lewat mikrofon" title="Bicara lewat mikrofon (id-ID)">🎙️</button>
         <button type="submit">Kirim</button>
       </form>
       <p id="health"></p>

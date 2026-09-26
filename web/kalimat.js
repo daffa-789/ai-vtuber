@@ -10,11 +10,7 @@
 // baris baru. Sisa yang belum bertanda selesai dikembalikan untuk chunk berikut.
 const BATAS = /[^.!?…\n]*[.!?…]+(?=[\s\n])|[^\n]*\n/g;
 
-// Potongan awal: minimal 8 karakter sebelum koma/titik-koma/titik-dua, supaya
-// "[senyum] Ya," tidak dikirim sendirian sebagai suara satu kata.
-const COMMA = /^[^,;:]{8,}?[,;:]/;
-
-export function kalimatSiap(teks, potongAwal = false) {
+export function kalimatSiap(teks) {
   const siap = [];
   let akhir = 0;
   let m;
@@ -24,14 +20,6 @@ export function kalimatSiap(teks, potongAwal = false) {
     if (potong) siap.push(potong);
     akhir = m.index + m[0].length;
   }
-  let sisa = teks.slice(akhir);
-
-  if (potongAwal && !siap.length) {
-    const awal = COMMA.exec(sisa);
-    if (awal) {
-      siap.push(awal[0].trim());
-      sisa = sisa.slice(awal[0].length);
-    }
-  }
+  const sisa = teks.slice(akhir);
   return { siap, sisa };
 }

@@ -136,6 +136,10 @@ def muat() -> None:
             raise RvcTidakHidup("rvc_python belum diinstal (pip install -r requirements.txt)")
 
         import torch  # noqa: F401  -- WAJIB sebelum rvc_python, lihat docstring modul
+        try:
+            torch.set_num_threads(min(4, os.cpu_count() or 4))
+        except Exception:
+            pass
 
         izinkan_global_torch()
         from rvc_python.infer import RVCInference
@@ -227,7 +231,9 @@ def ubah(wav_masuk: bytes, label: str = "", sisa: float = 0.0) -> bytes:
         masuk.write_bytes(wav_masuk)
         _rvc.set_params(**param_aktif())
         try:
-            _rvc.infer_file(str(masuk), str(keluar))
+            import torch
+            with torch.inference_mode():
+                _rvc.infer_file(str(masuk), str(keluar))
         except Exception as err:
             # vc_single MENELAN semua exception dan mengembalikan string traceback,
             # lalu infer_file meledak di dalam wavfile.write. Galat yang sampai ke

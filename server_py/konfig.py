@@ -91,35 +91,34 @@ def env_web() -> dict[str, str]:
     return hasil
 
 
-KUNCI = nilai("GEMINI_API_KEY")
+KUNCI = ""
 PORT = angka("VTUBER_PORT", 8787)
 
-# Terukur 2026-09-24 pada kunci tingkat gratis: gemini-3.5-flash dan -lite balas
-# 503 "high demand", sedangkan gemini-3-flash-preview 3/3 lolos. Urutan coba
-# utama -> cadangan, bukan menunggu dengan diam.
-MODEL = nilai("VTUBER_MODEL", "gemini-3-flash-preview")
-MODEL_CADANGAN = daftar("VTUBER_MODEL_CADANGAN", "gemini-3.5-flash,gemini-3.5-flash-lite")
+# Otak percakapan:
+# - 'local' / 'llama_cpp': Model GGUF offline di folder model/ (tanpa dependensi luar)
+# - 'ollama': Server daemon Ollama di http://127.0.0.1:11434
+LLM_PROVIDER = nilai("VTUBER_LLM_PROVIDER", "local").lower()
+LOCAL_MODEL_PATH = nilai("VTUBER_LOCAL_MODEL_PATH", "")
+LOCAL_MODEL_THREADS = angka("VTUBER_LOCAL_MODEL_THREADS", 4)
+LOCAL_MODEL_CTX = angka("VTUBER_LOCAL_MODEL_CTX", 8192)
 
-TTS_MODEL = nilai("VTUBER_TTS_MODEL", "gemini-3.8-flash-lite-tts")
-TTS_CADANGAN = daftar("VTUBER_TTS_CADANGAN", "gemini-3.8-flash-tts")
-TTS_SUARA = nilai("VTUBER_TTS_VOICE", "Kore")
+OLLAMA_URL = nilai("VTUBER_OLLAMA_URL", "http://127.0.0.1:11434")
+OLLAMA_MODEL = nilai("VTUBER_OLLAMA_MODEL", "llama3.2:3b")
+
+MODEL = "local"
+MODEL_CADANGAN: list[str] = []
+
+TTS_MODEL = "piper+rvc"
+TTS_CADANGAN: list[str] = []
+TTS_SUARA = ""
 TTS_PER_KALIMAT = bool_("VTUBER_TTS_PER_KALIMAT", True)
-STT_MODEL = nilai("VTUBER_STT_MODEL", "gemini-3.5-transcribe")
+STT_MODEL = "web_speech"
 
 JEDA_FAKTA = angka("VTUBER_JEDA_FAKTA", 8)
 
 # ── rantai engine suara ──────────────────────────────────────────────────────
-# Tiga kunci di atas (TTS_MODEL / TTS_CADANGAN / TTS_SUARA) sekarang milik engine
-# `gemini` SAJA. Bukan sistem konfigurasi kedua: engine lokal tidak punya nama
-# model cloud, jadi tidak ada yang perlu disalin.
-#
-# Rantai berisi RESEP; tiap resep adalah tahap yang digabung dengan '+'.
-# Yang dikenal: stub, piper, rvc, piper+rvc, gemini. Nilai tak dikenal dibuang
-# dengan peringatan di banner -- bukan diabaikan diam-diam.
-#
-# Bawaan `piper,gemini`, BUKAN `piper+rvc,gemini`: RVC baru naik ke depan kalau
-# menang diukur (scripts/uji_latensi.py). Sampai angka itu ada, cloud yang jalan.
-TTS_RANTAI = daftar("VTUBER_TTS_RANTAI", "piper,gemini")
+# Rantai berisi RESEP offline: piper, rvc, piper+rvc, stub
+TTS_RANTAI = daftar("VTUBER_TTS_RANTAI", "piper+rvc,piper")
 TTS_BATAS_DETIK = angka("VTUBER_TTS_BATAS_DETIK", 20)
 # Resep yang terbukti tidak selesai dalam TTS_BATAS_DETIK diistirahatkan selama ini
 # (detik) sebelum dicoba lagi. Tanpa jeda, SETIAP kalimat dari jawaban panjang

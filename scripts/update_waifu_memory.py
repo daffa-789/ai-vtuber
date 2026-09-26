@@ -118,9 +118,9 @@ suasana hati di [[Mood]], dan rekaman harian di [[Riwayat]].
 - Master aktif memainkan game Arknights: Endfield dan menggemari topik video game.
 - Master selalu minta dipanggil "Master", bukan menggunakan nama aslinya (Daffa).
 - Master meminta selalu diberi feedback jujur dan kritis yang spesifik (maksimal satu catatan per balasan), bukan sekadar pujian kosong atau kalimat penyemangat.
-- Master sedang membangun companion desktop AI pribadi berbasis karakter Elaina (Penyihir Abu) dengan model Live2D penyihir, Gemini TTS, dan VAD lokal untuk dipakai sendiri di desktop, bukan untuk live streaming.
+- Master membangun companion desktop AI pribadi berbasis karakter Elaina (Penyihir Abu) dengan model Live2D penyihir, LLM offline Llama-3.2-3B-Instruct (GGUF), suara offline Piper + RVC Furina, dan input mic Web Speech API (100% full offline di laptop).
 - Master menolak keras merekam suaranya sendiri untuk latihan suara atau dataset anime karena merasa malu; seluruh jalur suara harus bekerja tanpa memerlukan rekaman suara Master.
-- Master berlangganan Google AI Pro (akses Gemini API via Google AI Studio) dan memiliki Google Colab, namun tetap menggunakan kuota dan resource secara efisien tanpa layanan berbayar boros.
+- Master mengonfigurasi AI VTuber agar berjalan 100% full offline di CPU laptop tanpa ketergantungan API cloud Gemini.
 - Spesifikasi komputer Master: prosesor Intel Core i5-1135G7, grafis Intel Iris Xe, 16 GB RAM, tanpa kartu grafis terpisah NVIDIA (komputasi rendering dan audio harus ringan dan hemat resource).
 - Lingkungan kerja Master: layar monitor menggunakan Windows display scaling 125%, dan sering menjalankan beberapa aplikasi/proyek bersamaan sehingga port server tidak boleh saling berebut.
 - Sistem memori proyek disimpan secara lokal di vault Obsidian pada folder `Waifu Memory/AI VTUBER/` sebagai pulau mandiri tanpa database cloud atau vektor berat.
@@ -224,7 +224,7 @@ links:
 - **Dipanggil "Master"**, bukan namanya.
 - **Jangan minta dia rekaman suara** untuk jalur suara; cari cara lain tanpa rekaman sendiri.
 - **Memory dipisah per proyek** di vault ini, jangan mencampur catatan proyek lain (pulau terpisah).
-- **Sifat dibuat Elaina penuh**, model Live2D penyihir, Gemini TTS dengan suara Kore, dan VAD lokal.
+- **Sifat dibuat Elaina penuh**, model Live2D penyihir, suara Furina (Piper + RVC offline), dan model LLM lokal Llama-3.2-3B.
 
 ## Selera kanonik Elaina (pengganti karangan lama)
 

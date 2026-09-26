@@ -1,6 +1,7 @@
 import { EKSPRESI_DASAR, NAMA_POSE, NAMA_WAJAH, kupasTag } from './ekspresi.js';
 import { kalimatSiap } from './kalimat.js';
-import { antre, bicarakan, hentikan, selesai } from './suara.js';
+import { jedaMikrofon, lanjutMikrofon, pasangKontrolMikrofon } from './mikrofon.js';
+import { antre, bicarakan, hentikan, pasangStatusSuara, selesai } from './suara.js';
 
 const KUNCI_RIWAYAT = 'vtuber.riwayat';
 
@@ -56,6 +57,10 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
         : 'berbicara';
   };
 
+  pasangStatusSuara((keadaan) => {
+    if (keadaan === 'berbicara') setSuara('berbicara');
+  });
+
   fetch(`${API_BASE}/api/health`)
     .then((r) => r.json())
     .then((h) => {
@@ -70,10 +75,26 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
 
   riwayat.forEach((p) => gelembung(p.role, p.content));
 
+  const btnChatBaru = document.getElementById('chat-baru');
+  if (btnChatBaru) {
+    btnChatBaru.onclick = () => {
+      if (sibuk) return;
+      hentikan();
+      riwayat.length = 0;
+      localStorage.removeItem(KUNCI_RIWAYAT);
+      const log = document.getElementById('log');
+      if (log) log.innerHTML = '';
+      setSuara('diam');
+      picuEkspresi(EKSPRESI_DASAR);
+      isi.focus();
+    };
+  }
+
   async function kirim(teks) {
     if (sibuk) return;
 
     sibuk = true;
+    jedaMikrofon();
     hentikan();
     gelembung('user', teks);
     riwayat.push({ role: 'user', content: teks });
@@ -122,8 +143,6 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
       let antrean = 0;
       let potonganGagal = 0;
       let pesanGagal = '';
-      // Potongan di koma cuma boleh terjadi sekali, itu untuk kalimat pertama.
-      let bolehPotongAwal = true;
       const catat = (err) => {
         potonganGagal += 1;
         pesanGagal = err instanceof Error ? err.message : String(err);
@@ -131,11 +150,12 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
       const siarkan = () => {
         if (!perKalimat) return;
         const sisaDari = jawaban.slice(terucap);
-        const { siap, sisa } = kalimatSiap(sisaDari, bolehPotongAwal);
+        // Selalu potong per kalimat utuh (tanpa potong koma), agar RVC
+        // menyelaraskan kalimat utuh dan pitch vokal Furina tidak terpotong.
+        const { siap, sisa } = kalimatSiap(sisaDari, false);
         if (!siap.length) return;
-        bolehPotongAwal = false;
         terucap += sisaDari.length - sisa.length;
-        setSuara('menyusun suara…');
+        setSuara('menyelaraskan suara Furina (RVC)…');
         for (const potongan of siap) {
           antrean += 1;
           antre(potongan).catch(catat);
@@ -159,11 +179,11 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
       // Potongan penutup, lalu tunggu antrean habis terputar. Semua potongan
       // gugur = suara mati total dan itu harus kelihatan di layar; satu-dua yang
       // gugur cukup masuk log.
-      setSuara('menyusun suara…');
       if (perKalimat) {
         const sisa = jawaban.slice(terucap);
         if (sisa.trim()) {
           antrean += 1;
+          setSuara('menyelaraskan suara Furina (RVC)…');
           antre(sisa).catch(catat);
         }
         await selesai();
@@ -184,8 +204,16 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
       riwayat.pop();
     } finally {
       sibuk = false;
+      lanjutMikrofon();
       isi.focus();
     }
+  }
+
+  const btnMic = document.getElementById('btn-mic');
+  if (btnMic) {
+    pasangKontrolMikrofon(btnMic, isi, (teksSuara) => {
+      void kirim(teksSuara);
+    });
   }
 
   form.onsubmit = (e) => {
