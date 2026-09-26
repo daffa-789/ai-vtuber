@@ -14,20 +14,21 @@ from __future__ import annotations
 import base64
 import json
 import re
-import struct
 import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import gemini
+import jalur_suara
+import konfig
 import memori
 import statis
+import tts_rvc
 import vault
 from konfig import (
     AKAR_PERSONA,
     JEDA_FAKTA,
-    KUNCI,
     MAKS_AUDIO,
     MAKS_BODY,
     MAKS_KARAKTER,
@@ -36,12 +37,8 @@ from konfig import (
     MODEL_CADANGAN,
     PORT,
     STT_MODEL,
-    STUB,
-    TTS_CADANGAN,
-    TTS_MODEL,
-    TTS_PER_KALIMAT,
-    TTS_SUARA,
 )
+from wav import laju_kanal, pcm_ke_wav, sudah_wav
 
 PERSONA = AKAR_PERSONA.read_text(encoding="utf-8")
 
@@ -73,31 +70,6 @@ def rapikan_riwayat(raw) -> list[dict]:
             }
         )
     return hasil[-MAKS_PESAN:]
-
-
-def pcm_ke_wav(pcm: bytes, laju: int, kanal: int) -> bytes:
-    """Model TTS lama memulangkan PCM mentah tanpa header; dibungkus di sini."""
-    header = (
-        b"RIFF"
-        + struct.pack("<I", 36 + len(pcm))
-        + b"WAVEfmt "
-        + struct.pack("<IHHIIHH", 16, 1, kanal, laju, laju * kanal * 2, kanal * 2, 16)
-        + b"data"
-        + struct.pack("<I", len(pcm))
-    )
-    return header + pcm
-
-
-def sudah_wav(bin: bytes) -> bool:
-    """Model TTS baru sudah mengirim WAV lengkap; membungkusnya lagi = berkas rusak,
-    dan itu yang bikin suara hilang diam-diam saat model diganti."""
-    return len(bin) > 12 and bin[:4] == b"RIFF" and bin[8:12] == b"WAVE"
-
-
-def laju_kanal(mime: str) -> tuple[int, int]:
-    """Contoh mime: 'audio/wav' atau 'audio/L16;codec=pcm;rate=24000'."""
-    angka = [int(n) for n in re.findall(r"(?:rate|channels)=(\d+)", mime)]
-    return (angka[0] if angka else 24000, angka[1] if len(angka) > 1 else 1)
 
 
 class Sidecar(BaseHTTPRequestHandler):
@@ -143,10 +115,10 @@ class Sidecar(BaseHTTPRequestHandler):
                 200,
                 {
                     "ok": True,
-                    "model": "stub" if STUB else MODEL,
+                    "model": "stub" if konfig.STUB else MODEL,
                     "cadangan": MODEL_CADANGAN,
-                    "key": bool(KUNCI),
-                    "tts": {"model": TTS_MODEL, "suara": TTS_SUARA, "perKalimat": TTS_PER_KALIMAT},
+                    "key": bool(konfig.KUNCI),
+                    "tts": jalur_suara.ringkasan(),
                     "memori": "vault Obsidian" if vault.tersedia() else vault.alasan_tidak_tersedia(),
                     "sisi": "python",
                 },
@@ -192,9 +164,9 @@ class Sidecar(BaseHTTPRequestHandler):
 
     # ── chat ────────────────────────────────────────────────────────────────
     def chat(self) -> None:
-        if STUB:
+        if konfig.STUB:
             return self._chat_stub()
-        if not KUNCI:
+        if not konfig.KUNCI:
             return self._json(
                 501,
                 {"error": "GEMINI_API_KEY belum diisi. Salin .env.example jadi .env lalu isi."},
@@ -223,7 +195,7 @@ class Sidecar(BaseHTTPRequestHandler):
         aliran, terpakai, error_terakhir = None, "", ""
         for model in dict.fromkeys([MODEL, *MODEL_CADANGAN]):
             try:
-                aliran = gemini.alir(model, body, KUNCI)
+                aliran = gemini.alir(model, body, konfig.KUNCI)
                 terpakai = model
                 break
             except gemini.Ditolak as err:
@@ -280,7 +252,7 @@ class Sidecar(BaseHTTPRequestHandler):
 
     # ── tts ────────────────────────────────────────────────────────────────
     def tts(self) -> None:
-        if STUB:
+        if konfig.STUB:
             wav = pcm_ke_wav(bytes(4800), 24000, 1)
             self.send_response(200)
             self.send_header("content-type", "audio/wav")
@@ -288,8 +260,6 @@ class Sidecar(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(wav)
             return
-        if not KUNCI:
-            return self._json(501, {"error": "GEMINI_API_KEY belum diisi."})
         try:
             teks = str(json.loads(self._tubuh(MAKS_BODY).decode("utf-8")).get("text") or "")[
                 :MAKS_KARAKTER
@@ -300,27 +270,16 @@ class Sidecar(BaseHTTPRequestHandler):
         if not teks.strip():
             return self._json(400, {"error": "teks kosong"})
 
-        wav, terpakai, error_terakhir = None, "", ""
-        for model in dict.fromkeys([TTS_MODEL, *TTS_CADANGAN, "gemini-2.5-flash-preview-tts"]):
-            try:
-                hasil = gemini.generate(model, gemini.body_tts(teks, TTS_SUARA), KUNCI)
-                audio = gemini.audio_dari(hasil)
-                if not audio:
-                    error_terakhir = f"{model}: tidak ada audio"
-                    continue
-                bin = base64.b64decode(audio[1])
-                laju, kanal = laju_kanal(audio[0])
-                wav = bin if sudah_wav(bin) else pcm_ke_wav(bin, laju, kanal)
-                terpakai = model
-                break
-            except gemini.Ditolak as err:
-                error_terakhir = err.pesan
-                if not err.layak_dicoba:
-                    break  # 400 = permintaannya yang salah, bukan modelnya
-                print(f"TTS {model} ditolak: {err.pesan[:90]}", file=sys.stderr)
-
-        if not wav:
-            return self._json(503, {"error": error_terakhir or "semua model TTS gagal"})
+        # Tidak ada lagi "501 kalau GEMINI_API_KEY kosong" di sini. Dahulu syarat
+        # itu mutlak; sekarang engine lokal (piper/rvc) tidak butuh kunci sama
+        # sekali, jadi menolak tanpa kunci akan membisukan halaman yang sebenarnya
+        # bisa bicara. Kewajiban kunci milik tiap engine sendiri.
+        try:
+            wav, terpakai = jalur_suara.bangun(teks)
+        except jalur_suara.SemuaEngineGagal as err:
+            for catatan in err.catatan:
+                print(f"TTS: {catatan}", file=sys.stderr)
+            return self._json(503, {"error": str(err)})
 
         self.send_response(200)
         self.send_header("content-type", "audio/wav")
@@ -333,7 +292,7 @@ class Sidecar(BaseHTTPRequestHandler):
 
     # ── stt ─────────────────────────────────────────────────────────────────
     def stt(self) -> None:
-        if not KUNCI:
+        if not konfig.KUNCI:
             return self._json(501, {"error": "GEMINI_API_KEY belum diisi."})
         audio = self._tubuh(MAKS_AUDIO)
         if len(audio) < 1000:
@@ -341,7 +300,7 @@ class Sidecar(BaseHTTPRequestHandler):
 
         try:
             hasil = gemini.generate(
-                STT_MODEL, gemini.body_audio(base64.b64encode(audio).decode()), KUNCI
+                STT_MODEL, gemini.body_audio(base64.b64encode(audio).decode()), konfig.KUNCI
             )
             self._json(200, {"teks": gemini.transkrip_dari(hasil)})
         except gemini.Ditolak as err:
@@ -353,7 +312,7 @@ def simpan_memori(
 ) -> None:
     """Ditulis SETELAH balasan terkirim: vault mati tidak boleh merusak percakapan
     yang sudah terjawab."""
-    if STUB or not vault.tersedia() or not mentah.strip():
+    if konfig.STUB or not vault.tersedia() or not mentah.strip():
         return  # STUB: percakapan uji tidak boleh menodai riwayat karakter
     try:
         # Model kadang membungkus tag dengan backtick (`[lelah]`) walau dilarang di
@@ -374,7 +333,7 @@ def simpan_memori(
                 {"role": m["role"], "content": " ".join(p["text"] for p in m["parts"])}
                 for m in riwayat[-12:]
             ]
-            baru = memori.ekstrak_fakta(MODEL, percakapan, fakta_lama, KUNCI)
+            baru = memori.ekstrak_fakta(MODEL, percakapan, fakta_lama, konfig.KUNCI)
             if baru:
                 vault.simpan_fakta(list(dict.fromkeys([*fakta_lama, *baru]))[-40:])
                 print(f"fakta baru tersimpan: {len(baru)}")
@@ -390,29 +349,50 @@ def baris_banner(nomor: int) -> str:
     yang mengklaim "memori=vault Obsidian" bikin orang mencari fakta uji yang memang
     tidak pernah ada.
     """
-    model_chat = "stub (Gemini tidak dipanggil)" if STUB else MODEL
+    model_chat = "stub (Gemini tidak dipanggil)" if konfig.STUB else MODEL
     memori = "vault Obsidian" if vault.tersedia() else vault.alasan_tidak_tersedia()
-    if STUB:
+    if konfig.STUB:
         memori += " (diam, tidak ditulis)"
-    return (
-        f"sidecar python http://127.0.0.1:{nomor} | key={'siap' if KUNCI else 'KOSONG'} | "
-        f"chat={model_chat} | tts={TTS_MODEL}/{TTS_SUARA} | stt={STT_MODEL} | memori={memori}"
+    siap = jalur_suara.rantai_aktif()
+    tts = "stub (hening 0,2 dtk)" if konfig.STUB else (",".join(siap) or "TIDAK ADA")
+    baris = (
+        f"sidecar python http://127.0.0.1:{nomor} | key={'siap' if konfig.KUNCI else 'KOSONG'} | "
+        f"chat={model_chat} | tts={tts} | stt={STT_MODEL} | memori={memori}"
     )
+    # RVC yang dimatikan diam-diam adalah kelas bug yang sama dengan "suara hilang
+    # tanpa error" di wav.py. Kalau Master minta RVC tapi asetnya belum ada, itu
+    # harus terbaca di baris pertama, bukan tidak muncul sama sekali.
+    kalau = jalur_suara.peringatan()
+    if konfig.STUB:
+        return baris
+    for catatan in kalau:
+        baris += f"\n  ! {catatan}"
+    return baris
 
 
 def utama() -> int:
+    jalur_suara.mula()
     try:
-        server = ThreadingHTTPServer(("127.0.0.1", PORT), Sidecar)
-    except OSError as err:
-        # Jangan pernah merebut port milik proyek lain: lapor lalu berhenti.
-        print(f"port {PORT or 'acak'} tidak bisa dipakai: {err}", file=sys.stderr)
-        return 1
+        try:
+            server = ThreadingHTTPServer(("127.0.0.1", PORT), Sidecar)
+        except OSError as err:
+            # Jangan pernah merebut port milik proyek lain: lapor lalu berhenti.
+            print(f"port {PORT or 'acak'} tidak bisa dipakai: {err}", file=sys.stderr)
+            return 1
 
-    print(baris_banner(server.server_address[1]))
-    try:
+        print(baris_banner(server.server_address[1]))
+        # Muat RVC saat boot kalau diminta: pekerjaan pertama tidak dingin.
+        if konfig.RVC_MUAT_BOOT and not konfig.STUB and tts_rvc.hidup():
+            try:
+                tts_rvc.muat()
+                print("  rvc: model dimuat saat boot", file=sys.stderr)
+            except Exception as err:
+                print(f"  ! rvc tidak bisa dimuat: {err}", file=sys.stderr)
         server.serve_forever()
     except KeyboardInterrupt:
         pass
+    finally:
+        jalur_suara.berhenti()
     return 0
 
 

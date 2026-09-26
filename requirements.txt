@@ -1,12 +1,116 @@
-# Sisi server Python TIDAK butuh paket apa pun -- semuanya stdlib Python 3.10
-# (http.server, urllib, struct, json, base64). Jadi `pip install -r requirements.txt`
-# sengaja kosong: tidak ada yang bisa busuk, tidak ada yang perlu di-update.
+# ─────────────────────────────────────────────────────────────────────────────
+# Sisi CHAT tidak butuh paket apa pun: app.py / gemini.py / memori.py / vault.py /
+# statis.py tetap stdlib murni Python 3.10. Paket di bawah hanya untuk
+# JALUR SUARA LOKAL (Piper + RVC), dan itu bisa gagal dipasang tanpa membuat
+# Elaina berhenti mengobrol -- lihat server_py/uji_jalan.py.
 #
-# Tempat ini tetap disiapkan karena jalur training/ekspor dataset nanti pasti
-# membutuhkan paket. Yang belum dipasang dan memang belum perlu:
-#   python-dotenv   -> tidak perlu, konfig.py punya parser .env sendiri
-#   requests        -> tidak perlu, urllib sudah cukup
-#   webview         -> baru perlu kalau halaman dibuka dari jendela Python (pywebview)
-#   datasets / torch-> baru perlu kalau benar-benar mulai melatih; di mesin ini
-#                      (Iris Xe, tanpa GPU NVIDIA) torch hanya jalan di CPU dan itu
-#                      lambat untuk fine-tune -- ukur dulu sebelum menginstal 2 GB.
+# KRITERIA SELEKSI UTAMA: tiap paket wajib punya wheel Windows cp310 win_amd64.
+# Mesin ini tidak punya cmake maupun gcc, jadi apa pun yang butuh kompilasi
+# akan GALAT, bukan melambat.
+#
+# CARA PASANG -- tiga langkah, jangan digabung (satu langkah bikin pip menyeret
+# build CUDA ±2,5 GB ke mesin yang tidak punya GPU NVIDIA):
+#
+#   .venv\Scripts\python.exe -m pip install "pip==24.0"
+#   .venv\Scripts\python.exe -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.12.1 torchaudio==2.11.0
+#   .venv\Scripts\python.exe -m pip install --dry-run -r requirements.txt   # baca rencananya dulu
+#   .venv\Scripts\python.exe -m pip install -r requirements.txt
+#   .venv\Scripts\python.exe -m pip freeze > requirements.lock.txt          # berkas bukti
+#
+# LANGKAH PERTAMA BUKAN HIASAN, dan ini terukur di mesin ini 2026-09-26: pip >=
+# 24.1 menolak SEMUA wheel omegaconf 2.0.x karena metadata distribusinya cacat
+# (`PyYAML (>=5.1.*)` bukan specifier sah), sementara fairseq 0.12.2 dan hydra-core
+# 1.0.7 sama-sama mem-pin `omegaconf <2.1`. Jadi dengan pip baru bukan satu baris
+# yang macet tapi seluruh pohon dependensi fairseq: "No matching distribution
+# found for omegaconf==2.0.6". pip 24.0 sendiri yang mencetak saran itu.
+# Kenaikan pip berikutnya akan menjatuhkan jalur RVC -- jangan `pip install -U pip`.
+#
+# torch/torchaudio sengaja TIDAK ada di daftar ini supaya langkah keduanya tidak
+# bisa dilewatkan tanpa kelihatan. Versi yang benar-benar terpakai dicatat di
+# requirements.lock.txt; galat instalasi berikutnya dibaca sebagai selisihnya.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── fondasi suara ────────────────────────────────────────────────────────────
+piper-tts==1.8.0
+#  Wheel-nya `cp39-abi3-win_amd64` -> jalan di Python 3.10 TANPA kompilator.
+#  Dependensinya cuma onnxruntime + pathvalidate. Sengaja TIDAK menarik
+#  piper-phonemize (paket itu tidak punya wheel Windows sama sekali); espeak-ng
+#  sudah tertanam di dalam piper-tts. Extra resminya `train` = pintu latihan
+#  Piper nanti: pip install "piper-tts[train]".
+
+onnxruntime
+#  Versi dibiarkan resolve (piper minta >=1,<2); hasil final ada di lock.
+#  Jangan naik ke 2.x kalau kelak muncul -- belum diuji di mesin ini.
+
+# ── RVC ──────────────────────────────────────────────────────────────────────
+rvc-python==0.1.5
+#  Satu-satunya RVC yang bisa dipanggil in-process dari PyPI (`applio` = 404).
+#  JANGAN pernah `import rvc_python.api` atau `python -m rvc_python`: itu menarik
+#  fastapi/uvicorn/pydantic yang tidak kita pakai sama sekali.
+
+fairseq @ https://huggingface.co/Jmica/rvc/resolve/main/fairseq-0.12.2-cp310-cp310-win_amd64.whl
+#  BARIS PALING MENENTUKAN. rvc-python mem-pin `fairseq==0.12.2`, dan PyPI tidak
+#  punya wheel Windows untuk versi itu -> tanpa URL ini pip build dari sdist dan
+#  mati karena tidak ada compiler. URL ini persis yang tercatat di direct_url.json
+#  venv yang sudah terbukti jalan di mesin ini. Kalau URL-nya mati: unduh wheel
+#  cp310 win_amd64 ke aset/, install dari berkas itu -- jangan `--no-deps`
+#  (fairseq tetap butuh omegaconf/hydra).
+
+numpy==1.23.5
+#  Langit-langit keras rvc-python (`numpy<=1.23.5`) sekaligus pagar fairseq 0.12.2
+#  (numpy 2.x merusak np.float). Nilai ini juga yang terbukti terpasang di mesin
+#  ini. Kalau ada paket yang benar-benar menuntut numpy>=1.24, paket ITU yang
+#  dibuang -- jangan numpy. (Pasangan numba/llvmlite ikut turun lewat resolver;
+#  kalau macet, pakai .pip-constraints.txt, lihat catatan di bawah.)
+
+faiss-cpu==1.7.3
+#  Dipin oleh rvc-python. Hanya terpakai kalau `.index` RVC dinyalakan
+#  (VTUBER_RVC_INDEKS_LAJU > 0), dan itu sengaja mati di jalur live:
+#  rvc_python membaca + merekonstruksi index 507 MB PER KALIMAT tanpa cache.
+
+omegaconf==2.0.6
+#  Dipin oleh rvc-python.
+
+scipy
+#  `scipy.io.wavfile.write` adalah satu-satunya jalur keluaran
+#  rvc_python.infer_file -- jadi ini bukan paket tambahan, ini paket wajib.
+
+soundfile
+#  Baca/tulis WAV di luar scipy (dipakai scripts/sedia_suara.py dan uji_latensi).
+
+librosa
+#  Transitif dari rvc-python (resample/filter di jalur RVC). Didaftarkan di sini
+#  supaya versinya kelihatan, bukan ikut-ikutan resolve.
+
+av
+#  PyAV. Yang memdecode berkas masukan RVC adalah paket INI, bukan ffmpeg CLI --
+#  jadi `ffmpeg 9.0.2` di PATH tidak ikut jadi dependensi.
+
+praat-parselmouth
+#  f0 `pm` = default kita di mesin ini (rmvpe diadu terhadapnya lewat uji_latensi).
+
+pyworld
+#  Dipin rvc-python dan hanya dipakai f0 `harvest`. `harvest` sengaja BUKAN
+#  default (pyworld + lru_cache berdasarkan PATH berkas -> lambat dan berbahaya
+#  kalau nama berkas temp diulang), tapi paketnya harus ada supaya impor paket
+#  itu tidak gagal.
+
+torchcrepe
+#  Dipin rvc-python; f0 `crepe` ditolak untuk CPU 4-core. Dipasang karena dipaksa,
+#  bukan karena dipakai -- ditulis begini supaya tidak disalahartikan sebagai opsi.
+
+# ── alat ukur, BUKAN runtime ─────────────────────────────────────────────────
+psutil
+#  Peak RSS dilaporkan scripts/uji_latensi.py dan scripts/sedia_suara.py. Tanpa
+#  ini klaim "RAM aman" cuma tebakan.
+
+# ── catatan ──────────────────────────────────────────────────────────────────
+# python-dotenv tidak perlu (konfig.py punya parser .env sendiri; menambahkannya
+# justru creates dua sumber kebenaran). requests tidak perlu (urllib cukup).
+# pywebview baru perlu untuk jendela desktop (Fase 5), belum di sini.
+#
+# Kalau resolver macet atau mengorbankan numpy, pakai berkas constraints:
+#   .venv\Scripts\python.exe -m pip install -c .pip-constraints.txt -r requirements.txt
+# dan pasang bertahap: `piper-tts onnxruntime` dulu (kecil, mandiri, langsung
+# memberi suara Indonesia), baru `rvc-python`. Milestone Piper tidak boleh
+# digadaikan supaya RVC bisa jalan.

@@ -67,8 +67,11 @@ def _kirim(model: str, aksi: str, body: dict, key: str, query: str = "", timeout
         raise Ditolak(f"{model} tidak bisa dihubungi: {err}") from err
 
 
-def generate(model: str, body: dict, key: str) -> dict:
-    with _kirim(model, "generateContent", body, key) as resp:
+def generate(model: str, body: dict, key: str, timeout: int | None = None) -> dict:
+    # `timeout` boleh diubah per panggilan, tapi TIMEOUT global TIDAK naik: 15 detik
+    # itu pas untuk chat, dan synthesizer cloud butuh lebih lama. Kalau dinaikkan
+    # di sini, failover model chat ikut melambat dua kali lipat.
+    with _kirim(model, "generateContent", body, key, timeout=timeout or TIMEOUT) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
 

@@ -3,28 +3,34 @@
 Teman desktop berbasis Live2D yang bisa diajak ngobrol lewat teks maupun suara,
 menjawab dengan suara, dan menggerakkan wajah serta rahang sesuai isi pembicaraannya.
 
-Status: renderer, loop chat, ekspresi, text-to-speech, dan memori jangka panjang sudah
-berjalan. Memory karakter ditulis sebagai catatan Markdown di
+Status: renderer, loop chat, ekspresi, text-to-speech (lokal dan cloud), dan memori
+jangka panjang sudah berjalan. Memory karakter ditulis sebagai catatan Markdown di
 vault Obsidian, jadi bisa dibaca dan disunting langsung.
 
 ## Menjalankan
 
-Prasyarat: **Python 3.10** untuk aplikasi, dan **Node.js** hanya untuk skrip perkakas
-(`scripts/*.js` — pemasangan model, pengunduh aset). Tidak ada `npm install`:
-pustaka browser sudah divendur di `web/lib/` dan sisi server murni stdlib Python.
+Prasyarat: **Python 3.10**. Tidak ada Node lagi di proyek ini — yang tersisa hanya
+`.py` dan `.js` polos yang dimuat browser langsung. Pustaka browser sudah divendur
+di `web/lib/`, dan tidak ada langkah build.
 
 ```bash
 python -m venv .venv
-.venv\Scripts\python.exe server_py\app.py    # satu-satunya proses yang perlu dijalankan
+.venv\Scripts\python.exe -m pip install "pip==24.0"                     # lihat catatan di requirements.txt
+.venv\Scripts\python.exe -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.12.1 torchaudio==2.11.0
+.venv\Scripts\python.exe -m pip install -r requirements.txt             # jalur suara lokal
+.venv\Scripts\python.exe scripts\sedia_suara.py --piper                 # voice Indonesia 61 MB
+.venv\Scripts\python.exe server_py\app.py                               # satu-satunya proses yang perlu dijalankan
 # buka http://127.0.0.1:8787/  (port ikut VTUBER_PORT di .env)
 ```
+
+Chat tetap jalan tanpa `pip install` apa pun — hanya suaranya yang pindah ke cloud.
 
 Sekali jalan dari nol — aset karakter tidak ikut ke git:
 
 ```bash
-node scripts/fetch-assets.js     # Cubism core + aset VAD
-node scripts/pasang-model.js     # sinkronkan konfigurasi ekspresi model penyihir
-cp .env.example .env             # lalu isi GEMINI_API_KEY
+cp .env.example .env                    # lalu isi GEMINI_API_KEY
+.venv\Scripts\python.exe scripts\unduh_aset.py      # Cubism core dari situs Live2D
+# berkas ekspresi + penyihir.model3.json: buka /perkakas.html di halaman yang hidup
 ```
 
 Di halaman, ketik pesannya di kolom bawah. Jalur mikrofon **sedang dimatikan** —
@@ -48,9 +54,13 @@ pakai yang dimuat dengan `<script>` biasa, sehingga tidak ada langkah build sama
 | `src/*.ts` + `tsconfig.json` | `web/*.js` — ESM asli browser |
 | `node_modules` (270 MB) | `web/lib/` (647 KB: pixi + cubism4 + vad) |
 
-Sisi Python sengaja **tanpa dependensi**: `requirements.txt` kosong, `.venv` hanya untuk
-memisahkan interpreter. Parser resep wajah/pose tetap satu berkas (`web/konfigurasi.js`) yang
-dipakai browser DAN skrip Node, supaya nilainya tidak mungkin beda di dua tempat.
+Sisi **chat** tetap stdlib murni: `app.py`, `gemini.py`, `memori.py`, `vault.py`,
+`statis.py` tidak mengimpor satu pun paket luar. Yang butuh pip hanya **jalur suara
+lokal** (`piper-tts`, `rvc-python` dan pohon dependensinya), dan impornya tertunda di
+dalam fungsi — jadi venv yang belum di-`pip install` tetap menjalankan server penuh
+dengan suara cloud. Parser resep wajah/pose tetap satu berkas (`web/konfigurasi.js`)
+yang dipakai halaman utama DAN `/perkakas.html`; sisi Python tidak menafsirnya sama
+sekali, karena dua parser berarti dua kebenaran.
 
 ## Model karakter
 
@@ -71,7 +81,8 @@ public/models/penyihir/
 
 Sembilan wajah tersusun rapi dari parameter modelnya dan dialihbahasakan ke Indonesia:
 **Resepnya diatur fleksibel di `.env`** -- masing-masing adalah satu baris `VITE_WAJAH_*` /
-`VITE_POSE_*` di `.env`, dan berkas `.exp3.json` di atas disinkronkan oleh `node scripts/pasang-model.js`.
+`VITE_POSE_*` di `.env`; berkas `.exp3.json`-nya hanyalah salinan untuk perkakas luar
+dan diunduh ulang dari `/perkakas.html`.
 Label parameter juga tersimpan rapi di `penyihir.cdi3.json`:
 
 | Singkatan / Parameter | Arti sebenarnya | Dipakai untuk |
@@ -94,13 +105,15 @@ kalau ada motion yang jalan, pustaka justru mematikan kedip otomatisnya.
 ## Diatur lewat .env
 
 Semua yang bergerak, berubah wajah, dan mengukur piksel dibaca dari satu berkas:
-`.env` isinya, `web/konfigurasi.js` parsernya — dipakai browser DAN
-`node scripts/pasang-model.js`, jadi tidak bisa beda. Cara melihat apa yang sedang terpakai:
+`.env` isinya, `web/konfigurasi.js` parsernya — dipakai halaman utama DAN
+`web/perkakas.html`, jadi tidak bisa beda. Cara melihat apa yang sedang terpakai:
+buka **`http://127.0.0.1:8787/perkakas.html`** saat server jalan.
 
-```bash
-node scripts/tampilkan-konfigurasi.js            # tabel wajah/pose/gerakan + peringatan sintaks
-node scripts/tampilkan-konfigurasi.js --env   # blok .env siap tempel dari nilai efektif
-```
+Halaman itu menampilkan tabel wajah/pose/gerakan dari nilai efektif, peringatan
+sintaks, blok `.env` siap tempel, dan tombol unduh tiap `.exp3.json` plus
+`penyihir.model3.json`. Tidak ada logika kedua di dalamnya: ia mengimpor fungsi
+yang sama persis dengan yang dipakai avatar. Terukur 2026-09-26: 16 dari 16 resep
+dan `penyihir.model3.json` dihasilkan identik byte-per-byte dengan berkas di disk.
 
 | Yang mau diubah | Kunci |
 |---|---|
@@ -121,8 +134,8 @@ mengali; `kosong` berarti tanpa parameter. Nama kunci diterjemahkan apa adanya �
 `VITE_POSE_HANTU_KECIL` menjadi pose `hantu-kecil`. Id yang tidak ada di model atau
 nilai yang keluar rentang dilaporkan di status halaman ("N konfigurasi perlu dicek")
 dan di log browser. Ubah nilainya cukup
-muat ulang halaman; hanya gerakan baru yang perlu `node scripts/pasang-model.js` lagi
-supaya berkasnya ikut dipasang.
+muat ulang halaman; hanya berkas untuk perkakas luar yang perlu diunduh ulang
+dari `/perkakas.html`.
 
 Wajah memakai sistem ekspresi pustaka (satu wajah pada satu waktu), sedangkan pose
 ditulis sebagai lapisan parameter paling akhir setiap frame — sehingga tongkat,
@@ -197,15 +210,15 @@ dan kontras teks terjaga pada tema gelap.
 ## Cara kerja
 
 ```
-papan ketik ---------------------------> teks --> Gemini Flash --> teks + [tag]
-                                                                    |
-                                                              ekspresi Live2D
-                                                Gemini TTS -> WAV 24kHz
-                                                         |
-                                          AnalyserNode -> ParamMouthOpenY
-
-(mikrofon -> VAD Silero -> STT masih terpasang di sisi server, tapi belum
- ada tombolnya di halaman — lihat catatan di bagian Menjalankan)
+papan ketik ------------------> teks --> Gemini Flash --> teks + [tag]
+                                                              |
+                                                        ekspresi Live2D
+                     /api/tts --> jalur_suara (pekerja tunggal + cache)
+                          piper     --> WAV 22,05 kHz  (offline, CPU)
+                          piper+rvc --> RVC/Furina --> WAV 40 kHz
+                          gemini    --> cloud, 24 kHz
+                                          |
+                             AnalyserNode (RMS) -> ParamMouthOpenY
 ```
 
 - **`server_py/app.py`** — satu proses untuk semuanya: API key, Gemini (chat/TTS/STT),
@@ -216,10 +229,18 @@ papan ketik ---------------------------> teks --> Gemini Flash --> teks + [tag]
   cadangan tidak pernah jalan.
 - **`server_py/statis.py`** — pengganti dev server: `web/` lalu `public/`, MIME benar,
   query `?import` dibuang, dan jalur di luar akar ditolak.
+- **`server_py/jalur_suara.py`** — orkestrator suara: satu thread pekerja + antrean
+  berbatas, cache per kalimat, dedupe pekerjaan identik, dan fallback antar-resep saat
+  satu engine mati atau melewati `VTUBER_TTS_BATAS_DETIK`.
+- **`server_py/tts_piper.py`** / **`tts_rvc.py`** / **`tts_gemini.py`** — satu engine per
+  berkas. Ketiganya menunda impornya sendiri, jadi `import app` tidak pernah menyeret
+  torch atau onnxruntime hanya untuk menjawab `/api/chat`.
+- **`server_py/wav.py`** — bungkusan/baca header WAV. `sudah_wav` dipertahankan apa
+  adanya: membungkus ulang WAV yang sudah lengkap itu sebab "suara hilang diam-diam".
 - **`persona.md`** — sifat dan gaya bicara karakter. Ini konfigurasi, bukan model yang
   dilatih: diedit langsung, dan selalu dikirim sebagai system instruction.
-- **`web/konfigurasi.js`** — parser `.env` (wajah, pose, gerakan, ukuran). Dipakai browser
-  dan `scripts/pasang-model.js`, satu sumber kebenaran di dua runtime.
+- **`web/konfigurasi.js`** — parser `.env` (wajah, pose, gerakan, ukuran). Dipakai
+  `index.html` dan `perkakas.html`, satu sumber kebenaran untuk dua kegunaan.
 - **`web/wajah.js`** — menyuntik resep dari `.env` ke expression manager saat runtime
   dan menjaga lapisan pose tetap di atas wajah (`beforeModelUpdate`).
 - **`web/ekspresi.js`** — gerbang tag: tahu nama wajah dan pose dari konfigurasi, mengenal
@@ -283,6 +304,84 @@ model yang ternyata 404 saat dipakai.
 | **`gemini-3.8-flash-lite-tts`** | suara | **2,6-3,8 dtk** untuk 5 dtk audio <- dipakai |
 | `gemini-3.8-flash-tts` | suara | 3,3-3,9 dtk (jadi `VTUBER_TTS_CADANGAN`) |
 
+## Suara lokal: memasang & mengukur
+
+Angka di bawah **terukur di mesin ini tanggal 26 September 2026** dengan
+`python scripts/uji_latensi.py --resep piper+rvc --f0 pm,rmvpe --kalimat 8`.
+Jangan menambahkan atau mengubah satu pun angka tanpa menjalankan ulang skripnya.
+
+Mesin uji: i5-1135G7 (4 core/8 thread), Intel Iris Xe, 16 GB RAM, **tanpa GPU NVIDIA**.
+
+| jalur | median per kalimat | p95 | RTF | puncak RAM |
+|---|---|---|---|---|
+| `piper` saja | **0,29 – 0,53 dtk** | 0,61 dtk | **0,12 – 0,19** | ±200 MB |
+| `piper+rvc` f0 `pm` | 7,36 dtk (RVC-nya) | 9,93 dtk | 1,47 | 2160 MB |
+| `piper+rvc` f0 `rmvpe` | 14,70 dtk (RVC-nya) | 31,51 dtk | 3,22 | 2678 MB |
+| `gemini` (pembanding) | 2,6 – 3,9 dtk | — | — | — |
+
+Kesimpulan yang diambil dari tabel itu, dan alasan `VTUBER_TTS_RANTAI` bawaannya
+`piper,gemini`:
+
+- **Piper menang telak.** Sekitar 6–9× lebih cepat dari Gemini, offline, dan tidak
+  memakan kuota 20 permintaan/hari. Ini yang jadi suara utama.
+- **RVC kalah gerbang.** Konversinya 7–15 dtk per kalimat, lebih lambat dari cloud
+  yang mau digantikannya. Ia tetap terpasang dan bisa dipakai, tapi tidak jadi
+  default — dan README ini tidak boleh menyebut "sudah lokal bersuara karakter"
+  sebelum angka itu berubah.
+- **Muat model RVC 7–9 dtk terjadi DI DALAM permintaan pertama** kalau
+  `VTUBER_RVC_MUAT_BOOT` dibiarkan mati, sehingga kalimat pertama melewati batas
+  20 dtk dan jatuh ke engine lain. Kalau menyalakan RVC, nyalakan juga knob itu.
+
+Cara memasang (aset tidak ikut git):
+
+```bash
+.venv\Scripts\python.exe scripts/sedia_suara.py --piper        # voice id_ID, 61 MB
+.venv\Scripts\python.exe scripts/sedia_suara.py --model-dasar  # hubert + rmvpe ke .venv
+.venv\Scripts\python.exe scripts/sedia_suara.py --furina       # checkpoint dari E:
+.venv\Scripts\python.exe scripts/sedia_suara.py --periksa      # laporan, tanpa menulis
+```
+
+`--model-dasar` perlu dijalankan ulang setiap kali `.venv` dibuat ulang: `rvc_python`
+membaca `base_model/` dari dalam direktori paketnya sendiri, bukan dari proyek.
+
+Bukti sisi browser, dijalankan 2026-09-26 pada Chromium headed (Playwright global,
+bukan bagian proyek -- Node sudah tidak dipakai di sini): `POST /api/tts` membalas
+`200 audio/wav` dengan `x-tts-model: piper`, `decodeAudioData` menerima berkasnya
+(1,07 dtk), RMS pada `AnalyserNode` menyentuh **0,25**, dan `window.__vtuber.mulut`
+bernilai **0,681** setelah `antre()` selesai. Artinya rahang benar-benar digerakkan
+audio Piper, bukan hanya "file-nya valid".
+
+Catatan metode: pemeriksaan pertama melaporkan "rahang diam" dan itu **salah tes,
+salah produk** -- `antre()` tidak di-await sehingga sampel diambil sebelum konteks
+audio bangun. Kalau suatu hari tes rahang melaporkan nol, curigai dulu caranya
+sebelum menyalakan kodenya.
+
+Cara memilih suara dengan telinga (angka tidak bisa mengganti ini):
+
+```bash
+.venv\Scripts\python.exe scripts/adu_suara.py --transpose 0,12
+```
+
+Rantainya dipilih lewat `.env`, tanpa menyentuh kode: `piper`, `gemini`, dan
+`piper+rvc` bisa ditumpuk dengan koma, mana yang gagal dilompati. Tiga perilaku
+yang membuat penumpukan itu benar-benar terpakai, bukan sekadar tertulis:
+
+- **Hasil yang telat tetap masuk cache.** Yang menulis cache adalah pekerjanya,
+  bukan penunggunya. Tanpa ini, tiap kalimat RVC yang melewati `VTUBER_TTS_BATAS_DETIK`
+  dibuang hasilnya dan kalimat yang sama miss selamanya.
+- **Resep yang terbukti tidak selesai diistirahatkan** selama
+  `VTUBER_TTS_JEDA_RESEP` (bawaan 60 dtk). Tanpa jeda itu, kalimat ke-2..N dari satu
+  jawaban panjang membayar ulang 20 dtk kegagalan yang sama -- dan kuota cloud yang
+  seharusnya jadi penahan habis hanya untuk menunggu.
+- **Pekerja membuang pekerjaan yang tidak ada penunggunya lagi**, dan `var/tmp-suara`
+  disapu saat boot. Dua berkas `_masuk.wav` tertinggal dari proses yang dipotong di
+  tengah konversi -- `finally` tidak jalan kalau prosesnya dibunuh.
+
+Satu hal yang harus diketahui soal `piper+rvc`: voice Piper Indonesia adalah **suara berita
+laki-laki berlogat asing** (MODEL CARD-nya: 1 penutur, medium, hasil fine-tune dari
+suara Inggris), jadi RVC harus menjembatani gender, bukan sekadar warna — dan hasil
+eksperimennya ada di halaman yang dicetak `adu_suara.py`.
+
 ## Berapa lama sampai dia bersuara
 
 Dulu: teks 5-25 dtk (sering 503) **lalu** sintesis 49-77 dtk = belasan sampai
@@ -305,12 +404,26 @@ perbaikan yang benar-benar besar di bagian itu.
 ## Perkakas & Pengelolaan
 
 ```bash
-node scripts/fetch-assets.js         # unduh dependensi Cubism Core dan modul VAD
-node scripts/pasang-model.js         # sinkronkan berkas ekspresi .exp3.json di public/models/penyihir/
-node scripts/tampilkan-konfigurasi.js # periksa resep ekspresi, pose, dan motion dari .env
+.venv\Scripts\python.exe scripts/unduh_aset.py --periksa  # laporan aset: apa ada, apa hilang
+.venv\Scripts\python.exe scripts/unduh_aset.py            # unduh Cubism Core dari situs Live2D
+.venv\Scripts\python.exe scripts/sedia_suara.py --periksa # aset jalur suara (piper + rvc)
+.venv\Scripts\python.exe scripts/uji_latensi.py           # angka latensi, bukan dugaan
+.venv\Scripts\python.exe scripts/adu_suara.py             # render sampel untuk dipilih dengan telinga
 ```
 
-Semua skrip di `scripts/` memuat `.env` secara mandiri lewat `scripts/env.js`.
+Perkakas Python di `scripts/` membaca `.env` lewat `server_py/konfig.py` yang sama
+dengan server.
+
+Dua aset masih berstatus **tidak bisa dibangkitkan ulang** dan itu bukan hal yang
+dilahirkan rombakan suara ini — lubangya sudah ada sejak `node_modules` dihapus,
+cuma sebelumnya tersamar oleh skrip Node yang tampak bisa dijalankan:
+`public/vad` (6,2 MB) dan `public/ort` (83 MB) di-`.gitignore` dan aslinya disalin
+dari `node_modules/@ricky0123/vad-web` + `onnxruntime-web`, yang sudah tidak ada.
+`scripts/unduh_aset.py --periksa` melaporkannya apa adanya. Pilihannya: keluarkan
+keduanya dari `.gitignore`, atau unduh sekali paket itu lewat npm di luar proyek.
+Sampai hari ini tidak mengganggu, karena jalur mikrofon memang belum punya tombol
+di halaman. Berkas ekspresi dan `penyihir.model3.json` tidak lagi dibuat skrip:
+unduh dari `/perkakas.html`.
 Seluruh pengujian fungsional, rendering, dan integrasi telah selesai dilaksanakan dan diverifikasi.
 
 ## Kredit
@@ -342,5 +455,5 @@ tetap pada lisensinya masing-masing.
 Kode sumber proyek ini bebas dipakai sesuai ketentuan yang berlaku padanya.
 **Model Live2D dan Cubism Core tidak termasuk** dan tidak diizinkan untuk
 diredistribusi sebagai berkas lepas — karena itu keduanya dikecualikan dari
-repositori dan diambil ulang dengan `node scripts/fetch-assets.js`. Untuk karakter publik,
-gunakan model milik sendiri.
+repositori dan diambil ulang dengan `python scripts/unduh_aset.py` (Cubism Core dari
+situs Live2D). Untuk karakter publik, gunakan model milik sendiri.

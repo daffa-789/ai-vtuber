@@ -54,6 +54,19 @@ def angka(kunci: str, bawaan: int) -> int:
         return bawaan
 
 
+def angka_float(kunci: str, bawaan: float) -> float:
+    """Kembar `angka()` untuk rasio (protect 0.33, length_scale 1.0).
+
+    Tidak bisa lewat `angka()`: int("0.33") melempar ValueError lalu nilai
+    Master diam-diam diganti bawaan -- persis kelas bug "resep diabaikan tanpa
+    pesan" yang sudah pernah terjadi di proyek ini.
+    """
+    try:
+        return float(str(nilai(kunci, str(bawaan))).strip())
+    except ValueError:
+        return bawaan
+
+
 def bool_(kunci: str, bawaan: bool) -> bool:
     mentah = nilai(kunci, "true" if bawaan else "false").strip().lower()
     if mentah in ("true", "1", "ya", "on"):
@@ -95,11 +108,65 @@ STT_MODEL = nilai("VTUBER_STT_MODEL", "gemini-3.5-transcribe")
 
 JEDA_FAKTA = angka("VTUBER_JEDA_FAKTA", 8)
 
+# ── rantai engine suara ──────────────────────────────────────────────────────
+# Tiga kunci di atas (TTS_MODEL / TTS_CADANGAN / TTS_SUARA) sekarang milik engine
+# `gemini` SAJA. Bukan sistem konfigurasi kedua: engine lokal tidak punya nama
+# model cloud, jadi tidak ada yang perlu disalin.
+#
+# Rantai berisi RESEP; tiap resep adalah tahap yang digabung dengan '+'.
+# Yang dikenal: stub, piper, rvc, piper+rvc, gemini. Nilai tak dikenal dibuang
+# dengan peringatan di banner -- bukan diabaikan diam-diam.
+#
+# Bawaan `piper,gemini`, BUKAN `piper+rvc,gemini`: RVC baru naik ke depan kalau
+# menang diukur (scripts/uji_latensi.py). Sampai angka itu ada, cloud yang jalan.
+TTS_RANTAI = daftar("VTUBER_TTS_RANTAI", "piper,gemini")
+TTS_BATAS_DETIK = angka("VTUBER_TTS_BATAS_DETIK", 20)
+# Resep yang terbukti tidak selesai dalam TTS_BATAS_DETIK diistirahatkan selama ini
+# (detik) sebelum dicoba lagi. Tanpa jeda, SETIAP kalimat dari jawaban panjang
+# membayar ulang 20 dtk kegagalan yang sama -- dan penahan yang di depan (gemini)
+# justru kebagian kuota yang habis karena menunggu.
+TTS_JEDA_RESEP = angka("VTUBER_TTS_JEDA_RESEP", 60)
+
+# ── piper (TTS Indonesia offline, 61 MB ONNX) ────────────────────────────────
+PIPER_MODEL = nilai(
+    "VTUBER_TTS_PIPER_MODEL", "aset/suara/piper/id_ID-news_tts-medium.onnx"
+)
+PIPER_SUARA = nilai("VTUBER_TTS_PIPER_SUARA", "id_ID-news_tts-medium")  # dipakai sedia
+PIPER_VOLUME = angka("VTUBER_TTS_PIPER_VOLUME", 100)  # persen
+PIPER_PANJANG = angka_float("VTUBER_TTS_PIPER_PANJANG", 1.0)  # length_scale: <1 lebih laju
+
+# ── RVC (mengubah WARNA suara jadi Furina; TTS tetap menyumbang lafal+irama) ─
+RVC_HIDUP = bool_("VTUBER_RVC", True)  # mati => rantai menyaring sendiri, tanpa error
+RVC_FOLDER = nilai("VTUBER_RVC_FOLDER", "aset/suara/rvc")  # models_dir rvc_python
+RVC_MODEL = nilai("VTUBER_RVC_MODEL", "furina")  # nama subfolder di RVC_FOLDER
+RVC_INDEKS = nilai("VTUBER_RVC_INDEKS", "")  # kosong = ambil .index yang ada di folder
+RVC_VERSI = nilai("VTUBER_RVC_VERSI", "v2")  # terverifikasi dari info checkpoint Furina
+RVC_F0 = nilai("VTUBER_RVC_F0", "pm")  # pm|rmvpe (harvest|crepe: ditolak untuk CPU)
+RVC_TRANSPOSE = angka("VTUBER_RVC_TRANSPOSE", 0)  # f0up_key; sumber = suara pria Piper
+# 0 = JANGAN baca .index. Bukan selera: rvc_python melakukan faiss.read_index +
+# index.reconstruct_n TANPA cache di SETIAP panggilan (pipeline.py:306-320), jadi
+# index 507 MB berarti ±1 GB puncak RAM dan ratusan MB I/O per kalimat.
+RVC_INDEKS_LAJU = angka_float("VTUBER_RVC_INDEKS_LAJU", 0.0)
+RVC_PROTEKSI = angka_float("VTUBER_RVC_PROTEKSI", 0.33)  # protect
+RVC_PENCUCIAN = angka("VTUBER_RVC_PENCUCIAN", 3)  # filter_radius
+RVC_CAMPUR_RMS = angka_float("VTUBER_RVC_CAMPUR_RMS", 1.0)  # rms_mix_rate
+RVC_RESAMPLE = angka("VTUBER_RVC_RESAMPLE", 0)  # 0 = biarkan laju asli model (40000)
+# Muat model saat boot? bawaan TIDAK: boot harus tetap <1 detik dan tidak boleh
+# bisa gagal hanya karena aset 560 MB belum ditaruh.
+RVC_MUAT_BOOT = bool_("VTUBER_RVC_MUAT_BOOT", False)
+RVC_BATAS_ANTREAN = angka("VTUBER_RVC_BATAS_ANTREAN", 8)
+
+# ── cache hasil sintesis ─────────────────────────────────────────────────────
+TTS_CACHE = bool_("VTUBER_TTS_CACHE", True)
+TTS_CACHE_FOLDER = nilai("VTUBER_TTS_CACHE_FOLDER", "var/cache-suara")
+TTS_CACHE_MAKS_MB = angka("VTUBER_TTS_CACHE_MAKS_MB", 250)
+TTS_METERIK = bool_("VTUBER_TTS_METERIK", False)  # cetak median/p95 di banner + jsonl
+
 # VTUBER_STUB=1: /api/chat menjawab dengan aliran kalengan dan TTS memulangkan
 # hening pendek. Buat apa: menguji rantai streaming -> tag -> wajah -> rahang
 # tanpa satu pun panggilan berbayar, dan tanpa server Node terpisah -- halaman
 # ini sudah disajikan oleh proses yang sama, jadi tiruan harus hidup di sini juga.
-STUB = nilai("VTUBER_STUB", "").strip().lower() in ("1", "true", "ya", "on")
+STUB = bool_("VTUBER_STUB", False)
 MAKS_PESAN = 24
 MAKS_KARAKTER = 4000
 MAKS_BODY = 64 * 1024

@@ -4,9 +4,10 @@
  * ukuran gambar. Semuanya boleh ditimpa dari .env, jadi tidak ada lagi resep
  * yang cuma hidup di kepala atau di ujung skrip.
  *
- * Browser memanggil bacaKonfigurasi(import.meta.env), skrip Node memanggil
- * bacaKonfigurasi(process.env) -- kedua-duanya record string yang sama, dan
- * skrip perkakas di scripts/ memuat .env sendiri (scripts/env.js).
+ * Browser dan halaman perkakas (web/perkakas.html) sama-sama memanggil
+ * bacaKonfigurasi(window.__VTUBER_ENV__) -- satu-satunya tempat nilai .env sampai
+ * ke halaman. Sisi Python (server_py/konfig.py) membaca berkas yang sama untuk
+ * kunci VTUBER_-nya sendiri dan tidak pernah menafsir resep wajah.
  *
  * Aturan penulisan di .env
  *   VITE_WAJAH_<NAMA>   resep ekspresi wajah  -> token `Id=Nilai` dipisah spasi
@@ -350,8 +351,10 @@ export function bacaKonfigurasi(env = {}) {
 
 /**
  * Bentuk berkas exp3.json dari satu resep. Dipakai browser (untuk menyuntik
- * ekspresi tanpa menulis berkas) DAN scripts/pasang-model.js (untuk menulis
- * berkasnya), jadi format ekspresi tidak mungkin beda di dua tempat.
+ * ekspresi tanpa menulis berkas) DAN web/perkakas.html (untuk mengunduh berkasnya
+ * bagi perkakas luar), jadi format ekspresi tidak mungkin beda di dua tempat.
+ * Terukur 2026-09-26: 16 dari 16 resep menghasilkan byte yang sama persis dengan
+ * berkas yang ada di public/models/penyihir/ekspresi/.
  * @param {Ekspresi} e
  * @param {number} pudarDetik
  */

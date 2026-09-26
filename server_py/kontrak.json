@@ -1,0 +1,101 @@
+{
+ "asset halaman": {
+  "ctype": "text/html",
+  "panjang_min_1": true,
+  "status": 200
+ },
+ "asset model": {
+  "ctype": "application/json",
+  "kunci": [
+   "FileReferences",
+   "Groups",
+   "Version"
+  ],
+  "punya_error": false,
+  "status": 200
+ },
+ "asset modul": {
+  "ctype": "text/javascript",
+  "panjang_min_1": true,
+  "status": 200
+ },
+ "chat body bukan json": {
+  "ctype": "text/plain",
+  "panjang_min_1": true,
+  "status": 200
+ },
+ "chat riwayat kosong": {
+  "ctype": "text/plain",
+  "panjang_min_1": true,
+  "status": 200
+ },
+ "endpoint tak dikenal POST": {
+  "ctype": "application/json",
+  "kunci": [
+   "error"
+  ],
+  "punya_error": true,
+  "status": 404
+ },
+ "health": {
+  "ctype": "application/json",
+  "kunci": [
+   "cadangan",
+   "key",
+   "memori",
+   "model",
+   "ok",
+   "sisi",
+   "tts"
+  ],
+  "kunci_tts": [
+   "cache",
+   "model",
+   "perKalimat",
+   "piper",
+   "rantai",
+   "rvc",
+   "suara"
+  ],
+  "punya_error": false,
+  "status": 200
+ },
+ "stt audio pendek": {
+  "ctype": "application/json",
+  "kunci": [
+   "error"
+  ],
+  "punya_error": true,
+  "status": 400
+ },
+ "tts stub": {
+  "ctype": "audio/wav",
+  "status": 200,
+  "wav": {
+   "detik_min_0": true,
+   "kanal": 1,
+   "laju": 24000
+  },
+  "x-tts-model": ""
+ },
+ "tts tanpa teks": {
+  "ctype": "audio/wav",
+  "status": 200,
+  "wav": {
+   "detik_min_0": true,
+   "kanal": 1,
+   "laju": 24000
+  },
+  "x-tts-model": ""
+ },
+ "tts teks kosong": {
+  "ctype": "audio/wav",
+  "status": 200,
+  "wav": {
+   "detik_min_0": true,
+   "kanal": 1,
+   "laju": 24000
+  },
+  "x-tts-model": ""
+ }
+}

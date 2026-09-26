@@ -64,9 +64,15 @@ def cari(url_path: str) -> Path | None:
 
 
 def isi(berkas: Path) -> bytes:
-    """Isi berkas; index.html dibubuhi konfigurasi .env lebih dulu."""
+    """Isi berkas; setiap HTML yang menaruh penanda `<!--VTUBER_ENV-->` dibubuhi
+    konfigurasi .env di tempat itu.
+
+    Dulu terspesialisasi pada nama `index.html`. Sekarang berbasis penanda supaya
+    halaman perkakas (`perkakas.html`) membaca .env yang SAMA dengan halaman utama
+    lewat fungsi yang sama -- bukan perkakas kedua dengan kebenaran sendiri.
+    """
     mentah = berkas.read_bytes()
-    if berkas.name != "index.html":
+    if berkas.suffix != ".html":
         return mentah
     suntikan = (
         "<script>window.__VTUBER_ENV__ = "
@@ -79,13 +85,13 @@ def isi(berkas: Path) -> bytes:
 def tanda(berkas: Path) -> str:
     """ETap dari ukuran + mtime: cukup untuk tahu berkas berganti tanpa membacanya.
 
-    index.html dapat pengecualian: isinya berubah lewat .env, bukan lewat berkasnya
-    sendiri, jadi tanda .env ikut dicampur -- kalau tidak, mengedit .env akan
-    membalas 304 dan halaman tetap memakai nilai lama.
+    Berkas HTML dapat pengecualian: isinya bisa berubah lewat .env, bukan lewat
+    berkasnya sendiri, jadi tanda .env ikut dicampur -- kalau tidak, mengedit .env
+    akan membalas 304 dan halaman tetap memakai nilai lama.
     """
     st = berkas.stat()
     dasar = f"{st.st_size:x}-{int(st.st_mtime):x}"
-    if berkas.name == "index.html":
+    if berkas.suffix == ".html":
         dasar += f"-{hash(json.dumps(env_web(), sort_keys=True, ensure_ascii=False)) & 0xffffff:x}"
     return f'"{dasar}"'
 

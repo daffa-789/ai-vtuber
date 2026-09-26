@@ -12,7 +12,7 @@ __pycache__/
 # Log sementara (mis. sidecar yang dijalankan dari skrip uji).
 *.log
 
-# Aset berlisensi Live2D: diunduh ulang dengan `node scripts/fetch-assets.js`,
+# Aset berlisensi Live2D: diunduh ulang dengan `python scripts/unduh_aset.py`,
 # bukan diedarkan lewat repositori ini.
 public/live2dcubismcore.min.js
 public/vad/
@@ -20,4 +20,13 @@ public/ort/
 
 # Model karakter sendiri: berkas sumber + hasil pasang, tetap di mesin ini.
 public/models/penyihir/
+
+# Aset jalur suara, disediakan scripts/sedia_suara.py, bukan untuk di-commit:
+# voice Piper 61 MB, model dasar RVC (hubert + rmvpe) ~730 MB, checkpoint Furina.
+aset/suara/piper/
+aset/suara/rvc/
+aset/suara/model-dasar/
+# Hasil sintesis + berkas temp + jejak ukur. `var/` sengaja di luar web/ dan
+# public/ supaya statis.py tidak pernah bisa menyajikannya lewat HTTP.
+var/
 
