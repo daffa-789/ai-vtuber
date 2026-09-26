@@ -105,7 +105,7 @@ def _baca_wav(isi: bytes):
 def bangkitkan() -> tuple[subprocess.Popen, str, str]:
     """Jalankan sidecar sendiri di port acak dengan VTUBER_STUB=1.
 
-    Stub wajib: tes kontrak tidak boleh memakan kuota Gemini, dan tidak boleh
+    Stub wajib: tes kontrak berjalan mandiri dan tidak boleh
     menulis satu baris pun ke vault karakter.
     """
     env = dict(os.environ)

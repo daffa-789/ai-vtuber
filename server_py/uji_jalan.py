@@ -101,11 +101,11 @@ def utama() -> int:
 
         asli = (list(konfig.TTS_RANTAI), konfig.RVC_HIDUP)
         try:
-            konfig.TTS_RANTAI[:] = ["piper+rvc", "gemini"]
+            konfig.TTS_RANTAI[:] = ["piper+rvc", "piper"]
             konfig.RVC_HIDUP = False
             hasil = jalur_suara.rantai_aktif()
             assert "piper+rvc" not in hasil, f"RVC mati tapi resepnya lolos: {hasil}"
-            assert "gemini" in hasil or konfig.KUNCI == "", f"gemini hilang: {hasil}"
+            assert "piper" in hasil, f"piper hilang: {hasil}"
 
             konfig.TTS_RANTAI[:] = ["rekayasa-total"]
             assert jalur_suara.rantai_aktif() == [], "nilai tak dikenal tidak dibuang"

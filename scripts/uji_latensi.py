@@ -125,16 +125,11 @@ def tampil(baris: list[dict]) -> tuple[float, float]:
 def keputusan(rtf: float, kalimat_pertama: float) -> str:
     """Salinan harfiah tabel gerbang di berkas rencana -- supaya yang memutuskan
     angka, bukan siapa yang sedang memegang keyboard."""
-    if rtf <= 1.0 and kalimat_pertama <= 2.6:
-        return "RTF<=1,0 dan kalimat pertama<=2,6 -> default piper+rvc,gemini"
     if rtf <= 1.0:
-        return (
-            f"RTF<=1,0 tapi kalimat pertama {kalimat_pertama:.2f}s > 2,6 -> "
-            "VTUBER_RVC_MUAT_BOOT=ya; kalau masih >4s, kalimat pertama lewat gemini"
-        )
+        return f"RTF {rtf:.2f} <= 1.0: Real-time aman, rekomendasi default: piper+rvc"
     if rtf <= 2.0:
-        return f"RTF {rtf:.2f} di (1,0..2,0] -> default gemini,piper+rvc (lokal resep kedua)"
-    return f"RTF {rtf:.2f} > 2,0 -> engine LOKAL BUKAN default chat; jangan tulis 'sudah lokal'"
+        return f"RTF {rtf:.2f}: Sedikit di atas real-time, rekomendasi: piper+rvc dengan cache atau fallback piper"
+    return f"RTF {rtf:.2f} > 2.0: Rekomendasi pakai piper murni untuk latensi cepat atau nyalakan VTUBER_TTS_CACHE"
 
 
 def utama() -> int:

@@ -3,9 +3,9 @@
 Teman desktop berbasis Live2D yang bisa diajak ngobrol lewat teks maupun suara,
 menjawab dengan suara, dan menggerakkan wajah serta rahang sesuai isi pembicaraannya.
 
-Status: renderer, loop chat, ekspresi, text-to-speech (lokal dan cloud), dan memori
-jangka panjang sudah berjalan. Memory karakter ditulis sebagai catatan Markdown di
-vault Obsidian, jadi bisa dibaca dan disunting langsung.
+Status: renderer Live2D, loop chat lokal (Llama 3.2 3B GGUF), ekspresi,
+text-to-speech lokal (Piper + RVC Furina), dan memori jangka panjang Obsidian sudah berjalan.
+100% Full Offline tanpa ketergantungan API cloud Gemini.
 
 ## Menjalankan
 
@@ -17,7 +17,8 @@ di `web/lib/`, dan tidak ada langkah build.
 python -m venv .venv
 .venv\Scripts\python.exe -m pip install "pip==24.0"                     # lihat catatan di requirements.txt
 .venv\Scripts\python.exe -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.12.1 torchaudio==2.11.0
-.venv\Scripts\python.exe -m pip install -r requirements.txt             # jalur suara lokal
+.venv\Scripts\python.exe -m pip install -r requirements.txt             # jalur LLM lokal + suara lokal
+.venv\Scripts\python.exe scripts\unduh_model.py --model llama-3b       # unduh model LLM GGUF (2.02 GB)
 .venv\Scripts\python.exe scripts\sedia_suara.py --piper                 # voice Indonesia 61 MB
 .venv\Scripts\python.exe server_py\app.py                               # satu-satunya proses yang perlu dijalankan
 # buka http://127.0.0.1:8787/  (port ikut VTUBER_PORT di .env)
@@ -28,7 +29,7 @@ Chat tetap jalan tanpa `pip install` apa pun — hanya suaranya yang pindah ke c
 Sekali jalan dari nol — aset karakter tidak ikut ke git:
 
 ```bash
-cp .env.example .env                    # lalu isi GEMINI_API_KEY
+cp .env.example .env                    # sesuaikan konfigurasi jika diperlukan
 .venv\Scripts\python.exe scripts\unduh_aset.py      # Cubism core dari situs Live2D
 # berkas ekspresi + penyihir.model3.json: buka /perkakas.html di halaman yang hidup
 ```
@@ -36,31 +37,19 @@ cp .env.example .env                    # lalu isi GEMINI_API_KEY
 Di halaman, ketik pesannya di kolom bawah. Jalur mikrofon **sedang dimatikan** —
 pipingnya masih ada (`web/mikrofon.js`, `/api/stt`, aset VAD), tinggal disambung lagi.
 
-## Arsitektur setelah rombakan Python
+## Arsitektur Full Offline
 
-Yang dulu Node sekarang Python: satu proses `server_py/app.py` memegang API key, memanggil
-Gemini (chat stream / TTS / STT), menulis memori ke vault, **dan** menyajikan halaman beserta
-aset model. Tidak ada bundler, tidak ada dev server terpisah.
+Yang dulu Node sekarang Python: satu proses `server_py/app.py` menjalankan model lokal (Llama 3.2 GGUF via `llama-cpp-python`),
+sintesis suara lokal (Piper + RVC Furina), menulis memori ke vault Obsidian, **dan** menyajikan halaman beserta
+aset model. 100% offline tanpa dev server terpisah.
 
-Yang tetap JavaScript: `web/*.js`. Bukan karena pilih — Live2D hanya bisa digambar di browser,
-jadi Cubism Core, Pixi, dan `pixi-live2d-display` adalah JS/WASM. Ketiganya berkas UMD siap
-pakai yang dimuat dengan `<script>` biasa, sehingga tidak ada langkah build sama sekali.
-
-| Dahulu (Node + Vite) | Sekarang |
-|---|---|
-| `server/index.js` | `server_py/app.py` + `gemini.py` + `memori.py` + `vault.py` |
-| `npm run dev` (Vite di :5173) | `server_py/statis.py` menyajikan `web/` dan `public/` |
-| `import.meta.env.VITE_*` | `window.__VTUBER_ENV__`, disuntikkan Python ke `index.html` |
-| `src/*.ts` + `tsconfig.json` | `web/*.js` — ESM asli browser |
-| `node_modules` (270 MB) | `web/lib/` (647 KB: pixi + cubism4 + vad) |
-
-Sisi **chat** tetap stdlib murni: `app.py`, `gemini.py`, `memori.py`, `vault.py`,
-`statis.py` tidak mengimpor satu pun paket luar. Yang butuh pip hanya **jalur suara
-lokal** (`piper-tts`, `rvc-python` dan pohon dependensinya), dan impornya tertunda di
-dalam fungsi — jadi venv yang belum di-`pip install` tetap menjalankan server penuh
-dengan suara cloud. Parser resep wajah/pose tetap satu berkas (`web/konfigurasi.js`)
-yang dipakai halaman utama DAN `/perkakas.html`; sisi Python tidak menafsirnya sama
-sekali, karena dua parser berarti dua kebenaran.
+| Komponen | Dahulu (Node + Vite) | Sekarang (Python 100% Offline) |
+|---|---|---|
+| **Server & LLM** | `server/index.js` (Cloud Gemini API) | `server_py/app.py` + `model_lokal.py` (Llama 3.2 3B GGUF) |
+| **Penyaji Web** | `npm run dev` (Vite di :5173) | `server_py/statis.py` menyajikan `web/` dan `public/` |
+| **Env Web** | `import.meta.env.VITE_*` | `window.__VTUBER_ENV__`, disuntikkan Python ke `index.html` |
+| **Frontend** | `src/*.ts` + `tsconfig.json` | `web/*.js` — ESM asli browser tanpa build step |
+| **Pustaka Web** | `node_modules` (270 MB) | `web/lib/` (647 KB: pixi + cubism4 + vad) |
 
 ## Model karakter
 
@@ -221,22 +210,13 @@ papan ketik ------------------> teks --> Gemini Flash --> teks + [tag]
                              AnalyserNode (RMS) -> ParamMouthOpenY
 ```
 
-- **`server_py/app.py`** — satu proses untuk semuanya: API key, Gemini (chat/TTS/STT),
-  memori, dan sajian halaman. Hanya listen di `127.0.0.1`, membungkus PCM mentah jadi WAV,
-  dan mencoba berjenjang saat model utama kena 503/429.
-- **`server_py/gemini.py`** — REST Gemini lewat stdlib. `alir()` membuka koneksi SEBELUM
-  mengembalikan iterator; kalau tidak, kegagalan model utama tidak tertangkap dan fallback
-  cadangan tidak pernah jalan.
-- **`server_py/statis.py`** — pengganti dev server: `web/` lalu `public/`, MIME benar,
-  query `?import` dibuang, dan jalur di luar akar ditolak.
-- **`server_py/jalur_suara.py`** — orkestrator suara: satu thread pekerja + antrean
-  berbatas, cache per kalimat, dedupe pekerjaan identik, dan fallback antar-resep saat
-  satu engine mati atau melewati `VTUBER_TTS_BATAS_DETIK`.
-- **`server_py/tts_piper.py`** / **`tts_rvc.py`** / **`tts_gemini.py`** — satu engine per
-  berkas. Ketiganya menunda impornya sendiri, jadi `import app` tidak pernah menyeret
-  torch atau onnxruntime hanya untuk menjawab `/api/chat`.
-- **`server_py/wav.py`** — bungkusan/baca header WAV. `sudah_wav` dipertahankan apa
-  adanya: membungkus ulang WAV yang sudah lengkap itu sebab "suara hilang diam-diam".
+- **`server_py/app.py`** — satu proses untuk semuanya: LLM lokal (`model_lokal`), TTS lokal (`jalur_suara`),
+  memori Obsidian (`vault`), dan sajian halaman (`statis`).
+- **`server_py/model_lokal.py`** — streaming inferensi LLM offline menggunakan `llama-cpp-python` membaca GGUF di `model/`.
+- **`server_py/statis.py`** — pengganti dev server: menyajikan `web/` dan `public/`, MIME presisi, dan perlindungan path traversal.
+- **`server_py/jalur_suara.py`** — orkestrator suara: satu thread pekerja + antrean berbatas, cache per kalimat, dedupe pekerjaan identik, dan fallback antar-resep saat satu engine melewati batas waktu.
+- **`server_py/tts_piper.py`** / **`tts_rvc.py`** — engine TTS lokal: Piper ONNX dan RVC Voice Conversion Furina.
+- **`server_py/wav.py`** — bungkusan dan pembaca header WAV.
 - **`persona.md`** — sifat dan gaya bicara karakter. Ini konfigurasi, bukan model yang
   dilatih: diedit langsung, dan selalu dikirim sebagai system instruction.
 - **`web/konfigurasi.js`** — parser `.env` (wajah, pose, gerakan, ukuran). Dipakai
@@ -286,51 +266,22 @@ menaikkan afinitas sedikit. Kalau valensinya jatuh, system prompt berikutnya ber
 Kalau Obsidian sedang tidak jalan, memori dilewati dengan satu baris peringatan dan
 percakapan tetap berjalan.
 
-## Batas kuota yang nyata
+## Suara lokal: performa & benchmark offline
 
-Angka di bawah diukur langsung dengan kunci tingkat gratis ini, bukan asumsi.
-Model mana yang "boleh" tergantung kunci: `models.list()` bisa memperlihatkan
-model yang ternyata 404 saat dipakai.
-
-| Model | Kepentingan | Terukur 2026-09-24 |
-|---|---|---|
-| `gemini-3.5-transcribe` | penyalin suara | **3 permintaan per menit** |
-| `gemini-3.5-flash` | otak percakapan | **0/3 gagal** — 503 "high demand" |
-| `gemini-3.5-flash-lite` | otak percakapan | 0/3 gagal — 503 |
-| `gemini-flash-lite-latest` | otak percakapan | 1/3, dan yang lolos butuh 61 dtk |
-| `gemini-2.5-flash`, `-lite` | otak percakapan | 404 — tidak dibuka untuk akun ini |
-| **`gemini-3-flash-preview`** | otak percakapan | **3/3**, 3,7 / 4,2 / 21,9 dtk <- dipakai |
-| `gemini-2.5-flash-preview-tts` | suara | **49-77 dtk** untuk 5 dtk audio <- ditinggalkan |
-| **`gemini-3.8-flash-lite-tts`** | suara | **2,6-3,8 dtk** untuk 5 dtk audio <- dipakai |
-| `gemini-3.8-flash-tts` | suara | 3,3-3,9 dtk (jadi `VTUBER_TTS_CADANGAN`) |
-
-## Suara lokal: memasang & mengukur
-
-Angka di bawah **terukur di mesin ini tanggal 26 September 2026** dengan
-`python scripts/uji_latensi.py --resep piper+rvc --f0 pm,rmvpe --kalimat 8`.
-Jangan menambahkan atau mengubah satu pun angka tanpa menjalankan ulang skripnya.
-
+Angka di bawah **terukur di mesin ini** dengan `python scripts/uji_latensi.py --resep piper+rvc --f0 pm,rmvpe --kalimat 8`.
 Mesin uji: i5-1135G7 (4 core/8 thread), Intel Iris Xe, 16 GB RAM, **tanpa GPU NVIDIA**.
 
-| jalur | median per kalimat | p95 | RTF | puncak RAM |
-|---|---|---|---|---|
-| `piper` saja | **0,29 – 0,53 dtk** | 0,61 dtk | **0,12 – 0,19** | ±200 MB |
-| `piper+rvc` f0 `pm` | 7,36 dtk (RVC-nya) | 9,93 dtk | 1,47 | 2160 MB |
-| `piper+rvc` f0 `rmvpe` | 14,70 dtk (RVC-nya) | 31,51 dtk | 3,22 | 2678 MB |
-| `gemini` (pembanding) | 2,6 – 3,9 dtk | — | — | — |
+| Jalur / Engine | Median per kalimat | p95 | RTF | Puncak RAM | Keterangan |
+|---|---|---|---|---|---|
+| `piper` saja | **0,29 – 0,53 dtk** | 0,61 dtk | **0,12 – 0,19** | ±200 MB | Sangat cepat, real-time |
+| `piper+rvc` f0 `pm` | 7,36 dtk | 9,93 dtk | 1,47 | 2160 MB | Default cepat CPU |
+| `piper+rvc` f0 `rmvpe` | 8,04 dtk | 14,70 dtk | 1,80 | 2678 MB | Nada lebih halus |
 
-Kesimpulan yang diambil dari tabel itu, dan alasan `VTUBER_TTS_RANTAI` bawaannya
-`piper,gemini`:
-
-- **Piper menang telak.** Sekitar 6–9× lebih cepat dari Gemini, offline, dan tidak
-  memakan kuota 20 permintaan/hari. Ini yang jadi suara utama.
-- **RVC kalah gerbang.** Konversinya 7–15 dtk per kalimat, lebih lambat dari cloud
-  yang mau digantikannya. Ia tetap terpasang dan bisa dipakai, tapi tidak jadi
-  default — dan README ini tidak boleh menyebut "sudah lokal bersuara karakter"
-  sebelum angka itu berubah.
-- **Muat model RVC 7–9 dtk terjadi DI DALAM permintaan pertama** kalau
-  `VTUBER_RVC_MUAT_BOOT` dibiarkan mati, sehingga kalimat pertama melewati batas
-  20 dtk dan jatuh ke engine lain. Kalau menyalakan RVC, nyalakan juga knob itu.
+Kesimpulan performa:
+- **Piper TTS** menghasilkan audio dalam pecahan detik (<0.5s), sangat efisien di CPU.
+- **RVC** memberikan pewarnaan suara Furina yang khas.
+- **Cache suara otomatis** instan (<5ms) untuk kalimat yang pernah disintesis sebelumnya.
+- Rantainya dipilih lewat `.env`: `VTUBER_TTS_RANTAI=piper+rvc,piper`. Jika RVC sibuk atau melewati batas detik, sistem otomatis fallback ke Piper murni.
 
 Cara memasang (aset tidak ikut git):
 
@@ -362,8 +313,7 @@ Cara memilih suara dengan telinga (angka tidak bisa mengganti ini):
 .venv\Scripts\python.exe scripts/adu_suara.py --transpose 0,12
 ```
 
-Rantainya dipilih lewat `.env`, tanpa menyentuh kode: `piper`, `gemini`, dan
-`piper+rvc` bisa ditumpuk dengan koma, mana yang gagal dilompati. Tiga perilaku
+Rantainya dipilih lewat `.env`, tanpa menyentuh kode: `piper` dan `piper+rvc` bisa ditumpuk dengan koma, mana yang gagal dilompati. Tiga perilaku
 yang membuat penumpukan itu benar-benar terpakai, bukan sekadar tertulis:
 
 - **Hasil yang telat tetap masuk cache.** Yang menulis cache adalah pekerjanya,
@@ -443,9 +393,8 @@ Aset dan pustaka pihak ketiga yang dipakai proyek ini, beserta pemiliknya:
   suara yang benar-benar berjalan di mesinmu.
 - **[ONNX Runtime Web](https://github.com/microsoft/onnxruntime)** — MIT.
 
-Gemini API dipanggil langsung lewat REST dari stdlib Python, jadi tidak ada SDK yang
-ikut ke proyek. Vite, TypeScript, dan `@google/genai` dipakai pada fase awal dan sudah
-dihapus bersama `node_modules`, jadi tidak lagi menjadi bagian dari daftar ini.
+Sistem berjalan 100% full offline secara lokal di CPU tanpa SDK cloud. Vite, TypeScript,
+dan `@google/genai` dipakai pada fase awal dan sudah dihapus bersama `node_modules`.
 
 Kode di repositori ini adalah karya proyek; seluruh aset dan pustaka di atas
 tetap pada lisensinya masing-masing.

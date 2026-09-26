@@ -78,10 +78,8 @@ class Pekerjaan:
         return max(self.tenggat - time.perf_counter(), 0.0)
 
 
-# Konvensi panggilan SERAGAM: tiap `jalan` menerima (bahan, sisa_detik). Dulu
-# masing-masing engine punya tanda sendiri dan `sisa_detik` milik gemini tidak
-# pernah diteruskan, sehingga satu pekerjaan cloud bisa memegang pekerja 3 x 25
-# detik sementara penunggunya sudah menyerah di 20.
+# Konvensi panggilan SERAGAM: tiap `jalan` menerima (bahan, sisa_detik).
+# Pekerjaan dibatasi tenggat agar tidak memblokir antrean.
 TAHAP: dict[str, Tahap] = {
     "piper": Tahap(
         "piper", "teks",
@@ -174,8 +172,6 @@ def alasan_tidak_siap(nama: str) -> str:
         return tts_piper.alasan_tidak_tersedia()
     if nama == "rvc":
         return tts_rvc.alasan_tidak_tersedia()
-    if nama == "gemini":
-        return "GEMINI_API_KEY kosong"
     return "tidak siap"
 
 
@@ -402,9 +398,7 @@ def _lingkaran() -> None:
 def _kerjakan(pekerjaan: Pekerjaan) -> None:
     """Satu resep utuh: tahap pertama menerima teks, sisanya menerima WAV.
 
-    Tiap tahap mendapat SISA anggaran, bukan angka tetap -- dulu gemini dipanggil
-    dengan timeout 25 dtk di dalam pekerjaan yang penunggunya sudah menyerah di 20,
-    dan tiga model berurutan bisa memegang pekerja ~75 dtk tanpa ada yang menunggu.
+    Tiap tahap mendapat SISA anggaran waktu, bukan angka tetap.
     """
     audio = None
     for nama in pecah(pekerjaan.resep):
@@ -543,7 +537,7 @@ def ringkasan() -> dict:
     -- kontrak lama mengunci daftar kunci itu, dan chat.js membaca h.tts.perKalimat."""
     if konfig.STUB:
         # Mode stub TIDAK lewat rantai apa pun (app.py::tts memulangkan hening
-        # sebelum bangun()). Melaporkan "piper,gemini" di sini berarti halaman
+        # sebelum bangun()). Melaporkan engine offline di sini berarti halaman
         # dan banner saling bertentangan soal siapa yang sedang bicara.
         siap = ["stub"]
         isi = {

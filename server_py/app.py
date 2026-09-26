@@ -133,8 +133,8 @@ class Sidecar(BaseHTTPRequestHandler):
                 {
                     "ok": True,
                     "model": model_info,
-                    "cadangan": [] if is_offline else MODEL_CADANGAN,
-                    "key": True if is_offline else bool(konfig.KUNCI),
+                    "cadangan": [],
+                    "key": True,
                     "tts": jalur_suara.ringkasan(),
                     "memori": "vault Obsidian" if vault.tersedia() else vault.alasan_tidak_tersedia(),
                     "sisi": "python",
@@ -300,10 +300,7 @@ class Sidecar(BaseHTTPRequestHandler):
         if not teks.strip():
             return self._json(400, {"error": "teks kosong"})
 
-        # Tidak ada lagi "501 kalau GEMINI_API_KEY kosong" di sini. Dahulu syarat
-        # itu mutlak; sekarang engine lokal (piper/rvc) tidak butuh kunci sama
-        # sekali, jadi menolak tanpa kunci akan membisukan halaman yang sebenarnya
-        # bisa bicara. Kewajiban kunci milik tiap engine sendiri.
+        # Seluruh engine suara lokal (Piper + RVC) berjalan 100% offline tanpa API key.
         try:
             wav, terpakai = jalur_suara.bangun(teks)
         except jalur_suara.SemuaEngineGagal as err:
@@ -322,7 +319,11 @@ class Sidecar(BaseHTTPRequestHandler):
 
     # ── stt ─────────────────────────────────────────────────────────────────
     def stt(self) -> None:
-        # Sistem offline: STT ditangani di browser lewat Web Speech API (web/mikrofon.js)
+        # Sistem offline: STT utama ditangani di browser lewat Web Speech API (web/mikrofon.js)
+        panjang = int(self.headers.get("content-length", 0) or 0)
+        body = self.rfile.read(panjang) if panjang > 0 else b""
+        if len(body) < 100:
+            return self._json(400, {"error": "audio terlalu pendek"})
         return self._json(200, {"teks": ""})
 
 

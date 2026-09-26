@@ -154,13 +154,13 @@ def uji_kunci_peka():
     dasar = jalur_suara.hitung_kunci("halo", "piper+rvc")
     asli = konfig.RVC_F0
     try:
-        konfig.RVC_F0 = "rmvpe"
+        konfig.RVC_F0 = "pm" if asli == "rmvpe" else "rmvpe"
         ubah = jalur_suara.hitung_kunci("halo", "piper+rvc")
         assert dasar != ubah, "ganti f0method tidak mengubah kunci cache"
     finally:
         konfig.RVC_F0 = asli
     assert jalur_suara.hitung_kunci("halo", "piper") != jalur_suara.hitung_kunci(
-        "halo", "gemini"
+        "halo", "piper+rvc"
     ), "resep berbeda menghasilkan kunci sama -> hasil bocor antar-resep"
 
 
@@ -406,12 +406,7 @@ def uji_matriks_engine():
     VTUBER_RVC_MUAT_BOOT=didak. Yang diuji tes ini bentuk keluaran tiap engine;
     waktunya diukur terpisah oleh scripts/uji_latensi.py.
     """
-    for resep in ["piper", "rvc", "piper+rvc", "gemini"]:
-        if resep == "gemini" and konfig.nilai("VTUBER_UJI_CLOUD").strip().lower() != "ya":
-            # Akun ini 20 permintaan/HARI untuk semua model. Satu tes yang selalu
-            # hijau tidak boleh memakan jatah itu diam-diam.
-            print("     LEWAT gemini: hemat kuota (set VTUBER_UJI_CLOUD=ya untuk menguji)")
-            continue
+    for resep in ["piper", "rvc", "piper+rvc"]:
         with dengan_rantai(resep):
             if "rvc" in resep and tts_rvc.hidup():
                 try:

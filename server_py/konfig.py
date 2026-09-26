@@ -1,9 +1,8 @@
 """Konfigurasi sisi server Python.
 
-Baca dari environment dulu, baru dari berkas .env di akar proyek -- sama seperti
-`node --env-file-if-exists=.env`. Kunci yang dibaca di sini hanya VTUBER_* dan
-GEMINI_API_KEY; 34 kunci VITE_* di .env itu milik frontend dan tidak boleh
-menyentuh sisi server.
+Baca dari environment dulu, baru dari berkas .env di akar proyek.
+Kunci yang dibaca di sini adalah VTUBER_*; seluruh kunci VITE_* di .env
+milik frontend dan tidak menyentuh sisi server.
 """
 
 from __future__ import annotations
@@ -83,15 +82,13 @@ def daftar(kunci: str, bawaan: str) -> list[str]:
 def env_web() -> dict[str, str]:
     """Kunci VITE_* yang boleh sampai ke browser.
 
-    Sengaja HANYA berprefiks VITE_: GEMINI_API_KEY dan VTUBER_* tidak boleh
-    dibubuhkan ke halaman. Ini pengganti `import.meta.env` milik Vite.
+    Sengaja HANYA berprefiks VITE_: VTUBER_* tidak boleh dibubuhkan ke halaman.
     """
     hasil = {k: v for k, v in _ENV.items() if k.startswith("VITE_")}
     hasil.update({k: v for k, v in os.environ.items() if k.startswith("VITE_")})
     return hasil
 
 
-KUNCI = ""
 PORT = angka("VTUBER_PORT", 8787)
 
 # Otak percakapan:
@@ -121,9 +118,7 @@ JEDA_FAKTA = angka("VTUBER_JEDA_FAKTA", 8)
 TTS_RANTAI = daftar("VTUBER_TTS_RANTAI", "piper+rvc,piper")
 TTS_BATAS_DETIK = angka("VTUBER_TTS_BATAS_DETIK", 20)
 # Resep yang terbukti tidak selesai dalam TTS_BATAS_DETIK diistirahatkan selama ini
-# (detik) sebelum dicoba lagi. Tanpa jeda, SETIAP kalimat dari jawaban panjang
-# membayar ulang 20 dtk kegagalan yang sama -- dan penahan yang di depan (gemini)
-# justru kebagian kuota yang habis karena menunggu.
+# (detik) sebelum dicoba lagi.
 TTS_JEDA_RESEP = angka("VTUBER_TTS_JEDA_RESEP", 60)
 
 # ── piper (TTS Indonesia offline, 61 MB ONNX) ────────────────────────────────
