@@ -142,6 +142,8 @@ def muat() -> None:
             pass
 
         izinkan_global_torch()
+        import warnings
+        warnings.filterwarnings("ignore", category=FutureWarning)
         from rvc_python.infer import RVCInference
 
         try:

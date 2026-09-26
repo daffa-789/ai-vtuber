@@ -17,7 +17,10 @@ import re
 import sys
 import threading
 import time
+import warnings
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 import jalur_suara
 import konfig
