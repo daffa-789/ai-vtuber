@@ -15,12 +15,16 @@ import base64
 import json
 import re
 import sys
+import logging
 import threading
 import time
 import warnings
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 warnings.filterwarnings("ignore", category=FutureWarning)
+logging.getLogger("faiss").setLevel(logging.WARNING)
+logging.getLogger("fairseq").setLevel(logging.WARNING)
+logging.getLogger("rvc_python").setLevel(logging.WARNING)
 
 import jalur_suara
 import konfig

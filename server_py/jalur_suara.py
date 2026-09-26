@@ -564,6 +564,6 @@ def ringkasan() -> dict:
         }
     return {
         **isi,
-        "suara": tts_gemini.label(),
+        "suara": f"rvc/{konfig.RVC_MODEL}" if tts_rvc.hidup() else "piper",
         "perKalimat": bool(konfig.TTS_PER_KALIMAT),
     }
