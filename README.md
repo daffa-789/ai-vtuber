@@ -7,11 +7,10 @@ Status: renderer Live2D, loop chat lokal (Llama 3.2 3B GGUF di CPU **atau** GPU
 terintegrasi), ekspresi, text-to-speech lokal (Piper + RVC Furina), **mic lokal
 (Whisper)**, dan memori jangka panjang Obsidian sudah berjalan.
 
-**100% offline, dan itu dibuktikan oleh tes — bukan oleh kalimat di README.**
-`server_py/uji_jalan.py` memegang daftar putih alamat luar yang sekarang **kosong**:
-setiap URL non-loopback atau API cloud yang muncul lagi di kode runtime membuat
-`uji_jalan.py` gagal. Yang masih butuh internet hanya langkah instalasi
-(`pip install`, `scripts/unduh_*`).
+**100% offline.** Chat, suara, dan mic dihitung di mesin ini; tidak ada satu pun
+jalur runtime yang membuka koneksi ke luar. Yang masih butuh internet hanya
+mendatangkan aset/binary ke mesin ini (lihat "Aset" di bawah) -- dan setelah itu ada
+di disk, server tidak pernah memanggilnya lagi.
 
 ## Menjalankan
 
@@ -24,41 +23,50 @@ python -m venv .venv
 .venv\Scripts\python.exe -m pip install "pip==24.0"                     # lihat catatan di requirements.txt
 .venv\Scripts\python.exe -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.12.1 torchaudio==2.11.0
 .venv\Scripts\python.exe -m pip install -r requirements.txt             # jalur LLM lokal + suara + mic
-.venv\Scripts\python.exe scripts\unduh_model.py --model llama-3b       # unduh model LLM GGUF (2.02 GB)
-.venv\Scripts\python.exe scripts\sedia_suara.py --piper                 # voice Indonesia 61 MB
-.venv\Scripts\python.exe scripts\sedia_stt.py --model base              # mic lokal: Whisper 142 MB
-.venv\Scripts\python.exe scripts\unduh_llama.py                         # OPSIONAL: llama-server Vulkan (33 MB)
-.venv\Scripts\python.exe server_py\app.py                               # satu-satunya proses yang perlu dijalankan
+cp .env.example .env                    # sesuaikan konfigurasi jika diperlukan
+.venv\Scripts\python.exe main.py        # satu-satunya proses yang perlu dijalankan
 # buka http://127.0.0.1:8787/  (port ikut VTUBER_PORT di .env)
 ```
 
-Tanpa `unduh_llama.py` pun semuanya tetap jalan: `VTUBER_LLM_PROVIDER=vulkan` lalu
-jatuh ke CPU dan **mengatakannya** di baris banner. Lihat "GPU terintegrasi" di bawah
-sebelum menyalakan jalur itu.
+Atau dua kali klik: `jalankan.bat`.
 
-Tanpa `pip install`, tidak ada engine yang bisa jalan: `/api/chat` membalas 503 dan
-`/api/tts` menyerah dengan pesan jelas. **Tidak ada satu pun jalur yang jatuh ke cloud.**
+Kalau `bin/llama/` kosong, `VTUBER_LLM_PROVIDER=vulkan` jatuh ke CPU dan **mengatakannya**
+di baris banner -- lihat "GPU terintegrasi" sebelum menyalakan jalur itu. Tanpa
+`pip install`, tidak ada engine yang bisa jalan: `/api/chat` membalas 503 dan `/api/tts`
+menyerah dengan pesan jelas. **Tidak ada satu pun jalur yang jatuh ke cloud.**
 
-Sekali jalan dari nol — aset karakter tidak ikut ke git:
+## Aset
 
-```bash
-cp .env.example .env                    # sesuaikan konfigurasi jika diperlukan
-.venv\Scripts\python.exe scripts\unduh_aset.py      # Cubism core dari situs Live2D
-# berkas ekspresi + penyihir.model3.json: buka /perkakas.html di halaman yang hidup
-```
+Proyek ini **tidak lagi membawa skrip pengunduh**. Semua aset di bawah sudah ada di
+mesin ini dan di-`.gitignore` (lisensi Live2D melarang modelnya diedarkan sebagai
+berkas lepas, dan yang lain terlalu besar untuk repo). Kalau pindah mesin atau
+`.venv` dibuat ulang, aset-aset ini **disalin manual** -- tidak ada lagi tombolnya:
 
-Di halaman, ketik pesannya di kolom bawah. Jalur mikrofon **sedang dimatikan** —
-pipingnya masih ada (`web/mikrofon.js`, `/api/stt`, aset VAD), tinggal disambung lagi.
+| Lokasi | Isi | Cara mendapatkannya dulu |
+|---|---|---|
+| `model/*.gguf` | Llama 3.2 3B Q4_K_M (2,02 GB) | GGUF Llama 3.2 dari HuggingFace |
+| `aset/suara/piper/` | voice Indonesia `id_ID-news_tts-medium` (61 MB) | rilis Piper |
+| `aset/suara/rvc/` | checkpoint Furina (v2, 40 kHz) | hasil latih di Applio |
+| `aset/suara/model-dasar/` | HuBERT + rmvpe (±730 MB) | unduhan dasar `rvc_python` |
+| `aset/suara/whisper/` | `base` (142 MB) / `small` (470 MB) | repo `Systran/faster-whisper-*` |
+| `bin/llama/` | `llama-server.exe` + DLL Vulkan (92 MB) | build Windows resmi llama.cpp |
+| `public/models/penyihir/` | model karakter + tekstur 8192 | berkas kerja karakter |
+| `public/live2dcubismcore.min.js` | Cubism Core | SDK resmi Live2D |
+
+Dua catatan yang masih benar: `base_model/` RVC hidup **di dalam**
+`.venv/Lib/site-packages/rvc_python/`, jadi `.venv` baru berarti menyalin ulang
+±730 MB itu ke sana. Dan berkas ekspresi + `penyihir.model3.json` dibuat lewat
+halaman **`/perkakas.html`** di browser, bukan skrip.
 
 ## Arsitektur Full Offline
 
-Yang dulu Node sekarang Python: satu proses `server_py/app.py` menjalankan model lokal (Llama 3.2 GGUF via `llama-cpp-python`),
+Yang dulu Node sekarang Python: satu proses `main.py` (Flask) menjalankan model lokal (Llama 3.2 GGUF via `llama-cpp-python`),
 sintesis suara lokal (Piper + RVC Furina), menulis memori ke vault Obsidian, **dan** menyajikan halaman beserta
 aset model. 100% offline tanpa dev server terpisah.
 
 | Komponen | Dahulu (Node + Vite) | Sekarang (Python 100% Offline) |
 |---|---|---|
-| **Server & LLM** | `server/index.js` (Cloud Gemini API) | `server_py/app.py` + `model_lokal.py` (CPU) / `model_vulkan.py` (GPU terintegrasi) |
+| **Server & LLM** | `server/index.js` (Cloud Gemini API) | `main.py` (Flask) + `model_lokal.py` (CPU) / `model_vulkan.py` (GPU terintegrasi) |
 | **Mic (STT)** | Web Speech API browser (cloud Google) | `web/mikrofon.js` rekam WAV -> `server_py/stt_whisper.py` (Whisper lokal) |
 | **Penyaji Web** | `npm run dev` (Vite di :5173) | `server_py/statis.py` menyajikan `web/` dan `public/` |
 | **Env Web** | `import.meta.env.VITE_*` | `window.__VTUBER_ENV__`, disuntikkan Python ke `index.html` |
@@ -225,14 +233,14 @@ mic --> WAV 16 kHz --> /api/stt --> Whisper base --> teks         |
                              AnalyserNode (RMS) -> ParamMouthOpenY
 ```
 
-- **`server_py/app.py`** — satu proses untuk semuanya: LLM lokal (`model_lokal`), TTS lokal (`jalur_suara`),
+- **`main.py`** — satu proses untuk semuanya (Flask): LLM lokal (`model_lokal` / `model_vulkan`), TTS lokal (`jalur_suara`),
   memori Obsidian (`vault`), dan sajian halaman (`statis`).
 - **`server_py/model_lokal.py`** — streaming inferensi LLM offline menggunakan `llama-cpp-python` membaca GGUF di `model/`.
 - **`server_py/model_vulkan.py`** — penyedia chat di GPU terintegrasi: menyalakan
   `bin/llama/llama-server.exe` sebagai **proses anak** (port acak, hanya 127.0.0.1,
   API key acak per boot), streaming dari `/v1/chat/completions`, dan menyapu sisa
   proses lama saat boot. Bentuk keluarannya sama dengan `model_lokal.alir()`, jadi
-  sisi streaming `app.py` tidak perlu tahu mana yang menjawab.
+  sisi streaming `main.py` tidak perlu tahu mana yang menjawab.
 - **`server_py/stt_whisper.py`** — mic jadi teks: WAV dari browser -> `wave` (stdlib)
   -> numpy -> faster-whisper (CTranslate2, CPU, `int8`). Model dibuka dari folder
   dengan jalur lengkap, tanpa `download_root`, tanpa HuggingFace hub.
@@ -292,7 +300,7 @@ percakapan tetap berjalan.
 
 ## Suara lokal: performa & benchmark offline
 
-Angka di bawah **terukur di mesin ini** dengan `python scripts/uji_latensi.py --resep piper+rvc --f0 pm,rmvpe --kalimat 8`.
+Angka di bawah **terukur di mesin ini** pada 26 Sep (rantai penuh, 8 kalimat, dua f0).
 Mesin uji: i5-1135G7 (4 core/8 thread), Intel Iris Xe, 16 GB RAM, **tanpa GPU NVIDIA**.
 
 | Jalur / Engine | Median per kalimat | p95 | RTF | Puncak RAM | Keterangan |
@@ -307,14 +315,7 @@ Kesimpulan performa:
 - **Cache suara otomatis** instan (<5ms) untuk kalimat yang pernah disintesis sebelumnya.
 - Rantainya dipilih lewat `.env`: `VTUBER_TTS_RANTAI=piper+rvc,piper`. Jika RVC sibuk atau melewati batas detik, sistem otomatis fallback ke Piper murni.
 
-Cara memasang (aset tidak ikut git):
-
-```bash
-.venv\Scripts\python.exe scripts/sedia_suara.py --piper        # voice id_ID, 61 MB
-.venv\Scripts\python.exe scripts/sedia_suara.py --model-dasar  # hubert + rmvpe ke .venv
-.venv\Scripts\python.exe scripts/sedia_suara.py --furina       # checkpoint dari E:
-.venv\Scripts\python.exe scripts/sedia_suara.py --periksa      # laporan, tanpa menulis
-```
+Cara memasang: lihat tabel **Aset** -- semuanya disalin manual ke tempatnya.
 
 `--model-dasar` perlu dijalankan ulang setiap kali `.venv` dibuat ulang: `rvc_python`
 membaca `base_model/` dari dalam direktori paketnya sendiri, bukan dari proyek.
@@ -406,7 +407,7 @@ Dua hal yang tidak terlihat dari satu angka:
    memberi 138 / 141 / 156 / 163 / 166 tok/dtk untuk prompt, tapi keluar token di
    `-ngl 16` jatuh ke 6,9. Campuran CPU+GPU membayar sinkronisasi di tiap batas lapis.
 
-Terukur di aplikasi nyata (`/api/chat`, satu proses `app.py`): byte pertama **4,6 dtk**
+Terukur di aplikasi nyata (`/api/chat`, satu proses `main.py`): byte pertama **4,6 dtk**
 pada giliran pertama, lalu **0,4 dtk** saat slotnya masih hangat (`--cache-idle-slots`
 menyimpan persona panjang di prompt cache, jadi tidak dihitung ulang tiap giliran).
 
@@ -442,29 +443,23 @@ sekali sebagai pemanasan sebelum klik. Itu kelakuan alat uji, bukan produk.
 ## Perkakas & Pengelolaan
 
 ```bash
-.venv\Scripts\python.exe scripts/unduh_aset.py --periksa  # laporan aset: apa ada, apa hilang
-.venv\Scripts\python.exe scripts/unduh_aset.py            # unduh Cubism Core dari situs Live2D
-.venv\Scripts\python.exe scripts/sedia_suara.py --periksa # aset jalur suara (piper + rvc)
-.venv\Scripts\python.exe scripts/sedia_stt.py --periksa   # aset mic (whisper base/small/medium)
-.venv\Scripts\python.exe scripts/unduh_llama.py           # binary llama-server Vulkan (sekali)
-.venv\Scripts\python.exe scripts/uji_latensi.py           # angka latensi, bukan dugaan
-.venv\Scripts\python.exe scripts/adu_suara.py             # render sampel untuk dipilih dengan telinga
+.venv\Scripts\python.exe scripts/adu_suara.py   # render sampel suara untuk dipilih dengan telinga
 ```
 
-Perkakas Python di `scripts/` membaca `.env` lewat `server_py/konfig.py` yang sama
-dengan server.
+Satu-satunya perkakas yang tersisa di `scripts/` itu membaca `.env` lewat
+`server_py/konfig.py` yang sama dengan server, dan `update_waifu_memory.py`
+(penjaga pulau memori karakter -- bukan perkakas teknis).
 
-Dua aset masih berstatus **tidak bisa dibangkitkan ulang** dan itu bukan hal yang
-dilahirkan rombakan suara ini — lubangya sudah ada sejak `node_modules` dihapus,
-cuma sebelumnya tersamar oleh skrip Node yang tampak bisa dijalankan:
-`public/vad` (6,2 MB) dan `public/ort` (83 MB) di-`.gitignore` dan aslinya disalin
-dari `node_modules/@ricky0123/vad-web` + `onnxruntime-web`, yang sudah tidak ada.
-`scripts/unduh_aset.py --periksa` melaporkannya apa adanya. Pilihannya: keluarkan
-keduanya dari `.gitignore`, atau unduh sekali paket itu lewat npm di luar proyek.
-Sampai hari ini tidak mengganggu, karena jalur mikrofon memang belum punya tombol
-di halaman. Berkas ekspresi dan `penyihir.model3.json` tidak lagi dibuat skrip:
-unduh dari `/perkakas.html`.
-Seluruh pengujian fungsional, rendering, dan integrasi telah selesai dilaksanakan dan diverifikasi.
+Yang **tidak ada lagi**: pengunduh aset (`unduh_*`, `sedia_*`) dan seluruh suiter
+tes (`uji_jalan`, `uji_suara`, `uji_kontrak` + `kontrak.json`). Itu pilihan pada
+27 Sep, dan konsekuensinya perlu disebut jujur: tidak ada lagi yang otomatis
+menangkap kalau suatu hari ada kode yang diam-diam memanggil cloud, dan tidak ada
+lagi yang membuktikan kontrak HTTP `/api/*` tidak berubah bentuk. Yang masih
+menjaga adalah baris banner saat boot (ia menyebut engine yang benar-benar hidup
+atau mengakuinya mati) dan pesan 503 dari tiap endpoint.
+
+`public/vad` (6,2 MB) dan `public/ort` (83 MB) sampai sekarang tidak dipakai siapa-siapa:
+mic memakai ambang RMS sendiri, bukan Silero VAD. Keduanya tinggal menunggu untuk dihapus.
 
 ## Kredit
 
@@ -479,7 +474,7 @@ Aset dan pustaka pihak ketiga yang dipakai proyek ini, beserta pemiliknya:
 - **[PixiJS](https://github.com/pixijs/pixijs)** — MIT. Renderer WebGL.
 - **[llama.cpp](https://github.com/ggml-org/llama.cpp)** oleh ggml-org — MIT.
   `llama-server` + backend Vulkan yang menghitung Llama 3.2 di Iris Xe; biner
-  Windows resminya diambil sekali lewat `scripts/unduh_llama.py` (versi dipaku
+  Windows resminya disalin sekali ke `bin/llama/` (versi dipaku
   `b11206`, karena angka 171 tok/dtk adalah angka build itu).
 - **[faster-whisper](https://github.com/SYSTRAN/faster-whisper)** oleh SYSTRAN — MIT,
   di atas **[CTranslate2](https://github.com/OpenNMT/CTranslate2)** (MIT).
@@ -497,7 +492,7 @@ Aset dan pustaka pihak ketiga yang dipakai proyek ini, beserta pemiliknya:
 - **[ONNX Runtime Web](https://github.com/microsoft/onnxruntime)** — MIT.
 
 Sistem berjalan 100% offline: chat, suara, dan mic dihitung di CPU/GPU lokal tanpa
-satu pun panggilan cloud — dan `uji_jalan.py` menjaganya tetap begitu. Vite,
+satu pun panggilan cloud. Vite,
 TypeScript, dan `@google/genai` dipakai pada fase awal dan sudah dihapus bersama
 `node_modules`; Web Speech API (mic ke server Google) menyusul pada 27 Sep.
 
@@ -509,5 +504,5 @@ tetap pada lisensinya masing-masing.
 Kode sumber proyek ini bebas dipakai sesuai ketentuan yang berlaku padanya.
 **Model Live2D dan Cubism Core tidak termasuk** dan tidak diizinkan untuk
 diredistribusi sebagai berkas lepas — karena itu keduanya dikecualikan dari
-repositori dan diambil ulang dengan `python scripts/unduh_aset.py` (Cubism Core dari
-situs Live2D). Untuk karakter publik, gunakan model milik sendiri.
+repositori (lihat tabel **Aset**). Cubism Core diambil dari situs resmi Live2D.
+Untuk karakter publik, gunakan model milik sendiri.

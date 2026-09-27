@@ -2,7 +2,7 @@
 dengan telinga, bukan dengan angka.
 
 Ini langkah yang tidak bisa digantikan meterik: RTF sudah terukur lewat
-uji_latensi.py, tapi apakah hasil Piper+RVC masih terdengar seperti karakternya
+ukur-latensi, tapi apakah hasil Piper+RVC masih terdengar seperti karakternya
 -- atau seperti robot yang sedang membaca berita -- hanya bisa dinilai didengar.
 
     python scripts/adu_suara.py

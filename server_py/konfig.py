@@ -120,7 +120,7 @@ PORT = angka("VTUBER_PORT", 8787)
 # Otak percakapan:
 # - 'local' / 'llama_cpp': Model GGUF offline di folder model/ (tanpa dependensi luar)
 # - 'vulkan': GGUF yang SAMA, dihitung llama-server.exe di GPU terintegrasi (Iris Xe)
-#   lewat proses anak yang dikelola app.py -- lihat model_vulkan.py
+#   lewat proses anak yang dikelola main.py -- lihat model_vulkan.py
 # - 'ollama': Server daemon Ollama di http://127.0.0.1:11434
 LLM_PROVIDER = nilai("VTUBER_LLM_PROVIDER", "local").lower()
 LOCAL_MODEL_PATH = nilai("VTUBER_LOCAL_MODEL_PATH", "")
@@ -128,7 +128,7 @@ LOCAL_MODEL_THREADS = angka("VTUBER_LOCAL_MODEL_THREADS", 4)
 LOCAL_MODEL_CTX = angka("VTUBER_LOCAL_MODEL_CTX", 8192)
 
 # ── jalur GPU terintegrasi (llama.cpp Vulkan) ────────────────────────────────
-# Folder berisi llama-server.exe hasil scripts/unduh_llama.py, BUKAN berkas .env:
+# Folder berisi llama-server.exe (build Vulkan resmi llama.cpp), BUKAN berkas .env:
 # binary 92 MB ini tidak ikut ke git dan tidak boleh dianggap sumber.
 LLAMA_SERVER = nilai("VTUBER_LLAMA_SERVER", "bin/llama")
 # Jumlah lapis yang dititipkan ke GPU. 99 = semua. Angka ini BUKAN selera:

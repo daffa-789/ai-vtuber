@@ -70,7 +70,7 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
       health.textContent = h.key ? `sisi server siap — ${h.model}${suara}${sisi}` : 'API key belum diisi';
     })
     .catch(() => {
-      health.textContent = 'sisi server tidak jalan (python server_py/app.py)';
+      health.textContent = 'sisi server tidak jalan (python main.py)';
     });
 
   riwayat.forEach((p) => gelembung(p.role, p.content));

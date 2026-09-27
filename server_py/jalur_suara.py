@@ -536,7 +536,7 @@ def ringkasan() -> dict:
     """Bentuk objek `tts` di /api/health. Sengaja TIDAK menambah kunci level-atas
     -- kontrak lama mengunci daftar kunci itu, dan chat.js membaca h.tts.perKalimat."""
     if konfig.STUB:
-        # Mode stub TIDAK lewat rantai apa pun (app.py::tts memulangkan hening
+        # Mode stub TIDAK lewat rantai apa pun (main.py::tts memulangkan hening
         # sebelum bangun()). Melaporkan engine offline di sini berarti halaman
         # dan banner saling bertentangan soal siapa yang sedang bicara.
         siap = ["stub"]

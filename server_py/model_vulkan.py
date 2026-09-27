@@ -13,7 +13,7 @@ Aturan yang dijaga modul ini:
   * hanya bind 127.0.0.1 + API key acak per boot, supaya halaman/situs lain di
     mesin ini tidak bisa ikut memakai model;
   * kalau binary atau model tidak ada -> JANGAN diam-diam pindah. `tersedia()`
-    bilang tidak, `alasan_tidak_tersedia()` bilang kenapa, dan app.py yang memutuskan
+    bilang tidak, `alasan_tidak_tersedia()` bilang kenapa, dan main.py yang memutuskan
     (dengan peringatan keras di banner).
 """
 
@@ -40,7 +40,7 @@ from typing import Generator
 import konfig
 from konfig import AKAR
 
-# Kelas galat yang SAMA dengan model_lokal: app.py sudah punya satu jalur penanganan
+# Kelas galat yang SAMA dengan model_lokal: main.py sudah punya satu jalur penanganan
 # (503 + pesan yang bisa dibaca Master). Dua kelas galat berarti dua cabang yang bisa
 # lupa disinkronkan -- dan yang dilupakan biasanya jalur yang jarang dipakai.
 from model_lokal import ModelLokalError
@@ -79,8 +79,8 @@ def tersedia() -> bool:
 def alasan_tidak_tersedia() -> str:
     if not _exe().is_file():
         return (
-            f"{_exe().name} tidak ada di {jalur_binary()} -- jalankan "
-            "`python scripts/unduh_llama.py` (butuh internet sekali)"
+            f"{_exe().name} tidak ada di {jalur_binary()} -- salin dari build Vulkan "
+            "resmi llama.cpp (llama-bin-win-vulkan-x64) ke folder itu"
         )
     if konfig.LLM_PROVIDER != NAMA:
         return f"provider aktif '{konfig.LLM_PROVIDER}', bukan '{NAMA}'"
@@ -95,7 +95,7 @@ def _port_kosong() -> int:
 
 # ── jangan ada anak yatim memegang 2 GB ──────────────────────────────────────
 # `atexit` dan `finally` TIDAK jalan saat proses induk dibunuh keras (Stop-Process,
-# Task Manager, tombol X konsol). Itu terbukti di mesin ini 27 Sep: app.py ditutup
+# Task Manager, tombol X konsol). Itu terbukti di mesin ini 27 Sep: main.py ditutup
 # paksa dan llama-server tetap hidup.
 #
 # Yang pertama dicoba adalah job object dengan KILL_ON_JOB_CLOSE -- dan ia
@@ -201,7 +201,7 @@ def _perintah(port: int) -> list[str]:
     if jalur is None:
         raise ModelLokalError(
             "Tidak ditemukan berkas model .gguf di folder model/.\n"
-            "Jalankan: python scripts/unduh_model.py --model llama-3b"
+            "Letakkan berkas .gguf di folder model/."
         )
     arg = [
         str(_exe()),
@@ -375,7 +375,7 @@ def alir(
     temperature: float = 0.7,
 ) -> Generator[str, None, None]:
     """Stream token dari /v1/chat/completions. Bentuk keluaran sama persis dengan
-    model_lokal.alir(), jadi sisi streaming app.py tidak perlu tahu mana yang menjawab."""
+    model_lokal.alir(), jadi sisi streaming main.py tidak perlu tahu mana yang menjawab."""
     if not mulai():
         raise ModelLokalError(_terakhir_galat or "llama-server tidak bisa dimulai")
 

@@ -1,8 +1,8 @@
 """Bungkusan dan pembacaan header WAV.
 
-Rumah baru untuk tiga helper yang dulu hidup di app.py. Dipisahkan supaya jalur
+Rumah baru untuk tiga helper yang dulu hidup di server HTTP lama. Dipisahkan supaya jalur
 suara (piper / rvc / cache) bisa memeriksa berkas audio tanpa mengimpor server --
-mengimpor app.py berarti menjalankan konstanta modulnya, dan itu bukan sesuatu
+mengimpor modul server berarti menjalankan konstanta modulnya, dan itu bukan sesuatu
 yang aman dilakukan dari dalam tes.
 
 `sudah_wav` dipertahankan apa adanya. Doknya bukan seremoni: membungkus ulang

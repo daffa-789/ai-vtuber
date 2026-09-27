@@ -130,7 +130,7 @@ def muat() -> None:
         if pth is None:
             raise RvcTidakHidup(
                 f"checkpoint tidak ada di {folder_model() / nama} "
-                "(jalankan scripts/sedia_suara.py --furina)"
+                "(salin checkpoint .pth ke folder itu)"
             )
         if not _rvc_terpasang():
             raise RvcTidakHidup("rvc_python belum diinstal (pip install -r requirements.txt)")
@@ -248,7 +248,7 @@ def ubah(wav_masuk: bytes, label: str = "", sisa: float = 0.0) -> bytes:
                 _telusuri(str(masuk))
                 if konfig.TTS_METERIK
                 else "sebab asli hanya dipakai saat VTUBER_TTS_METERIK=ya "
-                     "atau lewat scripts/uji_latensi.py --mendiagnosa"
+                     "atau lewat fungsi diagnosa di bawah"
             )
             raise RvcGagal(f"{err} | {sebab}") from err
 
@@ -300,7 +300,7 @@ def _telusuri(jalur_masuk: str) -> str:
 
 
 def diagnostik(wav_masuk: bytes) -> str:
-    """Untuk scripts/uji_latensi.py --mendiagnosa: kembalikan laporan, bukan byte."""
+    """Diagnostik: kembalikan laporan keadaan model, bukan byte audio."""
     if not hidup():
         return "RVC mati atau asetnya belum ada"
     muat()

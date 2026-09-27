@@ -27,6 +27,12 @@
 # requirements.lock.txt; galat instalasi berikutnya dibaca sebagai selisihnya.
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ── sisi web ─────────────────────────────────────────────────────────────────
+Flask
+#  `main.py`: rute /api/* + sajian halaman. Murni Python, tidak pernah menghubungi
+#  jaringan. Werkzeug ikut terbawa -- server dev-nya cukup untuk satu pengguna di
+#  127.0.0.1 (ini aplikasi desktop, bukan deployment publik).
+
 # ── LLM lokal offline ────────────────────────────────────────────────────────
 llama-cpp-python
 #  Inference model GGUF lokal di CPU/RAM tanpa internet.
@@ -35,13 +41,13 @@ llama-cpp-python
 #    .venv\Scripts\python.exe -m pip install llama-cpp-python `
 #        --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
 #  Hanya untuk jalur CPU. Untuk GPU terintegrasi, JANGAN pakai paket ini -- pakai
-#  binary jadi llama-server: `python scripts/unduh_llama.py` + VTUBER_LLM_PROVIDER=vulkan.
+#  binary jadi llama-server (build Vulkan) ditaruh di bin/llama/ + VTUBER_LLM_PROVIDER=vulkan.
 
 # ── STT lokal offline (mic) ──────────────────────────────────────────────────
 faster-whisper
 #  Whisper lewat CTranslate2: wheel Windows jadi, murni CPU, tidak memanggil
 #  jaringan selama modelnya sudah di `aset/suara/whisper/` (siapkan dengan
-#  `python scripts/sedia_stt.py --model base`). Kode membuka modelnya dengan
+#  folder modelnya tersedia di aset/suara/whisper/). Kode membuka modelnya dengan
 #  local_files_only=True, jadi tidak ada unduhan senyap di tengah percakapan.
 #  Dipasang dengan berkas kendala yang mem-pin numpy + onnxruntime yang SUDAH ada:
 #    .venv\Scripts\python.exe -m pip install faster-whisper -c kendala.txt
@@ -94,7 +100,7 @@ scipy
 #  rvc_python.infer_file -- jadi ini bukan paket tambahan, ini paket wajib.
 
 soundfile
-#  Baca/tulis WAV di luar scipy (dipakai scripts/sedia_suara.py dan uji_latensi).
+#  Baca/tulis WAV di luar scipy (dipakai jalur_suara dan perkakas suara).
 
 librosa
 #  Transitif dari rvc-python (resample/filter di jalur RVC). Didaftarkan di sini
@@ -105,7 +111,7 @@ av
 #  jadi `ffmpeg 9.0.2` di PATH tidak ikut jadi dependensi.
 
 praat-parselmouth
-#  f0 `pm` = default kita di mesin ini (rmvpe diadu terhadapnya lewat uji_latensi).
+#  f0 `pm` = default kita di mesin ini (rmvpe sudah diadu terhadapnya).
 
 pyworld
 #  Dipin rvc-python dan hanya dipakai f0 `harvest`. `harvest` sengaja BUKAN
@@ -119,7 +125,7 @@ torchcrepe
 
 # ── alat ukur, BUKAN runtime ─────────────────────────────────────────────────
 psutil
-#  Peak RSS dilaporkan scripts/uji_latensi.py dan scripts/sedia_suara.py. Tanpa
+#  Peak RSS dulu dilaporkan perkakas ukur di scripts/. Tanpa
 #  ini klaim "RAM aman" cuma tebakan.
 
 # ── catatan ──────────────────────────────────────────────────────────────────

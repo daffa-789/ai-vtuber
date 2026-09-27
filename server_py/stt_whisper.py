@@ -70,8 +70,8 @@ def alasan_tidak_tersedia() -> str:
         return "faster-whisper belum dipasang: .venv\\Scripts\\pip install faster-whisper"
     if not jalur_model().is_dir():
         return (
-            f"model '{konfig.STT_MODEL}' belum ada di {jalur_model()} -- jalankan "
-            f"python scripts/sedia_stt.py --model {konfig.STT_MODEL}"
+            f"model '{konfig.STT_MODEL}' belum ada di {jalur_model()} -- salin foldernya "
+            "(config.json + model.bin + tokenizer.json) dari mesin sumber"
         )
     kurang = [b for b in _berkas_wajib() if not (jalur_model() / b).is_file()]
     if kurang:

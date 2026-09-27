@@ -7,8 +7,8 @@ BUKAN suara Elaina. Warna suaranya baru datang dari RVC (tts_rvc.py); Piper
 menyumbang lafal dan irama.
 
 Impor `piper` sengaja diletakkan DI DALAM fungsi. Itu keputusan struktural, bukan
-gaya: app.py dan konfig.py tidak boleh menyeret paket ratusan MB hanya untuk menjawab
-/api/chat, dan server_py/uji_jalan.py harus tetap PASS di venv yang belum
+gaya: main.py dan konfig.py tidak boleh menyeret paket ratusan MB hanya untuk menjawab
+/api/chat -- server harus tetap bisa naik di venv yang belum
 `pip install -r requirements.txt`.
 """
 
@@ -139,7 +139,7 @@ def sintesis(teks: str) -> bytes:
 
 def alasan_tidak_tersedia() -> str:
     if not jalur_model().is_file():
-        return f"model piper belum diunduh: {jalur_model()} (jalankan scripts/sedia_suara.py --piper)"
+        return f"model piper belum diunduh: {jalur_model()} (salin .onnx + .onnx.json ke folder itu)"
     if not _terpasang():
         return "paket piper-tts belum diinstal"
     return _galat_terakhir or "piper siap"

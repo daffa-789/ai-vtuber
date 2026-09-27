@@ -55,7 +55,7 @@ def muat_model(jalur_kandidat: str | None = None, threads: int = 4, n_ctx: int =
     if jalur is None:
         raise ModelLokalError(
             "Tidak ditemukan berkas model .gguf di folder model/.\n"
-            "Jalankan: python scripts/unduh_model.py atau letakkan berkas .gguf ke folder model/."
+            "Letakkan berkas .gguf-nya di sana (proyek ini tidak lagi membawa pengunduh aset)."
         )
 
     if _LLM_INSTANCE is not None and _MODEL_DIMUAT == str(jalur):
