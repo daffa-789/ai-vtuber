@@ -6,6 +6,7 @@ Live2DModel.registerTicker(PIXI.Ticker);
 
 import { pasangChat } from './chat.js';
 import { pasangIrama } from './iriama.js';
+import { pasangTampil } from './tampak.js';
 import { setelan, skalaRender, ukuranPanggung } from './setelan.js';
 import { tingkatMulut } from './suara.js';
 import {
@@ -14,6 +15,10 @@ import {
   suntikEkspresi,
   tabelParameter,
 } from './wajah.js';
+
+// SEBELUM kanvas dibuat: mode pet menulis html[data-tampak] yang mengubah kanvas
+// mengisi jendela, dan PIXI membaca clientWidth/clientHeight saat konstruksi.
+pasangTampil();
 
 const canvas = document.getElementById('stage');
 const statusEl = document.getElementById('status');

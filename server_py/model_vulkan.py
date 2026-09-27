@@ -112,7 +112,6 @@ def _port_kosong() -> int:
 TH32CS_SNAPPROCESS = 0x00000002
 PROCESS_QUERY_LIMITED = 0x1000
 PROCESS_TERMINATE = 0x0001
-INVALID_HANDLE = ctypes.c_void_p(-1).value
 
 
 class _EntriProses(ctypes.Structure):
@@ -130,23 +129,57 @@ class _EntriProses(ctypes.Structure):
     ]
 
 
+def _kernel32():
+    """kernel32 dengan tanda tangan fungsi yang BENAR, sekali saja per proses.
+
+    Ini bukan formalitas. Tanpa `restype = HANDLE`, ctypes memulangkan int 32 bit dan
+    handle 64-bit Windows TERPOTONG. Handle hasil potongan itu lalu dipakai
+    `CloseHandle` -- yang berarti menutup handle milik orang lain di proses ini.
+    Gejalanya bukan galat di jalur ini sama sekali, melainkan jendela pywebview/
+    WebView2 yang dibuat setelahnya hilang tanpa pesan (terbukti 27 Sep: pet muncul
+    begitu sapu_yatim dilewati).
+    """
+    k32 = ctypes.windll.kernel32
+    if getattr(k32, "_elaina_ditandatangani", False):
+        return k32
+    k32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    k32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+    k32.CloseHandle.argtypes = [wintypes.HANDLE]
+    k32.OpenProcess.restype = wintypes.HANDLE
+    k32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    k32.TerminateProcess.argtypes = [wintypes.HANDLE, ctypes.c_uint]
+    k32.Process32First.argtypes = [wintypes.HANDLE, ctypes.POINTER(_EntriProses)]
+    k32.Process32First.restype = wintypes.BOOL
+    k32.Process32Next.argtypes = [wintypes.HANDLE, ctypes.POINTER(_EntriProses)]
+    k32.Process32Next.restype = wintypes.BOOL
+    k32.QueryFullProcessImageNameW.argtypes = [
+        wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)
+    ]
+    k32.QueryFullProcessImageNameW.restype = wintypes.BOOL
+    k32._elaina_ditandatangani = True
+    return k32
+
+
+INVALID_HANDLE = None  # dibandingkan lewat bool(handle), bukan nilai -1
+
+
 def jalur_pid() -> Path:
     return AKAR / "var" / "llama.pid"
 
 
 def _nama_lengkap(pid: int) -> str:
-    kernel32 = ctypes.windll.kernel32
-    handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED, False, pid)
+    k32 = _kernel32()
+    handle = k32.OpenProcess(PROCESS_QUERY_LIMITED, False, pid)
     if not handle:
         return ""
     try:
         buf = ctypes.create_unicode_buffer(260)
         ukuran = wintypes.DWORD(260)
-        if not kernel32.QueryFullProcessImageNameW(handle, 0, buf, ctypes.byref(ukuran)):
+        if not k32.QueryFullProcessImageNameW(handle, 0, buf, ctypes.byref(ukuran)):
             return ""
         return buf.value
     finally:
-        kernel32.CloseHandle(handle)
+        k32.CloseHandle(handle)
 
 
 def yatim_sejati() -> list[int]:
@@ -154,37 +187,37 @@ def yatim_sejati() -> list[int]:
     if os.name != "nt":
         return []
     milik_kita = _exe().resolve()
-    snapshot = ctypes.windll.kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
-    if snapshot == INVALID_HANDLE or snapshot == 0:
+    k32 = _kernel32()
+    snapshot = k32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+    if not snapshot:  # HANDLE gagal = NULL
         return []
     hasil: list[int] = []
     entri = _EntriProses()
     entri.dwSize = ctypes.sizeof(_EntriProses)
-    kernel32 = ctypes.windll.kernel32
-    ada = kernel32.Process32First(snapshot, ctypes.byref(entri))
+    pid_sendiri = _proses.pid if _proses else -1
+    ada = k32.Process32First(snapshot, ctypes.byref(entri))
     try:
         while ada:
             pid = int(entri.th32ProcessID)
-            if entri.szExeFile.decode("mbcs", "replace").lower() == "llama-server.exe":
-                if pid != (_proses.pid if _proses else -1) and Path(_nama_lengkap(pid)).resolve() == milik_kita:
+            if entri.szExeFile.decode("mbcs", "replace").lower() == "llama-server.exe" and pid != pid_sendiri:
+                if Path(_nama_lengkap(pid)).resolve() == milik_kita:
                     hasil.append(pid)
-            ada = kernel32.Process32Next(snapshot, ctypes.byref(entri))
+            ada = k32.Process32Next(snapshot, ctypes.byref(entri))
     finally:
-        kernel32.CloseHandle(snapshot)
+        k32.CloseHandle(snapshot)
     return hasil
 
 
 def sapu_yatim() -> list[int]:
     """Matikan llama-server sisa boot sebelumnya. Aman: hanya yang exec-nya milik kita."""
     dibersihkan: list[int] = []
+    k32 = _kernel32()
     for pid in yatim_sejati():
         try:
-            handle = ctypes.windll.kernel32.OpenProcess(
-                PROCESS_QUERY_LIMITED | PROCESS_TERMINATE, False, pid
-            )
+            handle = k32.OpenProcess(PROCESS_QUERY_LIMITED | PROCESS_TERMINATE, False, pid)
             if handle:
-                ctypes.windll.kernel32.TerminateProcess(handle, 0)
-                ctypes.windll.kernel32.CloseHandle(handle)
+                k32.TerminateProcess(handle, 0)
+                k32.CloseHandle(handle)
                 dibersihkan.append(pid)
         except Exception:
             continue

@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Elaina</title>
+    <title>Silver Wolf</title>
     <!-- Ikon tab ikut jadi identitas: topi penyihir + lampu amber di atas langit
          panel. Tetap inline (data URI) karena tanpa ini browser meminta
          /favicon.ico sendiri, dapat 404, dan noise itu menyamarkan galat
          sungguhan saat halaman diperiksa skrip verifikasi. -->
     <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzE0MWEyNiIvPjxwYXRoIGQ9Ik01LjUgMTkuMmM2LjUtMi40IDE0LjUtMi40IDIxIDAtLjkgMi42LTUuMiA0LTEwLjUgNHMtOS42LTEuNC0xMC41LTR6IiBmaWxsPSIjZThiNjczIi8+PHBhdGggZD0iTTEyLjIgMTkuNGMuOS02LjQgMi45LTEwLjIgNC45LTEyLjMgMS4yIDMuMyAyLjIgNy42IDMgMTIuM3oiIGZpbGw9IiNlOGI2NzMiLz48Y2lyY2xlIGN4PSIyNC42IiBjeT0iOC40IiByPSIxLjciIGZpbGw9IiM5ZmQwYzAiLz48L3N2Zz4=" />
     <meta name="theme-color" content="#0d1119" />
-    <meta name="description" content="Elaina — penyihir keliling yang diajak mengobrol." />
+    <meta name="description" content="Silver Wolf — AI Qoder yang lagi kerja." />
     <!-- Urutan wajib: Cubism core -> Pixi -> pixi-live2d (menempel ke PIXI.live2d).
          Ketiganya berkas UMD di web/lib, tidak ada bundler lagi. -->
     <script src="/live2dcubismcore.min.js"></script>
@@ -276,6 +276,61 @@
           backdrop-filter: blur(3px);
         }
       }
+      /* =========================================================== mode pet */
+      /* Jendela tanpa bingkai di desktop (pywebview + WebView2). Satu halaman yang
+         sama dengan mode browser -- kontrak DOM (#stage, #log, #isi, #btn-mic, ...)
+         tidak bercabang, jadi chat.js/main.js tidak tahu pun tidak apa-apa.
+         Yang berubah cuma tata letak: dia melayang, panelnya tersembunyi sampai
+         Master klik kanan. */
+      html[data-tampak="pet"], html[data-tampak="pet"] body {
+        background: transparent !important;
+        height: 100%;
+      }
+      html[data-tampak="pet"] body {
+        display: block;
+        overflow: hidden;
+        user-select: none;
+      }
+      /* Tidak ada "tanah pijakan", tidak ada pil petunjuk, tidak ada kartu:
+           di mode pet yang boleh terlihat HANYA piksel modelnya sendiri --
+           sisanya desktop Master. */
+      html[data-tampak="pet"] #stage-wrap {
+        position: absolute; inset: 0;
+        background: none !important;
+      }
+      html[data-tampak="pet"] canvas {
+        width: 100%;
+        height: 100%;
+        background: none !important;
+      }
+      html[data-tampak="pet"] #panel {
+        position: absolute;
+        left: 10px; right: 10px; bottom: 10px;
+        height: auto;
+        max-height: min(64%, 420px);
+        border: 1px solid #ffffff1f;
+        border-radius: 12px;
+        background: #0e131bf2;
+        box-shadow: 0 12px 34px #00000073;
+        padding: 10px 12px;
+        gap: 8px;
+        grid-template-rows: 1fr auto auto;
+        display: none;
+      }
+      html[data-tampak="pet"] body.panel-terbuka #panel { display: grid; }
+      /* Meter FPS, gugus raut/pose/gerak, dan gelar: perkakas mode browser.
+         Di desktop cuma mengganggu. */
+      html[data-tampak="pet"] #meter,
+      html[data-tampak="pet"] #kepala,
+      html[data-tampak="pet"] .gugus { display: none; }
+      html[data-tampak="pet"] #catatan { min-height: 0; }
+      html[data-tampak="pet"] #catatan h2 { font-size: 11px; margin: 0 0 4px; }
+      html[data-tampak="pet"] #log { max-height: 30vh; font-size: 13px; }
+      html[data-tampak="pet"] #health { font-size: 10px; opacity: .6; }
+      /* Sengaja TIDAK ada pil/isyarat "klik kanan di sini": permintaan Master
+         adalah tidak ada latar apa pun selain karakternya. Petunjuk gestur
+         cukup ada di README. */
+
       @media (prefers-reduced-motion: reduce) {
         * { transition: none !important; animation: none !important; }
       }
@@ -287,8 +342,8 @@
     <aside id="panel">
       <header id="kepala">
         <div>
-          <h1>Elaina</h1>
-          <p id="gelar">penyihir keliling</p>
+          <h1>Silver Wolf</h1>
+          <p id="gelar">AI Qoder — lagi kerja</p>
         </div>
         <!-- Teks elemen ini ditulis chat.js ('diam' / 'menyusun suara…' /
              'gagal: ...'), dan data-keadaan ikut ditulis supaya lampu bisa
@@ -322,7 +377,7 @@
       </section>
 
       <form id="form" autocomplete="off">
-        <input id="isi" aria-label="Pesan untuk Elaina" placeholder="Katakan sesuatu&hellip;" />
+        <input id="isi" aria-label="Pesan untuk Silver Wolf" placeholder="Katakan sesuatu&hellip;" />
         <button type="button" id="btn-mic" aria-label="Bicara lewat mikrofon" title="Bicara lewat mikrofon (id-ID)">🎙️</button>
         <button type="submit">Kirim</button>
       </form>

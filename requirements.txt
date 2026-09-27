@@ -33,6 +33,17 @@ Flask
 #  jaringan. Werkzeug ikut terbawa -- server dev-nya cukup untuk satu pengguna di
 #  127.0.0.1 (ini aplikasi desktop, bukan deployment publik).
 
+pywebview
+#  Jendela pet desktop (frameless + transparan + selalu di atas). Backend-nya
+#  WebView2 milik Windows, jadi `pythonnet`/`clr_loader`/`bottle`/`proxy_tools`
+#  ikut terbawa -- semuanya wheel jadi.
+#  PENTING dan terukur 27 Sep: jendela TIDAK boleh dibuat di proses yang sama dengan
+#  engine suara. Dengan RVC (torch + fairseq + onnxruntime) termuat di proses itu,
+#  `webview.start()` kembali seketika tanpa satu baris galat pun -- WinForms menuntut
+#  thread utama ber-apartment STA dan COM sudah disetel lebih dulu. Karena itu
+#  `main.py --pet` menyalakan jendela sebagai PROSES ANAK (server_py/jendela.py),
+#  dan anaknya mengawasi PID induk supaya tidak tertinggal jendela hantu.
+
 # ── LLM lokal offline ────────────────────────────────────────────────────────
 llama-cpp-python
 #  Inference model GGUF lokal di CPU/RAM tanpa internet.

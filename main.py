@@ -1,4 +1,4 @@
-"""Satu titik masuk untuk Elaina: `python main.py`.
+"""Satu titik masuk untuk Silver Wolf: `python main.py`.
 
 Flask memegang sisi HTTP (halaman + /api/*), dan SEMUA kerja berat tetap di modul
 yang sudah ada di `server_py/` -- `model_lokal` / `model_vulkan` untuk chat,
@@ -18,10 +18,13 @@ Jalankan:  .venv\\Scripts\\python.exe main.py      lalu buka http://127.0.0.1:87
 
 from __future__ import annotations
 
+import argparse
 import json
 import logging
+import os
 import re
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -35,10 +38,15 @@ if str(AKAR / "server_py") not in sys.path:
 warnings.filterwarnings("ignore", category=FutureWarning)
 for _sunyi in ("faiss", "fairseq", "rvc_python", "httpx", "huggingface_hub"):
     logging.getLogger(_sunyi).setLevel(logging.WARNING)
+# Werkzeug berisik dua kali (banner "development server" + satu baris per permintaan).
+# Untuk jendela pet itu hanya sampah di bawah ikon; peredaman lewat logger karena
+# app.run() tidak lagi menerima parameter min_level di Werkzeug 3.
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
 from flask import Flask, Response, abort, request  # noqa: E402
 
 import jalur_suara  # noqa: E402
+import jendela  # noqa: E402
 import konfig  # noqa: E402
 import memori  # noqa: E402
 import model_lokal  # noqa: E402
@@ -451,7 +459,7 @@ def simpan_memori(riwayat: list, mentah: str, fakta_lama: list, mood_lama: dict 
                 tanya = riwayat[-1].get("content", "")
 
         mood = memori.perbarui_mood(mood_lama, tag)
-        vault.catat_hari(f"**Master:** {tanya} → **Elaina:** {isi} _({tag or 'tanpa tag'})_")
+        vault.catat_hari(f"**Master:** {tanya} → **Silver Wolf:** {isi} _({tag or 'tanpa tag'})_")
         vault.simpan_mood(mood)
     except Exception as err:
         print(f"memori gagal ditulis: {err}", file=sys.stderr)
@@ -495,7 +503,7 @@ def baris_banner(nomor: int) -> str:
         stt_baris = f"TIDAK ADA ({stt_whisper.alasan_tidak_tersedia()})"
 
     baris = (
-        f"elaina http://127.0.0.1:{nomor} | mode=100% OFFLINE | "
+        f"silverwolf http://127.0.0.1:{nomor} | mode=100% OFFLINE | "
         f"chat={model_chat} | tts={tts_baris} | stt={stt_baris} | memori={memori_baris}"
     )
     if konfig.STUB:
@@ -505,9 +513,25 @@ def baris_banner(nomor: int) -> str:
     return baris
 
 
-def utama() -> int:
+def utama(argumen: list[str] | None = None) -> int:
+    p = argparse.ArgumentParser(
+        description="Silver Wolf -- AI Qoder desktop Live2D, 100% offline.",
+    )
+    p.add_argument("--browser", action="store_true",
+                   help="tanpa jendela pet: Flask saja, buka sendiri di browser")
+    p.add_argument("--pet", action="store_true",
+                   help="paksa jendela pet melayang di desktop")
+    args = p.parse_args(argumen)
+
+    tampak = konfig.TAMPAK
+    if args.browser:
+        tampak = "browser"
+    if args.pet:
+        tampak = "pet"
+
     jalur_suara.mula()
     nomor = PORT or port_bebas()
+    base = f"http://127.0.0.1:{nomor}"
     try:
         print(baris_banner(nomor), flush=True)
 
@@ -537,9 +561,51 @@ def utama() -> int:
         if konfig.STT_MUAT_BOOT and not konfig.STUB and stt_whisper.tersedia():
             stt_whisper.muat()
 
-        # Werkzeug dev server: cukup untuk aplikasi desktop satu pengguna di
-        # 127.0.0.1. threaded=True supaya TTS/mic tidak mengantre di belakang chat
-        # yang sedang mengalir.
+        if tampak == "pet":
+            # Flask di thread samping; JENDELA di proses ANAK, bukan di sini.
+            #
+            # Alasannya terukur, bukan dugaan: dengan RVC (torch + fairseq +
+            # onnxruntime) dimuat di proses ini, `webview.start()` kembali seketika
+            # tanpa satu baris galat pun -- WinForms/WebView2 menuntut thread utama
+            # ber-apartment STA dan COM-nya sudah disetel lebih dulu oleh tumpukan
+            # audio. Tanpa RVC di proses yang sama, jendela muncul dengan benar.
+            # Jadi: server + engine tetap di sini, GUI dapat proses sendiri yang
+            # bersih. Anak mengawasi PID induknya dan menutup diri kalau induk mati.
+            #
+            # CATATAN: `app.run(min_level=...)` TIDAK ADA di Werkzeug 3 dan melempar
+            # TypeError yang membunuh thread ini dalam sekejap, sehingga /api/health
+            # tidak pernah menjawab dan jendela tidak pernah muncul. Peredaman log
+            # dilakukan lewat logger 'werkzeug', bukan lewat parameter run().
+            galat_serve: list[BaseException] = []
+
+            def serve():
+                try:
+                    app.run(
+                        host="127.0.0.1", port=nomor, threaded=True,
+                        debug=False, use_reloader=False,
+                    )
+                except BaseException as err:  # jangan sampai mati tanpa jejak
+                    galat_serve.append(err)
+
+            pelayan = threading.Thread(target=serve, daemon=True)
+            pelayan.start()
+            if not jendela.tunggu_siap(base, pelayan=pelayan):
+                pesan = galat_serve[0] if galat_serve else "batas waktu habis"
+                print(f"  ! sisi web tidak siap ({pesan}); jendela tidak dibuka", file=sys.stderr, flush=True)
+                return 1
+
+            print(f"  pet: {base}/?tampak=pet  (klik kanan pada dia untuk ngobrol)", flush=True)
+            anak = subprocess.Popen(
+                [sys.executable, str(AKAR / "server_py" / "jendela.py"), base, str(os.getpid())],
+                cwd=str(AKAR),
+            )
+            kode = anak.wait()
+            if galat_serve:
+                print(f"  ! sisi web mati: {galat_serve[0]}", file=sys.stderr, flush=True)
+                kode = 1
+            return kode
+
+        # Mode browser: satu proses, satu blokir.
         app.run(
             host="127.0.0.1",
             port=nomor,
@@ -547,6 +613,7 @@ def utama() -> int:
             debug=False,
             use_reloader=False,
         )
+        return 0
     except KeyboardInterrupt:
         pass
     finally:

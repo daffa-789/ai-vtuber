@@ -151,11 +151,11 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
         if (!perKalimat) return;
         const sisaDari = jawaban.slice(terucap);
         // Selalu potong per kalimat utuh (tanpa potong koma), agar RVC
-        // menyelaraskan kalimat utuh dan pitch vokal Furina tidak terpotong.
+        // menyelaraskan kalimat utuh dan pitch vokal Silver Wolf tidak terpotong.
         const { siap, sisa } = kalimatSiap(sisaDari, false);
         if (!siap.length) return;
         terucap += sisaDari.length - sisa.length;
-        setSuara('menyelaraskan suara Furina (RVC)…');
+        setSuara('menyelaraskan suara Silver Wolf (RVC)…');
         for (const potongan of siap) {
           antrean += 1;
           antre(potongan).catch(catat);
@@ -183,7 +183,7 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
         const sisa = jawaban.slice(terucap);
         if (sisa.trim()) {
           antrean += 1;
-          setSuara('menyelaraskan suara Furina (RVC)…');
+          setSuara('menyelaraskan suara Silver Wolf (RVC)…');
           antre(sisa).catch(catat);
         }
         await selesai();

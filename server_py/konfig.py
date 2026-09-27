@@ -117,6 +117,33 @@ def env_web() -> dict[str, str]:
 
 PORT = angka("VTUBER_PORT", 8787)
 
+# Wujud aplikasi: 'pet' = jendela melayang tanpa bingkai di desktop (pywebview),
+# 'browser' = Flask saja dan Master buka sendiri di tab. Keduanya menyajikan
+# HALAMAN YANG SAMA -- lihat web/tampak.js.
+TAMPAK = nilai("VTUBER_TAMPAK", "pet").lower()
+
+# ── perilaku jendela pet: "biar tidak terasa seperti jendela" ────────────────
+# Tidak ada cara membuat jendela benar-benar hilang di mesin ini -- menanamnya ke
+# lapisan desktop sudah dicoba dan gagal (lihat RENCANA-DESKTOP.md, Fase 1). Jadi
+# kesan itu dikejar lewat PERILAKU: dia minggir saat memang tidak muat di layar,
+# dan Master punya ikon tray + hotkey supaya tidak pernah terkunci.
+#
+# Kapan dia minggir:
+#   'tidak' (bawaan)       = selalu tampil. Ini bawaannya karena sembunyi-otomatis
+#                            yang salah simpul membuat karakternya HILANG tanpa
+#                            pesan -- jauh lebih buruk daripada satu jendela yang
+#                            menempel. Nyalakan kalau memang mau.
+#   'layar-penuh'          = hanya saat jendela depan menutupi SELURUH monitor,
+#                            termasuk pita taskbar -- video layar penuh, game.
+#   'maksimal'             = juga saat jendela depan sekadar dimaksimalkan.
+#                            Jangan dipakai kalau Master terbiasa kerja dengan
+#                            jendela maksimal: karakternya akan hampir selalu
+#                            sembunyi dan itu terasa seperti rusak.
+PET_SEMBUNYI = nilai("VTUBER_PET_SEMBUNYI", "tidak").lower()
+PET_TRAY = bool_("VTUBER_PET_TRAY", True)
+# Kosong = matikan hotkey. Bentuknya bebas urutannya: ctrl+shift+s
+PET_HOTKEY = nilai("VTUBER_PET_HOTKEY", "ctrl+shift+s").lower()
+
 # Otak percakapan:
 # - 'local' / 'llama_cpp': Model GGUF offline di folder model/ (tanpa dependensi luar)
 # - 'vulkan': GGUF yang SAMA, dihitung llama-server.exe di GPU terintegrasi (Iris Xe)
@@ -194,12 +221,12 @@ PIPER_SUARA = nilai("VTUBER_TTS_PIPER_SUARA", "id_ID-news_tts-medium")  # dipaka
 PIPER_VOLUME = angka("VTUBER_TTS_PIPER_VOLUME", 100)  # persen
 PIPER_PANJANG = angka_float("VTUBER_TTS_PIPER_PANJANG", 1.0)  # length_scale: <1 lebih laju
 
-# ── RVC (mengubah WARNA suara jadi Furina; TTS tetap menyumbang lafal+irama) ─
+# ── RVC (mengubah WARNA suara jadi Silver Wolf; TTS tetap menyumbang lafal+irama) ─
 RVC_HIDUP = bool_("VTUBER_RVC", True)  # mati => rantai menyaring sendiri, tanpa error
 RVC_FOLDER = nilai("VTUBER_RVC_FOLDER", "aset/suara/rvc")  # models_dir rvc_python
 RVC_MODEL = nilai("VTUBER_RVC_MODEL", "furina")  # nama subfolder di RVC_FOLDER
 RVC_INDEKS = nilai("VTUBER_RVC_INDEKS", "")  # kosong = ambil .index yang ada di folder
-RVC_VERSI = nilai("VTUBER_RVC_VERSI", "v2")  # terverifikasi dari info checkpoint Furina
+RVC_VERSI = nilai("VTUBER_RVC_VERSI", "v2")  # terverifikasi dari info checkpoint Silver Wolf JP
 RVC_F0 = nilai("VTUBER_RVC_F0", "pm")  # pm|rmvpe (harvest|crepe: ditolak untuk CPU)
 RVC_TRANSPOSE = angka("VTUBER_RVC_TRANSPOSE", 0)  # f0up_key; sumber = suara pria Piper
 # 0 = JANGAN baca .index. Bukan selera: rvc_python melakukan faiss.read_index +

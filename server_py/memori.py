@@ -66,23 +66,56 @@ def gabung_system(persona: str, fakta: list[str], mood: dict | None) -> str:
     return "\n\n".join(bagian)
 
 
-def gabung_system_lokal(fakta: list[str], mood: dict | None) -> str:
-    """System prompt ringkas khusus model lokal agar inferensi cepat (<4 detik).
+from konfig import AKAR_PERSONA
 
-    Panduan tag emosi tinggal SATU sumber di sini. Dulu instruksi yang sama ditulis
-    dua kali -- sekali di sini, sekali lagi di `model_lokal.alir()` sebagai blok
-    "[PANDUAN EKSPRESI WAJAH LIVE2D]" -- sehingga tiap giliran bicara membayar
-    ±120 token prompt tambahan untuk mengulang apa yang sudah dibaca model.
+# Persona BACA DARI BERKAS, bukan ditulis di dalam fungsi ini. Dulu blok
+# "Kamu adalah Elaina (18 tahun)..." tertanam di sini, jadi persona.md sama sekali
+# tidak dibaca jalur local/vulkan -- hanya jalur ollama yang memakainya. Akibatnya
+# menulis ulang persona.md tidak mengubah apa pun yang dijawab model. Sekarang
+# keduanya membaca sumber yang sama.
+PERSONA = AKAR_PERSONA.read_text(encoding="utf-8")
+
+
+def _ringkas_persona(teks: str, batas: int = 4200) -> str:
+    """Potong persona panjang pada batas paragraf supaya prompt tetap pendek.
+
+    Bawaan 4200 karakter, bukan 1400: pemotongan di batas paragraf membuat angka
+    kecil memotong persona SEBELUM bagian "Cara Bicara" dan "Ekspresi" -- persis
+    dua bagian yang paling menentukan gaya bicara dan tag wajah. Yang hilang bukan
+    lore, tapi instruksi. 4200 menutup seluruh persona.md (7.001 karakter) sehingga
+    pemotongan biasanya tidak terpakai sama sekali; kalau persona nanti tumbuh
+    lebih besar, yang dipotong tetap bagian contoh/ backstory, bukan aturan.
+
+    Prompt ±4.200 karakter itu ±1.200 token, dan hanya dibayar sekali: slot Vulkan
+    yang menganggur menyimpannya di prompt cache (--cache-idle-slots), jadi giliran
+    berikutnya tidak menghitung ulang.
+
+    Nama parameter bukan `nilai`: konfig.py mengekspor fungsi `nilai()`, dan memakai
+    nama yang sama di sini pernah membuat keduanya bertabrakan -- `len(nilai)` lalu
+    membandingkan int dengan str dan membunuh /api/chat dengan 500.
+    """
+    if len(teks) <= batas:
+        return teks
+    potong = teks[:batas]
+    batas_paragraf = potong.rfind("\n\n")
+    if batas_paragraf > batas // 2:
+        potong = potong[:batas_paragraf]
+    return potong
+
+
+def gabung_system_lokal(fakta: list[str], mood: dict | None) -> str:
+    """System prompt untuk model lokal: persona (dari berkas) + fakta + suasana.
+
+    Bagian yang TIDAK boleh hilang adalah daftar tag emosi: model lokal 3B akan
+    melontarkan nama lain kalau tidak diberi daftar tertutup. Tag itu sengaja
+    ditulis di sini dan bukan diambil dari persona.md supaya tidak ikut terpotong
+    pemangkasan panjang.
     """
     bagian = [
-        "Kamu adalah Elaina (18 tahun), si Penyihir Abu dari Wandering Witch. "
-        "Kamu tinggal di laptop Master. Sifatmu: tenang, mandiri, cerdas, agak narsis, "
-        "realistis, sedikit sinis tapi tetap peduli dan santun. Bicara dalam bahasa Indonesia yang anggun "
-        "dan selalu panggil lawan bicaramu dengan sebutan 'Master'. "
-        "Jawab dengan ringkas dan padat (1 sampai 3 kalimat). "
+        _ringkas_persona(PERSONA),
         "WAJIB: Awali setiap balasanmu dengan satu tag emosi di paling depan, persis satu dari "
-        "[senyum], [senang], [semangat], [kaget], [bingung], [lelah], [goda], [sebal], [sedih], [netral]. "
-        "Contoh: [senyum] Halo Master, ada yang bisa saya bantu?"
+        "[netral], [senyum], [semangat], [kaget], [bingung], [lelah], [goda], [sebal], [sedih]. "
+        "Contoh: [senyum] Halo Master, ada yang bisa saya bantu?",
     ]
     if fakta:
         bagian.append("Fakta tentang Master:\n" + "\n".join(f"- {f}" for f in fakta[-5:]))

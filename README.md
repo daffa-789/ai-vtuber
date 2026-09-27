@@ -22,13 +22,90 @@ di `web/lib/`, dan tidak ada langkah build.
 python -m venv .venv
 .venv\Scripts\python.exe -m pip install "pip==24.0"                     # lihat catatan di requirements.txt
 .venv\Scripts\python.exe -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.12.1 torchaudio==2.11.0
-.venv\Scripts\python.exe -m pip install -r requirements.txt             # jalur LLM lokal + suara + mic
+.venv\Scripts\python.exe -m pip install -r requirements.txt             # jalur LLM lokal + suara + mic + jendela
 cp .env.example .env                    # sesuaikan konfigurasi jika diperlukan
-.venv\Scripts\python.exe main.py        # satu-satunya proses yang perlu dijalankan
-# buka http://127.0.0.1:8787/  (port ikut VTUBER_PORT di .env)
+.venv\Scripts\python.exe main.py        # satu-satunya perintah yang perlu dijalankan
 ```
 
-Atau dua kali klik: `jalankan.bat`.
+Bawaannya dia muncul **sebagai pet di desktop** (lihat di bawah). Mau lewat browser
+seperti dulu? `python main.py --browser` lalu buka `http://127.0.0.1:8787/`
+(port ikut `VTUBER_PORT` di `.env`). Atau dua kali klik: `jalankan.bat`.
+
+## Silver Wolf di desktop (mode pet)
+
+`VTUBER_TAMPAK=pet` (bawaan) membuka jendela **tanpa bingkai, tembus pandang, selalu
+di atas**, duduk di pojok kanan bawah area kerja — kakinya tepat di garis taskbar.
+
+| gestur / jalan | hasil |
+|---|---|
+| **klik kanan** pada dia | buka/tutup kotak chat + mic, kursor langsung di kolom ketik |
+| **Ctrl+Shift+S** (hotkey global) | sama, dan bisa ditekan walau jendela lain sedang fokus |
+| **Esc** atau klik di luar panel | tutup panel |
+| seret tubuhnya | jendela ikut bergeser (`easy_drag`) |
+| **ikon tray** | Tampilkan / Sembunyikan / Keluar |
+
+Panel-nya hanya berisi log, kolom pesan, tombol mic, dan satu baris status — meter
+FPS, gugus raut/pose/gerak tetap ada di mode browser.
+
+### Dia minggir sendiri
+
+`VTUBER_PET_SEMBUNYI` (bawaan `layar-penuh`) menyembunyikannya saat jendela depan
+menutupi **seluruh** monitor, termasuk pita taskbar: video layar penuh dan game.
+Jendela yang sekadar dimaksimalkan **tidak** memicunya — itu pilihan sadar, karena
+kalau kerja sehari-hari memakai jendela maksimal, aturan `maksimal` akan membuat
+karakternya hampir selalu sembunyi dan itu terasa seperti rusak. Ada `maksimal` dan
+`tidak` kalau mau yang lain.
+
+Ikon tray bukan hiasan: selama aturan sembunyi bukan `tidak`, ia satu-satunya jalan
+memanggilnya kembali selain membunuh prosesnya. Menyembunyikan lewat tray juga tidak
+langsung dibatalkan pengintai — kehendak manual menang sampai keadaan layar berubah.
+
+### Tiga hal yang tidak kelihatan tapi menentukan
+
+1. **`transparent=True` pywebview tidak cukup di Windows.** pywebview menyalakan
+   `DefaultBackgroundColor = Transparent` pada WebView2-nya
+   (`platforms/edgechromium.py:114`) tetapi tidak pernah menyentuh form WinForms
+   induknya, dan seluruh paketnya tidak sekali pun memakai `TransparencyKey` atau
+   `SetLayeredWindowAttributes`. Hasilnya, terukur: `exstyle 0x50008` (tanpa
+   `WS_EX_LAYERED`) dan `PrintWindow` memulangkan 397.035 piksel (240,240,240)
+   seragam — karakter di atas kotak abu-abu pekat. `jendela.tembuskan()` menutupnya
+   dengan `WS_EX_LAYERED` + `LWA_COLORKEY` memakai warna `BackColor` form itu
+   sendiri. Harganya: tepi berantialias bercampur warna latar, jadi ada rim tipis.
+2. **Jendelanya dibuang dari taskbar** (`WS_EX_TOOLWINDOW`, `WS_EX_APPWINDOW`
+   dilepas) — kalau tidak, ia terasa persis seperti jendela aplikasi biasa.
+3. **Posisi dihitung ulang setelah prosesnya sadar-DPI.** Sebelum
+   `webview.start()`, prosesnya masih DPI-unaware dan `SPI_GETWORKAREA` menjawab
+   satuan virtual (1536x816 di layar 1920x1080 berskala 125%). Dipakai apa adanya,
+   kaki karakter mendarat **204 px di atas taskbar**.
+
+### "Tanpa jendela sama sekali" — sudah dicoba, tidak bisa di mesin ini
+
+Menanam karakter ke lapisan desktop (di belakang ikon, gaya wallpaper hidup) diuji
+27 Sep dan gagal; rinciannya di `RENCANA-DESKTOP.md` Fase 1. Ringkasnya: tidak ada
+kanvas `WorkerW` di mesin ini (pesan `0x052C` dicoba dengan empat variasi parameter,
+nihil), dan memaksa `SetParent` ke `Progman` membuat jendelanya runtuh jadi 0x0
+serta permukaan WebView2-nya mati. Karena itu kesan "bukan jendela" dikejar lewat
+perilaku — sembunyi otomatis, tray, dan hotkey — bukan lewat lapisan.
+
+Dua fakta teknis yang perlu diketahui sebelum mengubah apa pun di sini:
+
+1. **Jendela hidup di PROSES ANAK**, bukan di proses server. Dengan RVC (torch +
+   fairseq + onnxruntime) termuat di proses yang sama, `webview.start()` kembali
+   seketika tanpa satu baris galat pun: WinForms menuntut thread utama ber-apartment
+   STA, dan COM sudah disetel lebih dulu oleh tumpukan audio. Terukur A/B -- tanpa
+   RVC jendela muncul, dengan RVC hilang. Anaknya mengawasi PID induk
+   (`GetExitCodeProcess`), jadi kalau server dibunuh paksa jendela menutup diri
+   dalam ≤6 dtk (terbukti) dan tidak tertinggal sebagai kartu hantu.
+2. **Live2D tetap dirender JS** di dalam WebView2. SDK Cubism tidak punya jalur
+   Python, dan build Cubism Native butuh compiler C++ yang tidak ada di mesin ini.
+   Jadi "tanpa JS" di mode pet berarti *Master tidak pernah membuka browser atau
+   menyentuh berkasnya* -- bukan JS-nya hilang. `web/tampak.js` hanya menulis
+   `html[data-tampak="pet"]`; halaman, kontrak DOM, dan seluruh modul JS-nya sama
+   persis dengan mode browser, sengaja supaya tidak ada dua sumber kebenaran.
+
+Transparansinya diukur, bukan dipercaya: dari 29.929 titik sampling di kawasan
+jendela, hanya 1.351 yang berubah saat jendela ditampilkan -- dan kotak merah ujiannya
+sendiri menyumbang 1.445. Artinya desktop tembus sepenuhnya.
 
 Kalau `bin/llama/` kosong, `VTUBER_LLM_PROVIDER=vulkan` jatuh ke CPU dan **mengatakannya**
 di baris banner -- lihat "GPU terintegrasi" sebelum menyalakan jalur itu. Tanpa

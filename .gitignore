@@ -19,7 +19,10 @@ public/vad/
 public/ort/
 
 # Model karakter sendiri: berkas sumber + hasil pasang, tetap di mesin ini.
-public/models/penyihir/
+# SELURUH public/models/ dikecualikan, bukan cuma penyihir: lisensi Live2D
+# melarang modelnya diedarkan sebagai berkas lepas, dan silverwolf (19 MB) akan
+# ikut ter-commit kalau baris ini menyebut satu folder saja.
+public/models/
 
 # Aset jalur suara, disediakan scripts/sedia_suara.py, bukan untuk di-commit:
 # voice Piper 61 MB, model dasar RVC (hubert + rmvpe) ~730 MB, checkpoint Furina.

@@ -2,7 +2,7 @@
 dengan telinga, bukan dengan angka.
 
 Ini langkah yang tidak bisa digantikan meterik: RTF sudah terukur lewat
-ukur-latensi, tapi apakah hasil Piper+RVC masih terdengar seperti karakternya
+ukur-latensi, tapi apakah hasil Piper+RVC masih terdengar seperti Silver Wolf
 -- atau seperti robot yang sedang membaca berita -- hanya bisa dinilai didengar.
 
     python scripts/adu_suara.py
@@ -53,6 +53,11 @@ def utama() -> int:
     urai = argparse.ArgumentParser(description="adu resep suara untuk dipilih dengan telinga")
     urai.add_argument("--resep", default="piper,piper+rvc")
     urai.add_argument("--transpose", default="0,12", help="khusus resep yang memuat rvc")
+    urai.add_argument(
+        "--indeks",
+        default="",
+        help="daftar index_rate yang diadu (mis. 0,0.35); kosong = pakai nilai .env",
+    )
     urai.add_argument("--f0", default="pm")
     urai.add_argument("--kalimat", default="", help="satu kalimat, mengganti bawaan")
     urai.add_argument(
@@ -62,7 +67,7 @@ def utama() -> int:
     )
     arg = urai.parse_args()
 
-    keluar = Path(os.environ.get("TEMP", str(AKAR / "var"))) / "adu-suara-elaina"
+    keluar = Path(os.environ.get("TEMP", str(AKAR / "var"))) / "adu-suara"
     keluar.mkdir(parents=True, exist_ok=True)
     kalimat = [arg.kalimat] if arg.kalimat else KALIMAT
     resep_list = [r.strip() for r in arg.resep.split(",") if r.strip()]
@@ -78,24 +83,32 @@ def utama() -> int:
             print(f"rvc tidak siap: {str(err)[:200]}", file=sys.stderr)
             return 2
 
-    # Satu varian per (resep, transpose). ubah() menerapkan param sendiri di tiap
-    # panggilan, jadi mengubah konfig.RVC_TRANSPOSE di sini sudah cukup.
-    varian: list[tuple[str, list[str], int | None]] = []
+    # Satu varian per (resep, transpose, index_rate). ubah() menerapkan param
+    # sendiri di tiap panggilan, jadi mengubah konfig.RVC_TRANSPOSE dan
+    # konfig.RVC_INDEKS_LAJU di sini sudah cukup.
+    indeks_list = [float(x) for x in arg.indeks.split(",") if x.strip()] or None
+    varian: list[tuple[str, list[str], int | None, float | None]] = []
     for resep in resep_list:
         tahap = [t.strip() for t in resep.split("+") if t.strip()]
         if "rvc" in tahap:
             for tr in [int(x) for x in arg.transpose.split(",") if x.strip()]:
-                varian.append((f"rvc t{tr:+d}" if tr else "rvc t0", tahap, tr))
+                for ir in indeks_list or [None]:
+                    label = f"rvc t{tr:+d}" if tr else "rvc t0"
+                    if ir is not None:
+                        label += f" i{ir:g}"
+                    varian.append((label, tahap, tr, ir))
         else:
-            varian.append((resep, tahap, None))
+            varian.append((resep, tahap, None, None))
 
     waktu: dict[str, list[float]] = {v[0]: [] for v in varian}
     hasil: list[list[tuple[str, Path]]] = [[] for _ in kalimat]
 
     for i, teks in enumerate(kalimat):
-        for label, tahap, tr in varian:
+        for label, tahap, tr, ir in varian:
             if tr is not None:
                 konfig.RVC_TRANSPOSE = tr
+            if ir is not None:
+                konfig.RVC_INDEKS_LAJU = ir
             audio: bytes | None = None
             t0 = time.perf_counter()
             try:
@@ -116,12 +129,12 @@ def utama() -> int:
                 hasil[i].append((label, tujuan))
 
     print(f"{'varian':<10} " + " ".join(f"{k:>7}" for k in range(1, len(kalimat) + 1)))
-    for label, _, _ in varian:
+    for label, *_ in varian:
         print(f"{label:<10} " + " ".join(f"{d:6.2f}s" for d in waktu[label]))
 
     html = [
         "<!doctype html><meta charset=utf-8>",
-        "<title>adu suara Elaina</title><style>" + GAYA + "</style>",
+        "<title>adu suara Silver Wolf</title><style>" + GAYA + "</style>",
         "<h1>Adu resep suara</h1>",
         f"<p>f0 RVC = {arg.f0}. Tiap baris memakai kalimat yang sama persis. "
         "Angka di kanan adalah panjang audio, bukan dasar memilih.</p>",
