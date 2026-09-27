@@ -606,6 +606,24 @@ def utama(argumen: list[str] | None = None) -> int:
             return kode
 
         # Mode browser: satu proses, satu blokir.
+        #
+        # Peramban dibuka SENDIRI begitu servernya benar-benar menjawab, bukan
+        # sebelum app.run() -- warmup Vulkan di mesin ini 10-15 dtk, dan membuka
+        # lebih dulu hanya memunculkan "tidak bisa terhubung" selama itu.
+        def buka_peramban():
+            if not jendela.tunggu_siap(base, batas=180.0):
+                print(f"  ! server belum menjawab; buka sendiri: {base}/", file=sys.stderr, flush=True)
+                return
+            import webbrowser
+
+            try:
+                webbrowser.open(base + "/")
+                print(f"  web: {base}/ (dibuka di peramban bawaan)", flush=True)
+            except Exception as err:
+                print(f"  ! tidak bisa membuka peramban ({err}); buka sendiri: {base}/",
+                      file=sys.stderr, flush=True)
+
+        threading.Thread(target=buka_peramban, daemon=True).start()
         app.run(
             host="127.0.0.1",
             port=nomor,

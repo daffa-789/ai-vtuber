@@ -1,10 +1,11 @@
 @echo off
 cd /d "%~dp0"
-echo Menghidupkan Elaina...
+echo Menghidupkan Silver Wolf (mode web)...
 echo.
-echo Klik kanan pada dia untuk memunculkan kotak chat + mic.
+echo Peramban terbuka sendiri setelah servernya siap (10-15 dtk saat GPU dipanaskan).
 echo Tekan Ctrl+C di jendela ini jika ingin menghentikan.
-echo (Mau lewat browser? jalankan: .venv\Scripts\python.exe main.py --browser)
+echo.
+echo Mau jendela melayang di desktop? jalankan: .venv\Scripts\python.exe main.py --pet
 echo.
 .venv\Scripts\python.exe main.py
 pause

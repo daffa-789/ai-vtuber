@@ -27,13 +27,26 @@ cp .env.example .env                    # sesuaikan konfigurasi jika diperlukan
 .venv\Scripts\python.exe main.py        # satu-satunya perintah yang perlu dijalankan
 ```
 
-Bawaannya dia muncul **sebagai pet di desktop** (lihat di bawah). Mau lewat browser
-seperti dulu? `python main.py --browser` lalu buka `http://127.0.0.1:8787/`
-(port ikut `VTUBER_PORT` di `.env`). Atau dua kali klik: `jalankan.bat`.
+Bawaannya dia muncul **di peramban**: satu proses Python, dan peramban terbuka
+sendiri setelah servernya siap. Alamatnya `http://127.0.0.1:8787/` (port ikut
+`VTUBER_PORT` di `.env`). Atau dua kali klik: `jalankan.bat`.
 
-## Silver Wolf di desktop (mode pet)
+Ada juga **mode pet** — jendela tanpa bingkai yang melayang di desktop. Ia bekerja
+(tembus pandang, tanpa taskbar, ikon tray, hotkey, sembunyi otomatis), tapi ia
+selalu berada DI ATAS jendela lain, jadi begitu Master bekerja dengan jendela
+maksimal karakternya menutupi isi jendela itu. Karena itu ia bukan bawaan lagi.
+Nyalakan dengan `VTUBER_TAMPAK=pet` di `.env` atau `python main.py --pet`.
+Rinciannya di bagian **Mode pet** di bawah.
 
-`VTUBER_TAMPAK=pet` (bawaan) membuka jendela **tanpa bingkai, tembus pandang, selalu
+## Mode browser
+
+Dua kolom: kanvas karakter di kiri, panel di kanan. Panel berisi log percakapan,
+kolom pesan, tombol mic, meter FPS, dan gugus tombol raut/pose/gerak — jadi semua
+perkakas penyetelan ada di sini. Ini mode yang dipakai untuk merapikan tampilan.
+
+## Mode pet
+
+`VTUBER_TAMPAK=pet` membuka jendela **tanpa bingkai, tembus pandang, selalu
 di atas**, duduk di pojok kanan bawah area kerja — kakinya tepat di garis taskbar.
 
 | gestur / jalan | hasil |
@@ -47,18 +60,18 @@ di atas**, duduk di pojok kanan bawah area kerja — kakinya tepat di garis task
 Panel-nya hanya berisi log, kolom pesan, tombol mic, dan satu baris status — meter
 FPS, gugus raut/pose/gerak tetap ada di mode browser.
 
-### Dia minggir sendiri
+### Sembunyi otomatis
 
-`VTUBER_PET_SEMBUNYI` (bawaan `layar-penuh`) menyembunyikannya saat jendela depan
-menutupi **seluruh** monitor, termasuk pita taskbar: video layar penuh dan game.
-Jendela yang sekadar dimaksimalkan **tidak** memicunya — itu pilihan sadar, karena
-kalau kerja sehari-hari memakai jendela maksimal, aturan `maksimal` akan membuat
-karakternya hampir selalu sembunyi dan itu terasa seperti rusak. Ada `maksimal` dan
-`tidak` kalau mau yang lain.
+`VTUBER_PET_SEMBUNYI` bawaannya **`tidak`** (selalu tampil). Pilihan lain:
+`layar-penuh` (minggir hanya saat jendela depan menutupi SELURUH monitor termasuk
+pita taskbar — video layar penuh dan game) dan `maksimal` (juga saat jendela depan
+sekadar dimaksimalkan; hindari kalau kerja sehari-hari memakai jendela maksimal).
 
-Ikon tray bukan hiasan: selama aturan sembunyi bukan `tidak`, ia satu-satunya jalan
-memanggilnya kembali selain membunuh prosesnya. Menyembunyikan lewat tray juga tidak
-langsung dibatalkan pengintai — kehendak manual menang sampai keadaan layar berubah.
+Bawaannya `tidak` karena itu pilihan yang salah simpul: sembunyi otomatis yang
+keliru membuat karakternya **hilang tanpa pesan**, dan itu jauh lebih buruk daripada
+satu jendela yang menempel. Ikon tray bukan hiasan selama aturan ini menyala — ia
+satu-satunya jalan memanggilnya kembali. Menyembunyikan lewat tray juga tidak
+langsung dibatalkan pengintai: kehendak manual menang sampai keadaan layar berubah.
 
 ### Tiga hal yang tidak kelihatan tapi menentukan
 

@@ -117,10 +117,16 @@ def env_web() -> dict[str, str]:
 
 PORT = angka("VTUBER_PORT", 8787)
 
-# Wujud aplikasi: 'pet' = jendela melayang tanpa bingkai di desktop (pywebview),
-# 'browser' = Flask saja dan Master buka sendiri di tab. Keduanya menyajikan
-# HALAMAN YANG SAMA -- lihat web/tampak.js.
-TAMPAK = nilai("VTUBER_TAMPAK", "pet").lower()
+# Wujud aplikasi: 'browser' = Flask saja, Master buka sendiri di tab (bawaan),
+# 'pet' = jendela melayang tanpa bingkai di desktop (pywebview). Keduanya
+# menyajikan HALAMAN YANG SAMA -- lihat web/tampak.js.
+#
+# Bawaannya 'browser' sejak 27 Sep. Jendela pet-nya sendiri bekerja (tembus
+# pandang, tanpa taskbar, tray, hotkey), tapi ia selalu berada DI ATAS jendela
+# lain, jadi begitu Master bekerja dengan jendela maksimal karakternya menutupi
+# isi jendela itu. Mode pet tetap ada dan bisa dinyalakan kapan saja dengan
+# VTUBER_TAMPAK=pet atau `python main.py --pet`; kodenya sengaja tidak dihapus.
+TAMPAK = nilai("VTUBER_TAMPAK", "browser").lower()
 
 # ── perilaku jendela pet: "biar tidak terasa seperti jendela" ────────────────
 # Tidak ada cara membuat jendela benar-benar hilang di mesin ini -- menanamnya ke
