@@ -3,9 +3,15 @@
 Teman desktop berbasis Live2D yang bisa diajak ngobrol lewat teks maupun suara,
 menjawab dengan suara, dan menggerakkan wajah serta rahang sesuai isi pembicaraannya.
 
-Status: renderer Live2D, loop chat lokal (Llama 3.2 3B GGUF), ekspresi,
-text-to-speech lokal (Piper + RVC Furina), dan memori jangka panjang Obsidian sudah berjalan.
-100% Full Offline tanpa ketergantungan API cloud Gemini.
+Status: renderer Live2D, loop chat lokal (Llama 3.2 3B GGUF di CPU **atau** GPU
+terintegrasi), ekspresi, text-to-speech lokal (Piper + RVC Furina), **mic lokal
+(Whisper)**, dan memori jangka panjang Obsidian sudah berjalan.
+
+**100% offline, dan itu dibuktikan oleh tes — bukan oleh kalimat di README.**
+`server_py/uji_jalan.py` memegang daftar putih alamat luar yang sekarang **kosong**:
+setiap URL non-loopback atau API cloud yang muncul lagi di kode runtime membuat
+`uji_jalan.py` gagal. Yang masih butuh internet hanya langkah instalasi
+(`pip install`, `scripts/unduh_*`).
 
 ## Menjalankan
 
@@ -17,14 +23,21 @@ di `web/lib/`, dan tidak ada langkah build.
 python -m venv .venv
 .venv\Scripts\python.exe -m pip install "pip==24.0"                     # lihat catatan di requirements.txt
 .venv\Scripts\python.exe -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.12.1 torchaudio==2.11.0
-.venv\Scripts\python.exe -m pip install -r requirements.txt             # jalur LLM lokal + suara lokal
+.venv\Scripts\python.exe -m pip install -r requirements.txt             # jalur LLM lokal + suara + mic
 .venv\Scripts\python.exe scripts\unduh_model.py --model llama-3b       # unduh model LLM GGUF (2.02 GB)
 .venv\Scripts\python.exe scripts\sedia_suara.py --piper                 # voice Indonesia 61 MB
+.venv\Scripts\python.exe scripts\sedia_stt.py --model base              # mic lokal: Whisper 142 MB
+.venv\Scripts\python.exe scripts\unduh_llama.py                         # OPSIONAL: llama-server Vulkan (33 MB)
 .venv\Scripts\python.exe server_py\app.py                               # satu-satunya proses yang perlu dijalankan
 # buka http://127.0.0.1:8787/  (port ikut VTUBER_PORT di .env)
 ```
 
-Chat tetap jalan tanpa `pip install` apa pun — hanya suaranya yang pindah ke cloud.
+Tanpa `unduh_llama.py` pun semuanya tetap jalan: `VTUBER_LLM_PROVIDER=vulkan` lalu
+jatuh ke CPU dan **mengatakannya** di baris banner. Lihat "GPU terintegrasi" di bawah
+sebelum menyalakan jalur itu.
+
+Tanpa `pip install`, tidak ada engine yang bisa jalan: `/api/chat` membalas 503 dan
+`/api/tts` menyerah dengan pesan jelas. **Tidak ada satu pun jalur yang jatuh ke cloud.**
 
 Sekali jalan dari nol — aset karakter tidak ikut ke git:
 
@@ -45,7 +58,8 @@ aset model. 100% offline tanpa dev server terpisah.
 
 | Komponen | Dahulu (Node + Vite) | Sekarang (Python 100% Offline) |
 |---|---|---|
-| **Server & LLM** | `server/index.js` (Cloud Gemini API) | `server_py/app.py` + `model_lokal.py` (Llama 3.2 3B GGUF) |
+| **Server & LLM** | `server/index.js` (Cloud Gemini API) | `server_py/app.py` + `model_lokal.py` (CPU) / `model_vulkan.py` (GPU terintegrasi) |
+| **Mic (STT)** | Web Speech API browser (cloud Google) | `web/mikrofon.js` rekam WAV -> `server_py/stt_whisper.py` (Whisper lokal) |
 | **Penyaji Web** | `npm run dev` (Vite di :5173) | `server_py/statis.py` menyajikan `web/` dan `public/` |
 | **Env Web** | `import.meta.env.VITE_*` | `window.__VTUBER_ENV__`, disuntikkan Python ke `index.html` |
 | **Frontend** | `src/*.ts` + `tsconfig.json` | `web/*.js` — ESM asli browser tanpa build step |
@@ -199,13 +213,14 @@ dan kontras teks terjaga pada tema gelap.
 ## Cara kerja
 
 ```
-papan ketik ------------------> teks --> Gemini Flash --> teks + [tag]
-                                                              |
-                                                        ekspresi Live2D
+papan ketik ---------------> teks --> Llama 3.2 3B GGUF --> teks + [tag]
+                                       (CPU / Vulkan GPU)        |
+mic --> WAV 16 kHz --> /api/stt --> Whisper base --> teks         |
+           (lokal, di mesin ini)                                  |
+                                                            ekspresi Live2D
                      /api/tts --> jalur_suara (pekerja tunggal + cache)
                           piper     --> WAV 22,05 kHz  (offline, CPU)
                           piper+rvc --> RVC/Furina --> WAV 40 kHz
-                          gemini    --> cloud, 24 kHz
                                           |
                              AnalyserNode (RMS) -> ParamMouthOpenY
 ```
@@ -213,6 +228,14 @@ papan ketik ------------------> teks --> Gemini Flash --> teks + [tag]
 - **`server_py/app.py`** — satu proses untuk semuanya: LLM lokal (`model_lokal`), TTS lokal (`jalur_suara`),
   memori Obsidian (`vault`), dan sajian halaman (`statis`).
 - **`server_py/model_lokal.py`** — streaming inferensi LLM offline menggunakan `llama-cpp-python` membaca GGUF di `model/`.
+- **`server_py/model_vulkan.py`** — penyedia chat di GPU terintegrasi: menyalakan
+  `bin/llama/llama-server.exe` sebagai **proses anak** (port acak, hanya 127.0.0.1,
+  API key acak per boot), streaming dari `/v1/chat/completions`, dan menyapu sisa
+  proses lama saat boot. Bentuk keluarannya sama dengan `model_lokal.alir()`, jadi
+  sisi streaming `app.py` tidak perlu tahu mana yang menjawab.
+- **`server_py/stt_whisper.py`** — mic jadi teks: WAV dari browser -> `wave` (stdlib)
+  -> numpy -> faster-whisper (CTranslate2, CPU, `int8`). Model dibuka dari folder
+  dengan jalur lengkap, tanpa `download_root`, tanpa HuggingFace hub.
 - **`server_py/statis.py`** — pengganti dev server: menyajikan `web/` dan `public/`, MIME presisi, dan perlindungan path traversal.
 - **`server_py/jalur_suara.py`** — orkestrator suara: satu thread pekerja + antrean berbatas, cache per kalimat, dedupe pekerjaan identik, dan fallback antar-resep saat satu engine melewati batas waktu.
 - **`server_py/tts_piper.py`** / **`tts_rvc.py`** — engine TTS lokal: Piper ONNX dan RVC Voice Conversion Furina.
@@ -227,9 +250,10 @@ papan ketik ------------------> teks --> Gemini Flash --> teks + [tag]
   kanal `[prop:...]`, dan mengupas tag itu dari layar saat teks masih mengalir.
 - **`web/main.js`** — kanvas + resolusi (ikut `devicePixelRatio` terus-menerus), tombol
   panel dari `.env`, dan gerakan ulang parameter setelah motion selesai.
-- **`web/mikrofon.js`** — VAD Silero di mesin ini; hanya potongan yang terdeteksi sebagai
-  bicara yang dikirim untuk disalin. **Belum tersambung ke halaman** — tidak ada modul yang
-  mengimpornya, jadi aset `public/vad` dan `public/ort` tidak pernah diunduh browser.
+- **`web/mikrofon.js`** — tombol mic di halaman chat. **Tidak ada lagi Web Speech API**:
+  browser merekam lewat `getUserMedia` + `ScriptProcessor`, memotong pada jeda diam
+  (ambang RMS 0,012, sama dengan lantai noise lip-sync), membungkus WAV 16 kHz mono,
+  dan mengirimnya ke `/api/stt`. Semuanya terjadi di dalam mesin.
 - **`web/suara.js`** — memutar WAV dan mengukur amplitudo per frame.
 - **`server_py/vault.py`** — menulis/membaca catatan karakter ke vault Obsidian lewat Local
   REST API; token diambil dari `~/.qoder/settings.json`, bukan dari berkas di repo.
@@ -321,8 +345,8 @@ yang membuat penumpukan itu benar-benar terpakai, bukan sekadar tertulis:
   dibuang hasilnya dan kalimat yang sama miss selamanya.
 - **Resep yang terbukti tidak selesai diistirahatkan** selama
   `VTUBER_TTS_JEDA_RESEP` (bawaan 60 dtk). Tanpa jeda itu, kalimat ke-2..N dari satu
-  jawaban panjang membayar ulang 20 dtk kegagalan yang sama -- dan kuota cloud yang
-  seharusnya jadi penahan habis hanya untuk menunggu.
+  jawaban panjang membayar ulang 20 dtk kegagalan yang sama -- dan yang habis bukan
+  kuota, tapi CPU mesin ini sendiri.
 - **Pekerja membuang pekerjaan yang tidak ada penunggunya lagi**, dan `var/tmp-suara`
   disapu saat boot. Dua berkas `_masuk.wav` tertinggal dari proses yang dipotong di
   tengah konversi -- `finally` tidak jalan kalau prosesnya dibunuh.
@@ -345,11 +369,75 @@ token pertama  --->  SUARA PERTAMA TERDENGAR     selesai
    10,0 dtk                13,3 dtk            15,1 dtk   (2 potongan)
 ```
 
-Mode per kalimat itu menambah satu panggilan TTS per kalimat. Kalau kunci sering
-kena batas permintaan per menit, matikan dengan `VTUBER_TTS_PER_KALIMAT=false`.
-Yang masih tidak bisa dihindari di tingkat gratis adalah jeda sebelum token
-pertama — itu antrean di sisi Google, dan naik ke kunci berbayar adalah satu-satunya
-perbaikan yang benar-benar besar di bagian itu.
+Mode per kalimat itu menambah satu panggilan TTS per kalimat. Biayanya nyata di CPU
+ini (Piper 0,3-0,5 dtk, `piper+rvc` 7-15 dtk per kalimat), jadi matikan dengan
+`VTUBER_TTS_PER_KALIMAT=false` kalau suara mulai tertinggal dari teks. Jeda sebelum
+token pertama bukan lagi antrean di sisi Google seperti dulu: itu prompt-processing
+Llama 3.2 di mesin ini sendiri, dan dua perbaikan yang benar-benar terbukti ada di
+bagian "GPU terintegrasi" — memindahkan hitungan ke Iris Xe (110 -> 171 tok/dtk) dan
+menyimpan persona di prompt cache (4,6 dtk -> 0,4 dtk pada slot hangat).
+
+## GPU terintegrasi: apa yang benar-benar bisa dipindahkan
+
+Mesin ukur: i5-1135G7 + **Intel Iris Xe**, 16 GB RAM, tanpa GPU diskret, driver
+32.0.101.7088, Vulkan 1.4.
+
+Yang harus diterima lebih dulu: **Iris Xe tidak punya VRAM sendiri.** Angka
+"Shared GPU memory 7,9 GB" di Task Manager dipinjam dari 16 GB RAM yang sama dengan
+yang dipakai model. Jadi memindahkan kerja ke GPU di sini menambah **daya hitung**,
+bukan menambah memori — dan kalau yang habis adalah RAM, GPU tidak menolong.
+
+`llama-bench` resmi, Llama 3.2 3B Q4_K_M, prompt 2048 token + generate 128 token,
+3 pengulangan, flash attention menyala:
+
+| penempatan lapis | baca prompt (tok/dtk) | keluar token (tok/dtk) |
+|---|---|---|
+| `-ngl 0` (CPU murni) | 109,7 ± 10,4 | 5,05 ± 1,11 |
+| `-ngl 99` (Vulkan penuh) | **171,1 ± 8,0** | **9,91 ± 0,11** |
+
+Dua hal yang tidak terlihat dari satu angka:
+
+1. **`-fa on` adalah syarat, bukan hiasan.** Pengukuran pertama tanpa flash attention
+   justru membalik keadaannya (GPU 6,8 vs CPU 8,6 tok/dtk) dan hampir membuat jalur
+   ini dibuang. Dengan flash attention menyala, GPU menang di kedua kolom — dan
+   keluar token jauh lebih **stabil** (±0,11 vs ±1,11), yang terasa sebagai suara yang
+   tidak tersendat.
+2. **Lebih sedikit lapis GPU bukan kompromi yang aman.** Sapuan `-ngl 0,8,16,24,99`
+   memberi 138 / 141 / 156 / 163 / 166 tok/dtk untuk prompt, tapi keluar token di
+   `-ngl 16` jatuh ke 6,9. Campuran CPU+GPU membayar sinkronisasi di tiap batas lapis.
+
+Terukur di aplikasi nyata (`/api/chat`, satu proses `app.py`): byte pertama **4,6 dtk**
+pada giliran pertama, lalu **0,4 dtk** saat slotnya masih hangat (`--cache-idle-slots`
+menyimpan persona panjang di prompt cache, jadi tidak dihitung ulang tiap giliran).
+
+**Yang TIDAK bisa dan tidak akan pernah bisa pindah ke GPU di proyek ini:** RVC.
+Konversinya PyTorch, dan `torch-directml` tidak punya wheel untuk kombinasi
+torch 2.12 + Python 3.10 di mesin ini (dicek langsung: `No matching distribution
+found`). Jadi `piper+rvc` tetap CPU 7-15 dtk per kalimat, dan itu batas mesin, bukan
+kelalaian konfigurasi. Piper juga sengaja dibiarkan di CPU: 0,3-0,5 dtk per kalimat
+sudah cukup cepat, dan menggantinya berarti menukar `onnxruntime` yang sekarang
+memegang seluruh jalur suara.
+
+## Mic lokal: angka dan buktinya
+
+`whisper/base` int8, 2 thread CPU, ucapan 7,8 detik hasil Piper:
+
+| keadaan | waktu |
+|---|---|
+| panggilan pertama (model baru dimuat) | 1,5 dtk |
+| panggilan berikutnya | **0,77 dtk** |
+| hasil salin | `Apa yang bisa saya bantu hari ini?` |
+
+`small` (470 MB) tersedia lewat `VTUBER_STT_MODEL=small` kalau akurasi `base` kurang;
+di CPU ini `medium` tidak dicoba karena RAM kosong tinggal ±4,5 GB saat browser dan
+llama-server sudah hidup.
+
+Jalur utuhnya dibuktikan di browser nyata, bukan hanya di ujung server: Chromium
+dengan mikrofon palsu (`--use-fake-file-for-audio-capture`) berisi WAV Piper, klik
+tombol mic, dan hasilnya masuk ke log chat lalu dijawab Elaina. Satu catatan untuk
+yang menulis ulang tes ini: Chrome **tidak** mengalirkan audio file-palsu pada sesi
+`getUserMedia` pertama (terukur: 0 blok audio), jadi tes perlu membuka perangkat
+sekali sebagai pemanasan sebelum klik. Itu kelakuan alat uji, bukan produk.
 
 ## Perkakas & Pengelolaan
 
@@ -357,6 +445,8 @@ perbaikan yang benar-benar besar di bagian itu.
 .venv\Scripts\python.exe scripts/unduh_aset.py --periksa  # laporan aset: apa ada, apa hilang
 .venv\Scripts\python.exe scripts/unduh_aset.py            # unduh Cubism Core dari situs Live2D
 .venv\Scripts\python.exe scripts/sedia_suara.py --periksa # aset jalur suara (piper + rvc)
+.venv\Scripts\python.exe scripts/sedia_stt.py --periksa   # aset mic (whisper base/small/medium)
+.venv\Scripts\python.exe scripts/unduh_llama.py           # binary llama-server Vulkan (sekali)
 .venv\Scripts\python.exe scripts/uji_latensi.py           # angka latensi, bukan dugaan
 .venv\Scripts\python.exe scripts/adu_suara.py             # render sampel untuk dipilih dengan telinga
 ```
@@ -387,14 +477,29 @@ Aset dan pustaka pihak ketiga yang dipakai proyek ini, beserta pemiliknya:
 - **[pixi-live2d-display](https://github.com/guansss/pixi-live2d-display)**
   oleh guansss — MIT.
 - **[PixiJS](https://github.com/pixijs/pixijs)** — MIT. Renderer WebGL.
+- **[llama.cpp](https://github.com/ggml-org/llama.cpp)** oleh ggml-org — MIT.
+  `llama-server` + backend Vulkan yang menghitung Llama 3.2 di Iris Xe; biner
+  Windows resminya diambil sekali lewat `scripts/unduh_llama.py` (versi dipaku
+  `b11206`, karena angka 171 tok/dtk adalah angka build itu).
+- **[faster-whisper](https://github.com/SYSTRAN/faster-whisper)** oleh SYSTRAN — MIT,
+  di atas **[CTranslate2](https://github.com/OpenNMT/CTranslate2)** (MIT).
+- **[Whisper](https://github.com/openai/whisper)** oleh Open — MIT. Model `base`/`small`
+  bahasa Indonesia yang menyalin mic di mesin ini.
+- **[Piper](https://github.com/rhasspy/piper)** — MIT. TTS Indonesia (voice
+  `id_ID-news_tts-medium`, satu penutur, kualitas medium).
+- **[RVC](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI)** via
+  fork `rvc_python` — MIT. Konversi warna suara ke Furina.
 - **[vad-web](https://github.com/ricky0123/vad)** oleh ricky0123 — MIT. Pembungkus
-  deteksi bicara untuk browser.
+  deteksi bicara untuk browser. **Status sekarang: tidak dipakai** — `mikrofon.js`
+  memakai ambang RMS sendiri, jadi `public/vad` + `public/ort` (±89 MB) hanya sisa.
 - **[Silero VAD](https://github.com/snakers4/silero-vad)** — MIT. Model deteksi
-  suara yang benar-benar berjalan di mesinmu.
+  suara; sama: tersedia di disk, belum tersambung.
 - **[ONNX Runtime Web](https://github.com/microsoft/onnxruntime)** — MIT.
 
-Sistem berjalan 100% full offline secara lokal di CPU tanpa SDK cloud. Vite, TypeScript,
-dan `@google/genai` dipakai pada fase awal dan sudah dihapus bersama `node_modules`.
+Sistem berjalan 100% offline: chat, suara, dan mic dihitung di CPU/GPU lokal tanpa
+satu pun panggilan cloud — dan `uji_jalan.py` menjaganya tetap begitu. Vite,
+TypeScript, dan `@google/genai` dipakai pada fase awal dan sudah dihapus bersama
+`node_modules`; Web Speech API (mic ke server Google) menyusul pada 27 Sep.
 
 Kode di repositori ini adalah karya proyek; seluruh aset dan pustaka di atas
 tetap pada lisensinya masing-masing.

@@ -22,8 +22,34 @@ def _bersih(nilai: str) -> str:
     return nilai
 
 
+def _potong_komentar(nilai: str) -> str:
+    """Buang komentar sebaris: `VTUBER_VULKAN_NGL=99  # semua lapis`.
+
+    Parser ini dulunya tidak mengenal komentar sebaris, jadi nilai itu terbaca
+    utuh "99  # semua lapis" -> `angka()` melempar ValueError -> diam-diam jatuh
+    ke bawaan. Persis kelas bug "resep diabaikan tanpa pesan" yang sudah pernah
+    terjadi di proyek ini. Aturan yang dipakai sama dengan dotenv: hanya `#` yang
+    didahului spasi yang jadi komentar, supaya warna (`#fff`) dan resep param
+    tetap utuh; nilai yang dikutip dipotong sampai kutip penutupnya saja.
+    """
+    mentah = nilai.strip()
+    if len(mentah) >= 2 and mentah[0] in "\"'":
+        kutip = mentah[0]
+        akhir = mentah.find(kutip, 1)
+        return mentah[1:akhir] if akhir > 0 else mentah[1:]
+    for i, tanda in enumerate(mentah):
+        if tanda == "#" and i > 0 and mentah[i - 1] in " \t":
+            return mentah[:i].rstrip()
+    return mentah
+
+
 def baca_env(jalur: Path) -> dict[str, str]:
-    """Parser .env minimal: `KUNCI=nilai`, `#` komentar, spasi di sekitar `=`."""
+    """Parser .env minimal: `KUNCI=nilai`, `#` komentar, spasi di sekitar `=`.
+
+    Berkas .env saja yang boleh berkomentar sebaris; nilai dari environment
+    (`nilai()` di bawah) tidak dipotong, karena di sana `#` bisa memang bagian
+    dari nilainya.
+    """
     if not jalur.exists():
         return {}
     hasil: dict[str, str] = {}
@@ -32,7 +58,7 @@ def baca_env(jalur: Path) -> dict[str, str]:
         if not baris or baris.startswith("#") or "=" not in baris:
             continue
         kunci, _, nilai = baris.partition("=")
-        hasil[kunci.strip()] = _bersih(nilai)
+        hasil[kunci.strip()] = _potong_komentar(nilai)
     return hasil
 
 
@@ -93,11 +119,33 @@ PORT = angka("VTUBER_PORT", 8787)
 
 # Otak percakapan:
 # - 'local' / 'llama_cpp': Model GGUF offline di folder model/ (tanpa dependensi luar)
+# - 'vulkan': GGUF yang SAMA, dihitung llama-server.exe di GPU terintegrasi (Iris Xe)
+#   lewat proses anak yang dikelola app.py -- lihat model_vulkan.py
 # - 'ollama': Server daemon Ollama di http://127.0.0.1:11434
 LLM_PROVIDER = nilai("VTUBER_LLM_PROVIDER", "local").lower()
 LOCAL_MODEL_PATH = nilai("VTUBER_LOCAL_MODEL_PATH", "")
 LOCAL_MODEL_THREADS = angka("VTUBER_LOCAL_MODEL_THREADS", 4)
 LOCAL_MODEL_CTX = angka("VTUBER_LOCAL_MODEL_CTX", 8192)
+
+# ── jalur GPU terintegrasi (llama.cpp Vulkan) ────────────────────────────────
+# Folder berisi llama-server.exe hasil scripts/unduh_llama.py, BUKAN berkas .env:
+# binary 92 MB ini tidak ikut ke git dan tidak boleh dianggap sumber.
+LLAMA_SERVER = nilai("VTUBER_LLAMA_SERVER", "bin/llama")
+# Jumlah lapis yang dititipkan ke GPU. 99 = semua. Angka ini BUKAN selera:
+# terukur 27 Sep di mesin Master (pp2048 138->166 tok/s, tg 9,6 tok/s tetap sama),
+# dan nilai tengah seperti 16 justru membuat token per detik jatuh (6,9).
+VULKAN_NGL = angka("VTUBER_VULKAN_NGL", 99)
+VULKAN_FA = bool_("VTUBER_VULKAN_FA", True)  # flash attention: ini yang membuat
+# offload penuh akhirnya menang dari CPU -- tanpanya GPU malah kalah (lihat README).
+VULKAN_CTX = angka("VTUBER_VULKAN_CTX", 0) or LOCAL_MODEL_CTX
+VULKAN_PERANGKAT = nilai("VTUBER_VULKAN_PERANGKAT", "Vulkan0")
+# Panaskan llama-server saat boot? YA untuk jalur ini, dan alasannya beda dari RVC:
+# membaca 1,9 GB GGUF + kompilasi shader Vulkan itu 8-15 dtk, dan kalau terjadi di
+# dalam /api/chat kalimat pertama lewat batas waktunya.
+VULKAN_MUAT_BOOT = bool_("VTUBER_VULKAN_MUAT_BOOT", True)
+# Simpan slot menganggur ke prompt cache supaya persona panjang tidak dihitung ulang
+# tiap giliran bicara.
+VULKAN_SLOT_DIAM = bool_("VTUBER_VULKAN_SLOT_DIAM", True)
 
 OLLAMA_URL = nilai("VTUBER_OLLAMA_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = nilai("VTUBER_OLLAMA_MODEL", "llama3.2:3b")
@@ -109,7 +157,24 @@ TTS_MODEL = "piper+rvc"
 TTS_CADANGAN: list[str] = []
 TTS_SUARA = ""
 TTS_PER_KALIMAT = bool_("VTUBER_TTS_PER_KALIMAT", True)
-STT_MODEL = "web_speech"
+STT_MODEL = nilai("VTUBER_STT_MODEL", "base")  # folder di STT_MODEL_PATH
+
+# ── STT lokal (Whisper via faster-whisper / CTranslate2, CPU) ────────────────
+# Dulu konstanta ini bernilai "web_speech" dan itu BUKAN offline: Web Speech API di
+# Chrome/Edge mengunggah audio mic ke server Google/Microsoft. Sekarang browser
+# mengirim WAV ke /api/stt dan transkripsinya dibuat di mesin ini (stt_whisper.py).
+STT_HIDUP = bool_("VTUBER_STT", True)
+STT_MODEL_PATH = nilai("VTUBER_STT_MODEL_PATH", "aset/suara/whisper")
+STT_BAHASA = nilai("VTUBER_STT_BAHASA", "id")
+STT_KOMPUTASI = nilai("VTUBER_STT_KOMPUTASI", "int8")
+# 2 thread, bukan 4: jalur ini hidup berbarengan dengan llama-server yang juga
+# meminta LOCAL_MODEL_THREADS, dan Whisper CPU lebih diuntungkan oleh inti yang
+# tidak direbut.
+STT_THREADS = angka("VTUBER_STT_THREADS", 2)
+STT_BEAM = angka("VTUBER_STT_BEAM", 1)
+STT_MUAT_BOOT = bool_("VTUBER_STT_MUAT_BOOT", False)
+# Batas ukuran berkas yang diterima /api/stt -- ucapan 30 dtk @16 kHz mono 16-bit.
+STT_MAKS_DETIK = angka("VTUBER_STT_MAKS_DETIK", 30)
 
 JEDA_FAKTA = angka("VTUBER_JEDA_FAKTA", 8)
 

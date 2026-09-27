@@ -46,6 +46,7 @@
    "model",
    "ok",
    "sisi",
+   "stt",
    "tts"
   ],
   "kunci_tts": [
@@ -76,7 +77,7 @@
    "kanal": 1,
    "laju": 24000
   },
-  "x-tts-model": ""
+  "x-tts-model": "stub"
  },
  "tts tanpa teks": {
   "ctype": "audio/wav",
@@ -86,7 +87,7 @@
    "kanal": 1,
    "laju": 24000
   },
-  "x-tts-model": ""
+  "x-tts-model": "stub"
  },
  "tts teks kosong": {
   "ctype": "audio/wav",
@@ -96,6 +97,6 @@
    "kanal": 1,
    "laju": 24000
   },
-  "x-tts-model": ""
+  "x-tts-model": "stub"
  }
 }

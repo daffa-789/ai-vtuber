@@ -71,8 +71,9 @@ def muat_model(jalur_kandidat: str | None = None, threads: int = 4, n_ctx: int =
         from llama_cpp import Llama
     except ImportError:
         raise ModelLokalError(
-            "Paket llama-cpp-python belum terpasang. Jalankan:\n"
-            "pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu"
+            "Paket llama-cpp-python belum terpasang. Pasang jalur dependensi proyek:\n"
+            "  .venv\\Scripts\\python.exe -m pip install -r requirements.txt\n"
+            "(baris torch/CPU-nya harus lebih dulu -- lihat catatan di bagian atas berkas itu)"
         )
 
     print(f"Memuat model lokal GGUF: {jalur.name} ({threads} threads, ctx={n_ctx})...")
@@ -104,24 +105,12 @@ def alir(
     """Stream token respons dari model lokal GGUF."""
     llm = muat_model(jalur_kandidat=jalur_kandidat, threads=threads, n_ctx=n_ctx)
 
-    # Pastikan panduan ekspresi wajah disuntikkan ke system prompt
-    pesan_terformat = []
-    for m in pesan:
-        if m.get("role") == "system":
-            isi_sys = m.get("content", "")
-            if "[PANDUAN EKSPRESI WAJAH LIVE2D]" not in isi_sys:
-                isi_sys += (
-                    "\n\n[PANDUAN EKSPRESI WAJAH LIVE2D]\n"
-                    "WAJIB: Awali balasan Anda dengan tepat SATU tag emosi di paling depan kalimat pertama: "
-                    "[senyum], [senang], [semangat], [kaget], [bingung], [lelah], [goda], [sebal], [sedih], atau [netral].\n"
-                    "Contoh format balasan:\n"
-                    "[senyum] Halo Master, ada yang bisa saya bantu hari ini?\n"
-                    "[sebal] Hmph, jangan membuat saya menunggu terlalu lama, Master.\n"
-                    "[kaget] Eh? Kenapa tiba-tiba menanyakan hal itu, Master?"
-                )
-            pesan_terformat.append({"role": "system", "content": isi_sys})
-        else:
-            pesan_terformat.append(m)
+    # Tidak ada suntikan prompt di sini: isi system prompt adalah urusan
+    # memori.gabung_system_lokal(), supaya penyedia mana pun (CPU maupun vulkan)
+    # membaca pesan yang SAMA. Dulu blok "[PANDUAN EKSPRESI WAJAH LIVE2D]" ditambahkan
+    # di sini dan instruksi yang sama sudah ada di system prompt -- dua sumber
+    # kebenaran, dan yang kedua hanya menambah token prompt yang harus dihitung ulang.
+    pesan_terformat = pesan
 
     try:
         respon = llm.create_chat_completion(

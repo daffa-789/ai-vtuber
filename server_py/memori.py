@@ -67,15 +67,22 @@ def gabung_system(persona: str, fakta: list[str], mood: dict | None) -> str:
 
 
 def gabung_system_lokal(fakta: list[str], mood: dict | None) -> str:
-    """System prompt ringkas khusus model lokal CPU agar inferensi super cepat (<4 detik)."""
+    """System prompt ringkas khusus model lokal agar inferensi cepat (<4 detik).
+
+    Panduan tag emosi tinggal SATU sumber di sini. Dulu instruksi yang sama ditulis
+    dua kali -- sekali di sini, sekali lagi di `model_lokal.alir()` sebagai blok
+    "[PANDUAN EKSPRESI WAJAH LIVE2D]" -- sehingga tiap giliran bicara membayar
+    ±120 token prompt tambahan untuk mengulang apa yang sudah dibaca model.
+    """
     bagian = [
         "Kamu adalah Elaina (18 tahun), si Penyihir Abu dari Wandering Witch. "
         "Kamu tinggal di laptop Master. Sifatmu: tenang, mandiri, cerdas, agak narsis, "
         "realistis, sedikit sinis tapi tetap peduli dan santun. Bicara dalam bahasa Indonesia yang anggun "
         "dan selalu panggil lawan bicaramu dengan sebutan 'Master'. "
         "Jawab dengan ringkas dan padat (1 sampai 3 kalimat). "
-        "WAJIB: Awali setiap balasanmu dengan satu tag emosi Live2D di paling depan: "
-        "[senyum], [senang], [semangat], [kaget], [bingung], [lelah], [goda], [sebal], [sedih], atau [netral]."
+        "WAJIB: Awali setiap balasanmu dengan satu tag emosi di paling depan, persis satu dari "
+        "[senyum], [senang], [semangat], [kaget], [bingung], [lelah], [goda], [sebal], [sedih], [netral]. "
+        "Contoh: [senyum] Halo Master, ada yang bisa saya bantu?"
     ]
     if fakta:
         bagian.append("Fakta tentang Master:\n" + "\n".join(f"- {f}" for f in fakta[-5:]))

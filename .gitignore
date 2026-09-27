@@ -26,6 +26,9 @@ public/models/penyihir/
 aset/suara/piper/
 aset/suara/rvc/
 aset/suara/model-dasar/
+# Model Whisper untuk mic lokal (base 142 MB / small 470 MB): disediakan
+# scripts/sedia_stt.py, bukan untuk di-commit.
+aset/suara/whisper/
 # Hasil sintesis + berkas temp + jejak ukur. `var/` sengaja di luar web/ dan
 # public/ supaya statis.py tidak pernah bisa menyajikannya lewat HTTP.
 var/
@@ -33,5 +36,9 @@ var/
 # ukuran besar (>700 MB), tidak untuk di-commit ke Git.
 model/
 *.gguf
+
+# Binary llama.cpp (llama-server + DLL Vulkan) hasil scripts/unduh_llama.py:
+# 92 MB pihak ketiga, bisa dibangkitkan ulang, dan bukan sumber proyek ini.
+bin/
 
 

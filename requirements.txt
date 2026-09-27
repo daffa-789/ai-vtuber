@@ -30,6 +30,23 @@
 # ── LLM lokal offline ────────────────────────────────────────────────────────
 llama-cpp-python
 #  Inference model GGUF lokal di CPU/RAM tanpa internet.
+#  Wheel CPU jadi TIDAK ada di PyPI (Windows-nya sdist -> butuh compiler yang tidak
+#  ada di mesin ini). Ambil dari indeks wheel resmi proyek:
+#    .venv\Scripts\python.exe -m pip install llama-cpp-python `
+#        --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+#  Hanya untuk jalur CPU. Untuk GPU terintegrasi, JANGAN pakai paket ini -- pakai
+#  binary jadi llama-server: `python scripts/unduh_llama.py` + VTUBER_LLM_PROVIDER=vulkan.
+
+# ── STT lokal offline (mic) ──────────────────────────────────────────────────
+faster-whisper
+#  Whisper lewat CTranslate2: wheel Windows jadi, murni CPU, tidak memanggil
+#  jaringan selama modelnya sudah di `aset/suara/whisper/` (siapkan dengan
+#  `python scripts/sedia_stt.py --model base`). Kode membuka modelnya dengan
+#  local_files_only=True, jadi tidak ada unduhan senyap di tengah percakapan.
+#  Dipasang dengan berkas kendala yang mem-pin numpy + onnxruntime yang SUDAH ada:
+#    .venv\Scripts\python.exe -m pip install faster-whisper -c kendala.txt
+#  (numpy/onnxruntime ikut dipakai RVC dan Piper; membiarkan pip menggerakkannya
+#  berarti mengadu seluruh pohon dependensi yang dulu sudah susah payah cocok.)
 
 # ── fondasi suara ────────────────────────────────────────────────────────────
 piper-tts==1.8.0

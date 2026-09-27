@@ -10,6 +10,9 @@ Yang dijaga di sini, urut dari yang paling sering diam-diam rusak:
   2. banner tercetak di mode stub dan mode normal
   3. rantai engine tersaring benar untuk empat kombinasi konfigurasi
   4. bungkusan WAV mondar-mandir (header yang kita tulis bisa dibaca kembali)
+  5. tidak ada alamat/API non-loopback di kode yang dijalankan -- klaim "offline"
+     diuji, bukan ditulis
+  6. konfigurasi tidak menyimpan cadangan cloud yang bisa dipakai diam-diam
 
 Jalankan:  .venv\\Scripts\\python.exe server_py\\uji_jalan.py
 """
@@ -17,6 +20,7 @@ Jalankan:  .venv\\Scripts\\python.exe server_py\\uji_jalan.py
 from __future__ import annotations
 
 import io
+import re
 import sys
 import wave
 from pathlib import Path
@@ -61,7 +65,7 @@ def utama() -> int:
     def tanpa_paket_berat():
         # torch/onnxruntime adalah bukti terberat: kalau ada impor level-modul
         # yang menyeretnya, nama ini sudah ada di sys.modules setelah `import app`.
-        for terlarang in ("torch", "piper", "rvc_python", "faiss", "numba"):
+        for terlarang in ("torch", "piper", "rvc_python", "faiss", "numba", "faster_whisper", "ctranslate2"):
             if terlarang in sys.modules:
                 raise AssertionError(
                     f"'{terlarang}' sudah termuat hanya karena mengimpor server -- "
@@ -164,6 +168,160 @@ def utama() -> int:
         assert not bocor, f"kunci server bocor ke browser: {bocor[:5]}"
 
     cek("env_web hanya meloloskan VITE_*", pagar_browser)
+
+    # ── 7. tidak ada satu pun alamat non-loopback di kode yang DIJALANKAN ────
+    # Klaim "100% offline" dulu cuma ada di README dan sudah dua kali bohong:
+    # Gemini sempat hilang dari kode tapi labelnya tertinggal, dan mic diam-diam
+    # masih naik ke server Google. Skrip pengunduh (scripts/) sengaja tidak
+    # diperiksa -- itu alat instalasi, bukan runtime. `web/lib/` juga tidak:
+    # pustaka vendored penuh URL lisensi di komentar.
+    IZIN: dict[str, str] = {
+        # berkas -> ALASAN sah ia masih menyentuh luar mesin. KOSONG = "offline
+        # total" TERBUKTI, dan itu keadaan yang ingin kita pertahankan. Tiap baris
+        # baru di sini adalah keputusan sadar untuk mengirim sesuatu ke cloud;
+        # tanpa baris itu, tes ini yang berteriak.
+        #
+        # Riwayat: dulu berisi "mikrofon.js" (Web Speech API = server Google/MS) dan
+        # "model_lokal.py" (URL indeks pip di pesan galat). Keduanya sudah hilang --
+        # mic pindah ke Whisper lokal, dan pesan instal sekarang menunjuk
+        # requirements.txt, bukan ke alamat.
+    }
+    POLA_ALAMAT = re.compile(r"https?://([^/\s\"'`<>)]+)", re.I)
+    LOOPBACK = ("127.0.0.1", "localhost", "0.0.0.0", "::1", "[::1]")
+
+    def tanpa_alamat_luar():
+        akar_web = Path(__file__).resolve().parent.parent / "web"
+        target = sorted((Path(__file__).resolve().parent).glob("*.py"))
+        target += [p for p in sorted(akar_web.rglob("*")) if p.suffix in (".js", ".html")]
+        target = [p for p in target if "lib" not in p.parts and "uji_" not in p.name]
+        pelanggar: list[str] = []
+        menyentuh_luar: set[str] = set()
+
+        def catat(nama: str, temuan: str) -> None:
+            menyentuh_luar.add(nama)
+            if nama not in IZIN:
+                pelanggar.append(temuan)
+
+        for berkas in target:
+            for baris, teks in enumerate(berkas.read_text(encoding="utf-8").splitlines(), 1):
+                for host in POLA_ALAMAT.findall(teks):
+                    if not host.startswith(LOOPBACK):
+                        catat(berkas.name, f"{berkas.name}:{baris} -> {host}")
+        # nama API cloud yang tidak meninggalkan URL, tapi sama saja keluar mesin
+        for berkas in sorted(akar_web.rglob("*.js")):
+            if "lib" in berkas.parts:
+                continue
+            teks = berkas.read_text(encoding="utf-8")
+            for tanda in ("webkitSpeechRecognition", "SpeechRecognition"):
+                if tanda in teks:
+                    catat(berkas.name, f"{berkas.name} -> {tanda} (STT cloud browser)")
+        for nama, alasan in IZIN.items():
+            if nama not in menyentuh_luar:
+                raise AssertionError(
+                    f"{nama} tidak lagi menyentuh luar mesin -- izinkannya masih "
+                    f"tertulis: {alasan}. Hapus dari IZIN."
+                )
+        assert not pelanggar, f"jalur keluar mesin baru: {pelanggar[:6]}"
+
+    cek("kode runtime tidak menyentuh alamat luar", tanpa_alamat_luar)
+
+    # ── 8. tidak ada cadangan cloud yang tersisa di konfigurasi ──────────────
+    def tanpa_cadangan_cloud():
+        import konfig
+
+        for nama in ("MODEL_CADANGAN", "TTS_CADANGAN"):
+            assert getattr(konfig, nama) == [], f"{nama} harus kosong: {getattr(konfig, nama)}"
+        assert konfig.LLM_PROVIDER in ("local", "llama_cpp", "vulkan", "ollama"), (
+            f"provider chat di luar yang offline: {konfig.LLM_PROVIDER}"
+        )
+        for resep in konfig.TTS_RANTAI:
+            assert re.fullmatch(r"(piper|rvc|piper\+rvc|stub)", resep), (
+                f"resep TTS tak dikenal (mungkin sisa cloud): {resep}"
+            )
+
+    cek("konfigurasi tidak punya cadangan cloud", tanpa_cadangan_cloud)
+
+    # ── 9. parser .env: komentar sebaris tidak boleh menelan nilainya ────────
+    # Dulu `VTUBER_VULKAN_NGL=99  # semua lapis` terbaca utuh sampai komentar,
+    # `int()` gagal, dan nilainya diam-diam diganti bawaan -- bug kelas "resep
+    # diabaikan tanpa pesan" yang sudah lebih dari sekali terjadi di proyek ini.
+    def parser_env():
+        import tempfile
+
+        import konfig
+
+        isi = "\n".join(
+            [
+                "KANG_NUM=99  # semua lapis",
+                'KANG_QUOT="#fff"',
+                "KANG_MERGE=merah #f00",
+                "KANG_NO_SPASI=a#b",
+                "KANG_QUOT_SPASI=  'x y'  # catatan",
+                "KANG_Bulat=ya  # nyalakan",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as td:
+            jalur = Path(td) / ".env"
+            jalur.write_text(isi, encoding="utf-8")
+            hasil = konfig.baca_env(jalur)
+        assert hasil["KANG_NUM"] == "99", hasil["KANG_NUM"]
+        assert hasil["KANG_QUOT"] == "#fff", hasil["KANG_QUOT"]
+        assert hasil["KANG_MERGE"] == "merah", hasil["KANG_MERGE"]
+        assert hasil["KANG_NO_SPASI"] == "a#b", hasil["KANG_NO_SPASI"]
+        assert hasil["KANG_QUOT_SPASI"] == "x y", hasil["KANG_QUOT_SPASI"]
+        # lewat pembaca bertipe juga: di sinilah nilai cacat dulu jadi bawaan diam-diam
+        asli = dict(konfig._ENV)
+        try:
+            konfig._ENV = hasil
+            assert konfig.angka("KANG_NUM", -1) == 99
+            assert konfig.bool_("KANG_Bulat", False) is True
+        finally:
+            konfig._ENV = asli
+
+    cek("parser .env memotong komentar tanpa membunuh nilai", parser_env)
+
+    # ── 10. pembaca WAV sisi STT: tolak yang bukan audio, jangan sampai muat model ──
+    def pembatas_stt():
+        import struct
+
+        import stt_whisper
+
+        wav_sunyi = wav.pcm_ke_wav(bytes(16000 * 2), 16000, 1)  # 1,0 detik hening
+        data, laju = stt_whisper.baca_wav(wav_sunyi)
+        assert laju == 16000, laju
+        assert abs(len(data) / 16000 - 1.0) < 0.01, len(data)
+
+        # Bukan WAV sama sekali.
+        for buruk, nama in ((b"RIFF" + bytes(60), "header palsu"), (b"", "kosong")):
+            try:
+                stt_whisper.baca_wav(buruk)
+                raise AssertionError(f"{nama} tidak ditolak")
+            except stt_whisper.GalatSTT:
+                pass
+
+        # 8-bit: tidak didukung, dan harus bilang begitu -- bukan salah transkrip.
+        delapan = (
+            b"RIFF"
+            + struct.pack("<I", 36 + 100)
+            + b"WAVEfmt "
+            + struct.pack("<IHHIIHH", 16, 1, 1, 8000, 8000, 1, 8)
+            + b"data"
+            + struct.pack("<I", 100)
+            + bytes(100)
+        )
+        try:
+            stt_whisper.baca_wav(delapan)
+            raise AssertionError("WAV 8-bit lolos -- harusnya ditolak, bukan disalahtranskrip")
+        except stt_whisper.GalatSTT:
+            pass
+
+        # Resample: 22,05 kHz -> 16 kHz harus memendek dengan rasio yang benar.
+        data22, _ = stt_whisper.baca_wav(wav.pcm_ke_wav(bytes(22050 * 2), 22050, 1))
+        hasil = stt_whisper.resample(data22, 22050)
+        assert abs(len(hasil) / 16000 - 1.0) < 0.02, len(hasil)
+        assert len(stt_whisper.resample(data22, 16000)) == len(data22), "16k tidak boleh diubah"
+
+    cek("stt_whisper menolak audio buruk & resample benar", pembatas_stt)
 
     print(f"\n{LOLOS} lulus, {len(GAGAL)} gagal")
     return 1 if GAGAL else 0
