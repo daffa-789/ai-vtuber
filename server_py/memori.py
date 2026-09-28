@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 
 NILAI_TAG = {
     "senyum": 0.25,
@@ -76,17 +77,22 @@ from konfig import AKAR_PERSONA
 PERSONA = AKAR_PERSONA.read_text(encoding="utf-8")
 
 
-def _ringkas_persona(teks: str, batas: int = 4200) -> str:
+def _ringkas_persona(teks: str, batas: int = 9000) -> str:
     """Potong persona panjang pada batas paragraf supaya prompt tetap pendek.
 
-    Bawaan 4200 karakter, bukan 1400: pemotongan di batas paragraf membuat angka
-    kecil memotong persona SEBELUM bagian "Cara Bicara" dan "Ekspresi" -- persis
-    dua bagian yang paling menentukan gaya bicara dan tag wajah. Yang hilang bukan
-    lore, tapi instruksi. 4200 menutup seluruh persona.md (7.001 karakter) sehingga
-    pemotongan biasanya tidak terpakai sama sekali; kalau persona nanti tumbuh
-    lebih besar, yang dipotong tetap bagian contoh/ backstory, bukan aturan.
+    Angka ini pernah 4200 dengan komentar "menutup seluruh persona.md" -- dan
+    komentar itu SALAH, terukur 28 Sep: persona.md 7.206 karakter, hasilnya prompt
+    4.164 dan tiga bagian hilang seluruhnya: "Batas", "Contoh Nada", "Aturan Emoji".
+    Yang terbuang justru bagian paling menentukan -- contoh dialog adalah senjata
+    terbesar persona ini, dan aturan tanpa-emoji itu satu-satunya tempat ia ditulis
+    untuk jalur lokal. Gejalanya bukan error, cuma karakter yang pelan-pelan lupa
+    caranya bicara.
 
-    Prompt ±4.200 karakter itu ±1.200 token, dan hanya dibayar sekali: slot Vulkan
+    Karena itu batasnya sekarang 9000 (persona + ruang tumbuh), dan kalau nanti
+    tetap terpotong, bagian yang hilang DICEPRINT -- pemangkasan senyap tidak boleh
+    terjadi dua kali pada berkas yang sama.
+
+    Prompt ±7.200 karakter itu ±1.900 token, dan hanya dibayar sekali: slot Vulkan
     yang menganggur menyimpannya di prompt cache (--cache-idle-slots), jadi giliran
     berikutnya tidak menghitung ulang.
 
@@ -100,6 +106,13 @@ def _ringkas_persona(teks: str, batas: int = 4200) -> str:
     batas_paragraf = potong.rfind("\n\n")
     if batas_paragraf > batas // 2:
         potong = potong[:batas_paragraf]
+    hilang = [h.strip() for h in re.findall(r"(?m)^## (.+)$", teks) if f"## {h.strip()}" not in potong]
+    print(
+        f"  ! persona terpotong: {len(potong)} dari {len(teks)} karakter masuk prompt. "
+        f"Bagian yang HILANG: {', '.join(hilang) or '(tanpa judul)'}",
+        file=sys.stderr,
+        flush=True,
+    )
     return potong
 
 
