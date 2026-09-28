@@ -27,16 +27,21 @@ cp .env.example .env                    # sesuaikan konfigurasi jika diperlukan
 .venv\Scripts\python.exe main.py        # satu-satunya perintah yang perlu dijalankan
 ```
 
-Bawaannya dia muncul **di peramban**: satu proses Python, dan peramban terbuka
-sendiri setelah servernya siap. Alamatnya `http://127.0.0.1:8787/` (port ikut
-`VTUBER_PORT` di `.env`). Atau dua kali klik: `jalankan.bat`.
+Bawaannya dia muncul sebagai **Vtuber 2D di desktop**: jendela tanpa bingkai,
+tembus pandang, tanpa entri taskbar, dan tanpa satu pun jendela konsol di
+belakangnya. Dua jalan menyalakannya:
 
-Ada juga **mode pet** — jendela tanpa bingkai yang melayang di desktop. Ia bekerja
-(tembus pandang, tanpa taskbar, ikon tray, hotkey, sembunyi otomatis), tapi ia
-selalu berada DI ATAS jendela lain, jadi begitu Master bekerja dengan jendela
-maksimal karakternya menutupi isi jendela itu. Karena itu ia bukan bawaan lagi.
-Nyalakan dengan `VTUBER_TAMPAK=pet` di `.env` atau `python main.py --pet`.
-Rinciannya di bagian **Mode pet** di bawah.
+```
+jalankan.pyw                                    # dua kali klik, nol jendela konsol
+.venv\Scripts\python.exe main.py                # dari konsol
+```
+
+`jalankan.pyw` dijalankan `pythonw.exe` (interpreter yang sama, tanpa konsol) dan
+tetap memakai `.venv`. Karena tidak ada konsol, jejak yang dulu cuma terbaca di sana
+pindah ke berkas: `var/run.log` (boot, Vulkan, RVC) dan `var/pet.log` (jendela).
+Alamat halamannya tetap `http://127.0.0.1:8787/` (port ikut `VTUBER_PORT` di `.env`),
+dan **mode browser** tinggal `--browser` atau `VTUBER_TAMPAK=browser` — itu mode yang
+dipakai untuk merapikan penampilannya.
 
 ## Mode browser
 
@@ -46,8 +51,14 @@ perkakas penyetelan ada di sini. Ini mode yang dipakai untuk merapikan tampilan.
 
 ## Mode pet
 
-`VTUBER_TAMPAK=pet` membuka jendela **tanpa bingkai, tembus pandang, selalu
-di atas**, duduk di pojok kanan bawah area kerja — kakinya tepat di garis taskbar.
+`VTUBER_TAMPAK=pet` (bawaan sejak 28 Sep) membuka jendela **tanpa bingkai, tembus
+pandang, selalu di atas**, duduk di pojok kanan bawah area kerja — kakinya tepat di
+garis taskbar. Dia bukan jendela biasa: `WS_EX_TOOLWINDOW` dipasang dan
+`WS_EX_APPWINDOW` dibuang (hilang dari taskbar dan Alt+Tab), lalu
+`SetLayeredWindowAttributes(..., LWA_COLORKEY)` membuat latar jendelanya tembus ke
+desktop. Harga teknis color key yang perlu diketahui: tepi karakter yang
+ber-antialias ikut sewarna latar setipis satu piksel — itu batas teknik, bukan
+penyetelan yang salah.
 
 | gestur / jalan | hasil |
 |---|---|
@@ -57,19 +68,23 @@ di atas**, duduk di pojok kanan bawah area kerja — kakinya tepat di garis task
 | seret tubuhnya | jendela ikut bergeser (`easy_drag`) |
 | **ikon tray** | Tampilkan / Sembunyikan / Keluar |
 
-Panel-nya hanya berisi log, kolom pesan, tombol mic, dan satu baris status — meter
-FPS, gugus raut/pose/gerak tetap ada di mode browser.
+Panel-nya berisi log, kolom pesan, tombol mic, dan satu baris status. Yang tetap
+tersembunyi di mode pet hanya perkakas penyetel: meter FPS dan gugus raut/pose/gerak.
+(Log dulu ikut hilang karena `#catatan` ber-class `gugus` dan aturan
+`.gugus { display: none }` tidak pilih kasih — sekarang dikecualikan.)
 
 ### Sembunyi otomatis
 
-`VTUBER_PET_SEMBUNYI` bawaannya **`tidak`** (selalu tampil). Pilihan lain:
-`layar-penuh` (minggir hanya saat jendela depan menutupi SELURUH monitor termasuk
-pita taskbar — video layar penuh dan game) dan `maksimal` (juga saat jendela depan
-sekadar dimaksimalkan; hindari kalau kerja sehari-hari memakai jendela maksimal).
+`VTUBER_PET_SEMBUNYI` bawaannya **`layar-penuh`**: minggir hanya saat jendela depan
+menutupi SELURUH monitor termasuk pita taskbar — video layar penuh dan game. Pilihan
+lain: `tidak` (selalu tampil; berarti karakternya menutupi jendela kerja yang
+dimaksimalkan) dan `maksimal` (juga saat jendela depan sekadar dimaksimalkan;
+hindari kalau kerja sehari-hari memakai jendela maksimal — karakternya hampir selalu
+sembunyi dan itu terasa seperti rusak).
 
-Bawaannya `tidak` karena itu pilihan yang salah simpul: sembunyi otomatis yang
-keliru membuat karakternya **hilang tanpa pesan**, dan itu jauh lebih buruk daripada
-satu jendela yang menempel. Ikon tray bukan hiasan selama aturan ini menyala — ia
+Aturan ini kini menyala justru karena mode pet jadi bawaan dan dia selalu di atas.
+Sembunyi otomatis yang keliru pernah membuat karakternya **hilang tanpa pesan**, jadi
+ikon tray bukan hiasan selama aturan ini menyala — ia
 satu-satunya jalan memanggilnya kembali. Menyembunyikan lewat tray juga tidak
 langsung dibatalkan pengintai: kehendak manual menang sampai keadaan layar berubah.
 
@@ -140,13 +155,14 @@ berkas lepas, dan yang lain terlalu besar untuk repo). Kalau pindah mesin atau
 | `aset/suara/model-dasar/` | HuBERT + rmvpe (±730 MB) | unduhan dasar `rvc_python` |
 | `aset/suara/whisper/` | `base` (142 MB) / `small` (470 MB) | repo `Systran/faster-whisper-*` |
 | `bin/llama/` | `llama-server.exe` + DLL Vulkan (92 MB) | build Windows resmi llama.cpp |
-| `public/models/penyihir/` | model karakter + tekstur 8192 | berkas kerja karakter |
+| `public/models/silverwolf/` | model karakter + 6 tekstur 8192 | berkas kerja karakter (`var/pasang_silverwolf.py`, tak ter-track) |
 | `public/live2dcubismcore.min.js` | Cubism Core | SDK resmi Live2D |
 
 Dua catatan yang masih benar: `base_model/` RVC hidup **di dalam**
 `.venv/Lib/site-packages/rvc_python/`, jadi `.venv` baru berarti menyalin ulang
-±730 MB itu ke sana. Dan berkas ekspresi + `penyihir.model3.json` dibuat lewat
-halaman **`/perkakas.html`** di browser, bukan skrip.
+±730 MB itu ke sana. Dan `silverwolf.model3.json` + isi `ekspresi/` dibuat oleh
+skrip pemasangan di `var/` — yang tidak ikut ke git, jadi salinan manual juga
+berarti menyalin folder `public/models/silverwolf/` utuh.
 
 ## Arsitektur Full Offline
 
@@ -161,67 +177,122 @@ aset model. 100% offline tanpa dev server terpisah.
 | **Penyaji Web** | `npm run dev` (Vite di :5173) | `server_py/statis.py` menyajikan `web/` dan `public/` |
 | **Env Web** | `import.meta.env.VITE_*` | `window.__VTUBER_ENV__`, disuntikkan Python ke `index.html` |
 | **Frontend** | `src/*.ts` + `tsconfig.json` | `web/*.js` — ESM asli browser tanpa build step |
-| **Pustaka Web** | `node_modules` (270 MB) | `web/lib/` (647 KB: pixi + cubism4 + vad) |
+| **Pustaka Web** | `node_modules` (270 MB) | `web/lib/` (572 KB: pixi + cubism4) |
 
 ## Model karakter
 
-Karakternya model Live2D Cubism 4 (279 parameter, 617 art mesh, tekstur 8192),
-dikelola di `public/models/penyihir/` dengan nama berkas dan konfigurasi bahasa Indonesia:
+Karakternya **Silver Wolf**, model Live2D Cubism 4 dengan **358 parameter**
+(didaftarkan di `silverwolf.cdi3.json`), **6 atlas tekstur** 8192, dan folder
+kerja ber-nama Indonesia:
 
 ```
-public/models/penyihir/
-  penyihir.model3.json      daftar ekspresi + motion, ini yang dibaca aplikasi
-  penyihir.moc3             geometri yang sudah dikompilasi (jangan disunting)
-  penyihir.physics3.json    rambut, baju, perhiasan bergoyang
-  penyihir.cdi3.json        label parameter untuk editor — sudah dialihbahasakan
-  tekstur/texture_00.png    8192x8192
-  tekstur/texture_01.png    4096x8192
-  ekspresi/*.exp3.json      salinan dari resep di .env, untuk alat luar (VTube/Cubism)
-  gerakan/sedih-melambai.motion3.json
+public/models/silverwolf/
+  silverwolf.model3.json      FileReferences + Groups + daftar ekspresi & motion
+  silverwolf.moc3             geometri yang sudah dikompilasi (jangan disunting)
+  silverwolf.physics3.json    rambut, baju, perhiasan bergoyang
+  silverwolf.cdi3.json        label parameter untuk editor
+  tekstur/texture_00.png .. 05.png
+  ekspresi/*.exp3.json        salinan untuk alat luar (VTube/Cubism); isinya
+                              ditimpa resep .env saat runtime
+  gerakan/berubah-1.motion3.json   (2,33 dtk)  ubah wujud
+  gerakan/berubah-2.motion3.json   (2,33 dtk)  ubah wujud, varian
+  gerakan/siklus.motion3.json      (1,67 dtk)  isyarat badan/gamepad
+  gerakan/tidur.motion3.json       (4,00 dtk)  molor
 ```
 
-Sembilan wajah tersusun rapi dari parameter modelnya dan dialihbahasakan ke Indonesia:
-**Resepnya diatur fleksibel di `.env`** -- masing-masing adalah satu baris `VITE_WAJAH_*` /
-`VITE_POSE_*` di `.env`; berkas `.exp3.json`-nya hanyalah salinan untuk perkakas luar
-dan diunduh ulang dari `/perkakas.html`.
-Label parameter juga tersimpan rapi di `penyihir.cdi3.json`:
+**Letak dua daftar itu penting dan pernah salah.** `Expressions` dan `Motions`
+harus berada **di dalam** `FileReferences`; pustaka membacanya sebagai
+`t.FileReferences.Expressions` / `.Motions`. Ketika keduanya tertanam di level
+teratas (bentuk yang dihasilkan pemasangan lama), pustaka tidak melihat apa pun dan
+tidak mengeluh: `expressionManager` tidak pernah terbentuk — sembilan wajah mati
+tanpa pesan — dan `motionManager.definitions` jadi `{}` sehingga keempat gerakan
+tidak bisa dipanggil. `web/wajah.js:siapkanSettings()` sekarang menormalkan
+letaknya sebelum model dimuat, jadi salinan lama pun tetap tampil benar.
 
-| Singkatan / Parameter | Arti sebenarnya | Dipakai untuk |
+Akting wajah model ini **bukan** lapisan `Param59` model lama, melainkan 17
+sakelar artmesh `key1..key17` (grup `ParamGroup5` di cdi3 aslinya, rentang 0..1).
+Namanya dari berkas asli `银狼.cdi3.json` — cdi3 hasil pemasangan di mesin ini
+kehabisan label itu, jadi tabelnya ditulis di sini:
+
+| Sakelar | Arti (nama aslinya) | Dipakai untuk |
 |---|---|---|
-| `ku` | mata berair + alis naik | `sedih` |
-| `sq` | cemberut | `sebal` |
-| `h` | setetes keringat + bayangan muram di mata | `bingung` |
-| `xx` / `x` | pupil bintang / pupil hati | `semangat` / `goda` |
-| `mz` `fz` `yj` `zs1` `zs2` `cw` `hdj` | topi, tongkat sihir, kacamata, memamerkan barang, hantu kecil, kalung | kanal `[prop:...]`, ditumpuk di atas wajah |
+| `key1` | 黑脸 wajah datar/gelap | belum terpakai |
+| `key2` | 脸红爱心 pipi merah + hati | `[goda]` |
+| `key3` | 生气 marah | `[sebal]` |
+| `key4` | 晕 pusing | `[bingung]` |
+| `key5` | `><` mata tertutup kencang | `[senyum]` |
+| `key6` | `0.0` mata bulat kosong | `[kaget]` |
+| `key7` | 星星眼 mata bintang | `[semangat]` |
+| `key8` | 流泪 air mata | `[sedih]` |
+| `key9` | 正常眼镜 kacamata | `[prop:kacamata]` |
+| `key10` | 吹泡泡 meniup gelembung | `[lelah]` |
+| `key11` | 变身 henshin | `[prop:ubah-wujud]` |
+| `key12` | 水印 watermark | belum terpakai |
+| `key13` | 外套 jaket | `[prop:jaket]` |
+| `key14` | 抱胸手 tangan melipat dada | pose `tangan-1` |
+| `key15` | 划卡手 tangan menggeser kartu | pose `tangan-4` |
+| `key16` | 捧心手 tangan di dada | pose `tangan-2` |
+| `key17` | 要饭手 tangan mengemis | pose `tangan-3` |
 
-`netral`, `senyum`, `kaget`, dan `lelah` tidak punya lapisan sendiri di model aslinya,
-jadi keempatnya saya rakit dari parameter dasar (`ParamEyeLOpen`, `ParamBrowLY`,
-`ParamMouthForm`, `Param50`). Rentang tiap parameter dibaca dari model yang sedang
-berjalan, bukan ditebak.
+Model ini **tidak saling-mematikan** sakelarnya, jadi tiap resep di `.env` menulis
+yang dia mau DAN memadamkan tetangga yang memakai artmesh sama (`key8=1 key2=0
+key4=0 key7=0`). Kalau suatu resep lupa, wajahnya menumpuk dan hasil akhirnya
+dijelaskan `web/konfigurasi.js:periksaTerhadapModel` di baris status halaman.
+Gambar pedoman visual aslinya ikut terbawa di `var/silverwolf-mentah/银狼/`
+(`按键设置说明.png`), tidak di-commit karena lisensi.
 
-Napass, goyang kepala, dan kedip tidak butuh berkas motion — pustaka `pixi-live2d-display`
-sudah menyetelnya sendiri, dan itu alasan `gerakan/` sengaja tidak dipasang sebagai Idle:
-kalau ada motion yang jalan, pustaka justru mematikan kedip otomatisnya.
+**Seberapa besar tiap resep benar-benar mengubah gambar** (terukur 28 Sep, Chromium
+headless, dibaca dari opasitas 375 artmesh; lantai drift tanpa melakukan apa pun =
+14 artmesh pada 0,005):
+
+| Tag | Artmesh berubah | Opasitas terbesar |
+|---|---|---|
+| `[sebal]` | 51 | 1,0 |
+| `[senyum]` / `[kaget]` | 36 | 1,0 |
+| `[sedih]` | 24 | 1,0 |
+| `[goda]` | 22 | 1,0 |
+| `[semangat]` | 18 | 1,0 |
+| `[bingung]` | 17 | 1,0 |
+| `[lelah]` | 15 (= lantai + 1) | 1,0 |
+| `[prop:kacamata]` | 14 | 0,80 |
+| `[prop:jaket]` | 27 | 0,79 |
+| `[prop:ubah-wujud]` | 60 | 0,78 |
+| `[prop:tangan-1..4]` | 58 / 53 / 23 / 19 | ~0,79 |
+| gerakan `siklus` | 25 | 0,91 |
+
+Angka itu yang membuat `key9` perlu `:mati=0` dan bukan sekadar hiasan sintaks, dan
+ia juga menunjukkan `[lelah]` paling halus di antara sembilan wajah: satu artmesh
+(gelembung). Mau lebih kelihatan, cukup ganti barisnya di `.env` -- misalnya
+`key1=1` (黑脸, wajah datar) yang sampai sekarang belum dipakai siapa-siapa.
+
+Napas, goyang kepala, dan kedip tidak butuh berkas motion — pustaka
+`pixi-live2d-display` sudah menyetelnya sendiri (`Groups.EyeBlink` menunjuk
+`ParamEyeLOpen/ROpen`, `Groups.LipSync` menunjuk `ParamMouthOpenY`), dan itu alasan
+`gerakan/` sengaja tidak dipasang sebagai grup Idle: kalau ada motion yang jalan,
+pustaka justru mematikan kedip otomatisnya.
 
 ## Diatur lewat .env
 
 Semua yang bergerak, berubah wajah, dan mengukur piksel dibaca dari satu berkas:
-`.env` isinya, `web/konfigurasi.js` parsernya — dipakai halaman utama DAN
-`web/perkakas.html`, jadi tidak bisa beda. Cara melihat apa yang sedang terpakai:
-buka **`http://127.0.0.1:8787/perkakas.html`** saat server jalan.
+`.env` isinya, `web/konfigurasi.js` satu-satunya parsernya. Tidak ada halaman
+penyetel kedua — `/perkakas.html` dibuang 28 Sep karena masih menunjuk jalur model
+`penyihir` yang sudah tidak ada. Cara melihat apa yang benar-benar terpakai:
 
-Halaman itu menampilkan tabel wajah/pose/gerakan dari nilai efektif, peringatan
-sintaks, blok `.env` siap tempel, dan tombol unduh tiap `.exp3.json` plus
-`penyihir.model3.json`. Tidak ada logika kedua di dalamnya: ia mengimpor fungsi
-yang sama persis dengan yang dipakai avatar. Terukur 2026-09-26: 16 dari 16 resep
-dan `penyihir.model3.json` dihasilkan identik byte-per-byte dengan berkas di disk.
+* baris **status** di mode browser: `siap — 9 wajah, 7 pose, 4 gerakan · ... · N
+  konfigurasi perlu dicek` (angka itu dihitung dari nilai efektif, bukan dari harapan);
+* `window.__vtuber` di devtools: `.konfig` (nilai efektif), `.ekspresiTerpasang`,
+  `.peringatan`, `.gerakTersedia`, `.keadaan.status()`, `.setEkspresi('sebal')`,
+  `.picuGerak('siklus', 3)`.
 
 | Yang mau diubah | Kunci |
 |---|---|
-| Raut wajah (9) | `VITE_WAJAH_<NAMA>="ParamMouthForm=1 ParamEyeLOpen=-0.35"` |
-| Pose / aksesoris (7) | `VITE_POSE_<NAMA>="Param72=30"`, tag `[prop:tongkat]` dan `[prop:tongkat=mati]` |
+| Raut wajah (9) | `VITE_WAJAH_<NAMA>="key7=1 key2=0 key4=0 key8=0"` |
+| Pose / aksesoris (7) | `VITE_POSE_<NAMA>="key13=1"`, tag `[prop:jaket]` dan `[prop:jaket=mati]` |
+| Lepas semua aksesoris | tag `[prop:kosong]` |
 | Wajah saat dibuka dan lama pudarnya | `VITE_EKSPRESI_DASAR`, `VITE_PUDAR_WAJAH_MS` |
-| Gerakan (motion) | `VITE_GERAK_<NAMA>="grup=isyarat berkas=... sumber=... ulang=false"` |
+| Gerakan (motion) | `VITE_GERAK_<NAMA>="grup=isyarat berkas=gerakan/siklus.motion3.json ulang=false"` |
+| Isyarat sekali jalan dari balasan | tag `[gerak:siklus]`, `[gerak:kosong]` untuk menghentikan |
+| Mesin keadaan (diam/bicara/tidur) | `VITE_KEADAAN`, `VITE_KEADAAN_GERAK_*`, `VITE_KEADAAN_JEDA_DETIK`, `VITE_KEADAAN_DETIK_TIDUR` |
 | Ukuran kotak avatar (CSS px) | `VITE_PANGGUNG_UKURAN`, `VITE_PANGGUNG_LEBAR`, `VITE_PANGGUNG_TINGGI` |
 | Seberapa besar karakter mengisi kotak | `VITE_AVATAR_ZOOM`, `VITE_AVATAR_X`, `VITE_AVATAR_JANGKAR` |
 | Jumlah piksel nyata / ketajaman | `VITE_RENDER_SKALA`, `VITE_RENDER_SKALA_MAKS`, `VITE_RENDER_HALUS` |
@@ -232,15 +303,40 @@ dan `penyihir.model3.json` dihasilkan identik byte-per-byte dengan berkas di dis
 Satu sintaks untuk semuanya: token `Id=Nilai` dipisah spasi; blend default `Add`
 menambah di atas nilai bawaan parameter, `:Overwrite` menulis mentah, `:Multiply`
 mengali; `kosong` berarti tanpa parameter. Nama kunci diterjemahkan apa adanya —
-`VITE_POSE_HANTU_KECIL` menjadi pose `hantu-kecil`. Id yang tidak ada di model atau
-nilai yang keluar rentang dilaporkan di status halaman ("N konfigurasi perlu dicek")
-dan di log browser. Ubah nilainya cukup
-muat ulang halaman; hanya berkas untuk perkakas luar yang perlu diunduh ulang
-dari `/perkakas.html`.
+`VITE_POSE_TANGAN_1` menjadi pose `tangan-1`. Id yang tidak ada di model, nilai yang
+keluar rentang, dan tabrakan tulisan antara wajah dan pose dilaporkan di baris status
+halaman ("N konfigurasi perlu dicek") dan di log browser. Ubah nilainya cukup muat
+ulang jendela.
 
 Wajah memakai sistem ekspresi pustaka (satu wajah pada satu waktu), sedangkan pose
-ditulis sebagai lapisan parameter paling akhir setiap frame — sehingga tongkat,
-kacamata, atau hantu kecil tetap menempel walau wajahnya sedang sedih.
+ditulis sebagai lapisan parameter paling akhir setiap frame — sehingga kacamata,
+jaket, atau satu posisi tangan tetap menempel walau wajahnya sedang sedih.
+
+### Mesin keadaan: dia tidak lagi patung
+
+Empat motion yang ada sebelumnya cuma bisa dipanggil dari tombol — dan tombol itu
+disembunyikan di mode pet. `web/keadaan.js` memakainya sendiri lewat tiga keadaan:
+
+| Keadaan | Kapan | Yang dilakukan |
+|---|---|---|
+| `bicara` | suara mulai berbunyi | satu isyarat opsional (`VITE_KEADAAN_GERAK_BICARA`, bawaan `kosong`) — kecuali balasannya sudah membawa `[gerak:]` sendiri |
+| `diam` | tidak ada suara dan tidak ada aktivitas | isyarat badan tiap `VITE_KEADAAN_JEDA_DETIK` (dikalikan acak 0,5–1,5x supaya tidak seperti metronom), prioritas IDLE: hanya kalau benar-benar kosong |
+| `tidur` | `VITE_KEADAAN_DETIK_TIDUR` tanpa suara, klik, atau ketikan | `gerakan/tidur.motion3.json` dengan `ulang=true`, berhenti saat ada aktivitas |
+
+Dua keputusan yang sengaja:
+
+* **Waktunya dihitung dari frame yang digambar, bukan jam dinding.** Saat jendela
+  tersembunyi `web/iriama.js` menghentikan ticker; dengan jam dinding dia akan
+  langsung "tidur" pada frame pertama setelah dipanggil kembali — padahal itu justru
+  momen dia seharusnya bangun.
+* **Tidak ada motion "ngobrol" di model ini, jadi `bicara` bukan animasi bicara.**
+  Rahang tetap dibaca dari amplitudo audio (`web/suara.js` + `ParamMouthOpenY`), dan
+  menambah isyarat badan di awal balasan hanya menghias — itu pun bawaannya mati.
+
+Prioritas motion memakai enum pustaka: `NONE=0` (ditolak), `IDLE=1` (hanya saat
+kosong), `NORMAL=2` (menyela ambient), `FORCE=3` (klik dan tag, wajib jalan).
+Setelah motion sekali-jalan selesai, semua parameter ditulis ulang ke nilai bawaan;
+tanpa itu tangan atau air mata membeku di posisi terakhir selamanya.
 
 ### Irama render: jangan menggambar untuk orang yang tidak melihat
 
@@ -284,9 +380,10 @@ kalau angka CSS dan piksel tidak sebanding, kanvas sedang diregangkan.
 
 ## Rupa panel
 
-Rel kiri adalah dia; rel kanan adalah buku catatannya. Elaina menyendiri di jalan
-dan mencatat apa yang dia lihat, dan memori build ini pun sungguh-sungguh berupa
-catatan Markdown di vault — jadi panelnya sebuah ledger lapangan, bukan dashboard.
+Rel kiri adalah dia; rel kanan adalah buku catatannya. Silver Wolf bekerja sendirian
+di base camp-nya dan mencatat apa yang dia temukan, dan memori build ini pun
+sungguh-sungguh berupa catatan Markdown di vault — jadi panelnya sebuah ledger
+lapangan, bukan dashboard.
 
 - **Warna.** Langit di atas laut awan (`#0d1119` → `#1e2739`) dengan satu aksen
   lampu minyak `#e8b673`. Amber dipakai hanya untuk yang hidup: raut aktif,
@@ -340,19 +437,28 @@ mic --> WAV 16 kHz --> /api/stt --> Whisper base --> teks         |
 - **`server_py/wav.py`** — bungkusan dan pembaca header WAV.
 - **`persona.md`** — sifat dan gaya bicara karakter. Ini konfigurasi, bukan model yang
   dilatih: diedit langsung, dan selalu dikirim sebagai system instruction.
-- **`web/konfigurasi.js`** — parser `.env` (wajah, pose, gerakan, ukuran). Dipakai
-  `index.html` dan `perkakas.html`, satu sumber kebenaran untuk dua kegunaan.
-- **`web/wajah.js`** — menyuntik resep dari `.env` ke expression manager saat runtime
-  dan menjaga lapisan pose tetap di atas wajah (`beforeModelUpdate`).
-- **`web/ekspresi.js`** — gerbang tag: tahu nama wajah dan pose dari konfigurasi, mengenal
-  kanal `[prop:...]`, dan mengupas tag itu dari layar saat teks masih mengalir.
+- **`web/konfigurasi.js`** — satu-satunya parser `.env` (wajah, pose, gerakan, keadaan,
+  ukuran), plus `periksaTerhadapModel()` yang menguji resep terhadap tabel parameter
+  model yang sedang berjalan. Bawaannya ada di berkas ini, `.env` menimpanya.
+- **`web/wajah.js`** — `siapkanSettings()` menormalkan letak `Motions`/`Expressions`
+  di `model3.json` sebelum pustaka membacanya; `suntikEkspresi()` menyuntik resep
+  `.env` ke expression manager saat runtime; `LapisanPose` menjaga pose tetap di atas
+  wajah (`beforeModelUpdate`).
+- **`web/ekspresi.js`** — gerbang tag: nama wajah, pose, dan gerakan diambil dari
+  konfigurasi (bukan ditulis di sini), kanal `[prop:...]` dan `[gerak:...]` dikenali,
+  dan tag itu dikupas dari layar saat teks masih mengalir.
+- **`web/keadaan.js`** — mesin `diam`/`bicara`/`tidur`: memilih motion dari yang
+  terdaftar, memanggilnya dengan prioritas yang benar, dan bangun saat ada aktivitas.
 - **`web/main.js`** — kanvas + resolusi (ikut `devicePixelRatio` terus-menerus), tombol
-  panel dari `.env`, dan gerakan ulang parameter setelah motion selesai.
+  panel dari `.env`, `picuGerak()` dengan prioritas, dan gerakan ulang parameter ke
+  bawaan setelah motion sekali-jalan selesai.
 - **`web/mikrofon.js`** — tombol mic di halaman chat. **Tidak ada lagi Web Speech API**:
   browser merekam lewat `getUserMedia` + `ScriptProcessor`, memotong pada jeda diam
   (ambang RMS 0,012, sama dengan lantai noise lip-sync), membungkus WAV 16 kHz mono,
   dan mengirimnya ke `/api/stt`. Semuanya terjadi di dalam mesin.
-- **`web/suara.js`** — memutar WAV dan mengukur amplitudo per frame.
+- **`web/suara.js`** — memutar WAV dan mengukur amplitudo per frame; keadaan suaranya
+  (`berbicara`/`diam`) bisa didaftarkan banyak pemakai — chat untuk lampu indikator,
+  `keadaan.js` untuk mesin gerak.
 - **`server_py/vault.py`** — menulis/membaca catatan karakter ke vault Obsidian lewat Local
   REST API; token diambil dari `~/.qoder/settings.json`, bukan dari berkas di repo.
 - **`server_py/memori.py`** — kebijakan memori: apa yang masuk prompt, bagaimana mood
@@ -525,10 +631,27 @@ llama-server sudah hidup.
 
 Jalur utuhnya dibuktikan di browser nyata, bukan hanya di ujung server: Chromium
 dengan mikrofon palsu (`--use-fake-file-for-audio-capture`) berisi WAV Piper, klik
-tombol mic, dan hasilnya masuk ke log chat lalu dijawab Elaina. Satu catatan untuk
-yang menulis ulang tes ini: Chrome **tidak** mengalirkan audio file-palsu pada sesi
-`getUserMedia` pertama (terukur: 0 blok audio), jadi tes perlu membuka perangkat
+tombol mic, dan hasilnya masuk ke log chat lalu dijawab Silver Wolf. Satu catatan
+untuk yang menulis ulang tes ini: Chrome **tidak** mengalirkan audio file-palsu pada
+sesi `getUserMedia` pertama (terukur: 0 blok audio), jadi tes perlu membuka perangkat
 sekali sebagai pemanasan sebelum klik. Itu kelakuan alat uji, bukan produk.
+
+## Memeriksa avatar tanpa menyentuh desktop
+
+Suiter tes Python sudah dibuang 27 Sep dan tidak dikembalikan. Yang tinggal adalah
+permukaan debug yang memang sudah ada di halaman: `window.__vtuber`
+(`web/main.js`). Dari devtools — atau dari Chromium headless lewat `evaluate_js` —
+empat pertanyaan penting bisa dijawab tanpa melihat layar:
+
+| Yang ingin dipastikan | Coba |
+|---|---|
+| Resep wajah/pose benar-benar terpasang | `__vtuber.ekspresiTerpasang.length` (bawaan: 16 = 9 wajah + 7 pose) dan `__vtuber.peringatan` harus `[]` |
+| Gerakan bisa dipanggil sama sekali | `__vtuber.gerakTersedia` (4 nama) lalu `await __vtuber.picuGerak('siklus', 3)` → `true` |
+| Wajah benar-benar mengubah gambar | baca `internalModel.coreModel.getDrawableOpacity(i)` sebelum/sesudah `setEkspresi('sebal')`; lihat tabel terukur di bagian **Model karakter** |
+| Mesin keadaan hidup | `__vtuber.keadaan.status()` → `{nama, sejakSah, sejakAktifSah, gerak}` |
+
+Yang TIDAK bisa dibuktikan lewat angka: apakah gerakannya enak dilihat, dan apakah
+rim color-key di tepi antialias masih mengganggu. Dua-duanya butuh mata Master.
 
 ## Perkakas & Pengelolaan
 
@@ -548,15 +671,24 @@ lagi yang membuktikan kontrak HTTP `/api/*` tidak berubah bentuk. Yang masih
 menjaga adalah baris banner saat boot (ia menyebut engine yang benar-benar hidup
 atau mengakuinya mati) dan pesan 503 dari tiap endpoint.
 
-`public/vad` (6,2 MB) dan `public/ort` (83 MB) sampai sekarang tidak dipakai siapa-siapa:
-mic memakai ambang RMS sendiri, bukan Silero VAD. Keduanya tinggal menunggu untuk dihapus.
+`public/vad` (6,2 MB) dan `public/ort` (83 MB) **sudah dilepas 28 Sep**: nol
+referensi di `web/*.js` (dibuktikan dengan grep), dan `web/mikrofon.js:13-16` memang
+menyebutnya sengaja tidak dipakai karena bundelnya UMD, bukan ESM. Karena keduanya
+di-`.gitignore` dan skrip pengunduhnya sudah dibuang, salinannya dititipkan di
+`C:\Sampah Karantina\AI VTUBER\` dengan jalur pemulihan tercatat di `PULIHKAN.csv` —
+bukan dihapus diam-diam. Yang ikut pindah: `web/lib/vad.bundle.min.js`,
+`web/perkakas.html` (masih menunjuk jalur model lama), dan `scripts/probe_*.py`
+(sekali pakai, 27 Sep). `jalankan.bat` menyusul digantikan `jalankan.pyw`, tapi itu
+satu masih ada di riwayat git.
 
 ## Kredit
 
 Aset dan pustaka pihak ketiga yang dipakai proyek ini, beserta pemiliknya:
 
-- **Model karakter "Penyihir"** (`public/models/penyihir`) — model Cubism 4
-  dengan konfigurasi, parameter, dan ekspresi berbahasa Indonesia.
+- **Model karakter "Silver Wolf"** (`public/models/silverwolf`) — model Cubism 4
+  berlisensi *Cubism SDK License*, berkas aslinya dari `var/silverwolf-mentah/银狼/`;
+  nama berkas, folder, dan konfigurasinya dialihbahasakan ke Indonesia. Tidak
+  di-commit (lisensi Live2D melarang model diedarkan sebagai berkas lepas).
 - **Live2D Cubism Core for Web** (`live2dcubismcore.min.js`) — SDK resmi
   [Live2D Inc.](https://www.live2d.com/en/sdk/download/web/), *Cubism SDK License*.
 - **[pixi-live2d-display](https://github.com/guansss/pixi-live2d-display)**
@@ -574,12 +706,13 @@ Aset dan pustaka pihak ketiga yang dipakai proyek ini, beserta pemiliknya:
   `id_ID-news_tts-medium`, satu penutur, kualitas medium).
 - **[RVC](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI)** via
   fork `rvc_python` — MIT. Konversi warna suara ke Furina.
-- **[vad-web](https://github.com/ricky0123/vad)** oleh ricky0123 — MIT. Pembungkus
-  deteksi bicara untuk browser. **Status sekarang: tidak dipakai** — `mikrofon.js`
-  memakai ambang RMS sendiri, jadi `public/vad` + `public/ort` (±89 MB) hanya sisa.
-- **[Silero VAD](https://github.com/snakers4/silero-vad)** — MIT. Model deteksi
-  suara; sama: tersedia di disk, belum tersambung.
-- **[ONNX Runtime Web](https://github.com/microsoft/onnxruntime)** — MIT.
+- **[vad-web](https://github.com/ricky0123/vad)** oleh ricky0123 — MIT,
+  **[Silero VAD](https://github.com/snakers4/silero-vad)** — MIT, dan
+  **[ONNX Runtime Web](https://github.com/microsoft/onnxruntime)** — MIT. Ketiganya
+  pernah ikut terbawa ke `public/` tetapi **tidak pernah tersambung**: mic memakai
+  ambang RMS sendiri di `web/mikrofon.js`. Asetnya sudah dilepas 28 Sep (lihat
+  **Perkakas & Pengelolaan** di atas), jadi tidak ada lagi yang perlu dikredit di
+  dalam repo ini selain catatan historis ini.
 
 Sistem berjalan 100% offline: chat, suara, dan mic dihitung di CPU/GPU lokal tanpa
 satu pun panggilan cloud. Vite,

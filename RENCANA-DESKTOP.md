@@ -1,7 +1,33 @@
 # Rencana: Silver Wolf jadi karakter desktop (tanpa jendela)
 
-Status: **rencana, belum ada kode baru ditulis.** Berkas ini bisa dihapus setelah
-disetujui.
+Status: **sebagian sudah berjalan; sisanya masih rencana.** Berkas ini bisa dihapus
+setelah disetujui.
+
+## Catatan progres 28 Sep
+
+* **Mode pet jadi bawaan** (`VTUBER_TAMPAK=pet` di `konfig.py`, `.env`,
+  `.env.example`) dan `VTUBER_PET_SEMBUNYI` bawaannya `layar-penuh`. Kombinasi dua
+  inilah yang menjawab keberatan 27 Sep ("dia selalu di atas, jadi menutupi jendela
+  maksimal") tanpa harus melepaskan wujud pet.
+* **Tanpa jendela konsol**: `jalankan.pyw` (pythonw, dua kali klik) menggantikan
+  `jalankan.bat`, dan proses anak jendela di `main.py` lahir dengan
+  `CREATE_NO_WINDOW` + stdout/stderr ke `var/pet.log`; banner boot pindah ke
+  `var/run.log`. `--browser` dan `--pet` tetap ada sebagai jalur cadangan.
+* **Akar masalah "gerakannya tidak sesuai data" ditemukan dan dibetulkan**:
+  `silverwolf.model3.json` menaruh `Motions` dan `Expressions` di LEVEL TERATAS
+  sedangkan pustaka membacanya dari `FileReferences`. Gejalanya jauh lebih besar dari
+  yang terlihat: `expressionManager` tidak pernah terbentuk (sembilan wajah mati
+  total) dan `motionManager.definitions` `{}` (empat gerakan tak bisa dipanggil).
+  Ditambal di kode lewat `web/wajah.js:siapkanSettings()` karena `public/models/`
+  di-gitignore dan `server_py/statis.py` menyajikan `/models/` sebagai `immutable`;
+  sumber petanya di `var/pasang_silverwolf.py` ikut dibetulkan.
+  Rincian: README bagian **Model karakter**.
+* **Belum** dari dokumen ini: mode `desktop` (tanam ke WorkerW -- Fase 1 terbukti
+  gagal di mesin ini), rute `POST /api/pet/rect` untuk uji sentuh per piksel, dan mode
+  `obrolan`.
+* Berkas perkakas yang disebut di bawah ini sudah dilepas ke
+  `C:\Sampah Karantina\AI VTUBER\` (jalur pemulihan di `PULIHKAN.csv`):
+  `scripts/probe_desktop.py`, `scripts/probe_lihat.py`, `scripts/probe_tanam.py`.
 
 ## Keputusan yang sudah dikunci
 
@@ -222,8 +248,8 @@ kebenaran, sama seperti keputusan yang sudah ada di `web/tampak.js`.
 - `.env` + `.env.example`: `VTUBER_TAMPAK=desktop`, dan knob kotak pukul
   (`VTUBER_PET_LEGA_PIKSEL` untuk menambah/mengurangi kelonggaran rect).
 - `main.py`: `--desktop` (bawaan baru), `--pet` (overlay lama), `--browser`.
-- `jalankan.bat`: bunyi pesannya disesuaikan ("klik kanan pada dia untuk membuka
-  kotak chat").
+- `jalankan.pyw` (menggantikan `jalankan.bat` 28 Sep, tanpa jendela konsol): bunyi
+  pesannya disesuaikan ("klik kanan pada dia untuk membuka kotak chat").
 - `README.md`: bagian baru yang menyebut keempat wujud, cara mengembalikan ke
   mode lama, dan konsekuensi 1–3 di atas.
 
@@ -237,7 +263,7 @@ kebenaran, sama seperti keputusan yang sudah ada di `web/tampak.js`.
 | `web/tampak.js` | mode `obrolan`; mode `desktop` = tanpa panel sama sekali | belum |
 | `web/index.html` | CSS `html[data-tampak="desktop"]` dan `="obrolan"` | belum |
 | `web/main.js` | kirim `getBounds()` ke server; jangan `boot()` di mode `obrolan` | belum |
-| `.env`, `.env.example`, `jalankan.bat`, `README.md` | knob + dokumentasi | belum |
+| `.env`, `.env.example`, `jalankan.pyw`, `README.md` | knob + dokumentasi | sebagian (28 Sep: bawaan `pet`, launcher tanpa konsol) |
 | `scripts/probe_desktop.py`, `scripts/probe_lihat.py` | perkakas ukur, ditinggalkan | **sudah** |
 
 Yang **tidak** disentuh: seluruh jalur LLM/TTS/STT/memori, `persona.md`,
@@ -246,7 +272,8 @@ sama — yang berubah hanya di mana ia digambar dan bagaimana obrolan dipanggil.
 
 ## Cara menguji (kriteria lulus)
 
-1. `jalankan.bat` → tidak ada entri di taskbar, tidak ada di Alt+Tab.
+1. `jalankan.pyw` (dahulu `jalankan.bat`) → tidak ada entri di taskbar, tidak ada di
+   Alt+Tab, dan tidak ada jendela konsol di belakangnya.
 2. Ikon desktop terlihat **di atas** karakter; membuka jendela apa pun menutupi dia.
 3. Wallpaper di sekeliling karakter utuh — tidak ada kotak pekat.
 4. Klik kanan tepat di karakter → kotak chat muncul; klik kanan di tempat lain →

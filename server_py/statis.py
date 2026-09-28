@@ -68,8 +68,9 @@ def isi(berkas: Path) -> bytes:
     konfigurasi .env di tempat itu.
 
     Dulu terspesialisasi pada nama `index.html`. Sekarang berbasis penanda supaya
-    halaman perkakas (`perkakas.html`) membaca .env yang SAMA dengan halaman utama
-    lewat fungsi yang sama -- bukan perkakas kedua dengan kebenaran sendiri.
+    halaman mana pun yang memakai `<!--VTUBER_ENV-->` membaca .env yang SAMA lewat
+    fungsi yang sama -- satu sumber kebenaran, bukan perkakas kedua dengan
+    kebenaran sendiri.
     """
     mentah = berkas.read_bytes()
     if berkas.suffix != ".html":
