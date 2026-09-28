@@ -141,8 +141,27 @@ psutil
 
 # ── catatan ──────────────────────────────────────────────────────────────────
 # python-dotenv tidak perlu (konfig.py punya parser .env sendiri; menambahkannya
-# justru creates dua sumber kebenaran). requests tidak perlu (urllib cukup).
-# pywebview baru perlu untuk jendela desktop (Fase 5), belum di sini.
+# justru menghasilkan dua sumber kebenaran). requests tidak perlu (urllib cukup).
+# pywebview sudah terpasang dan terpakai -- lihat blok "sisi web" di atas; jendela
+# pet dipindah ke proses ANAK karena bentrok STA/COM dengan engine RVC.
+#
+# Kandidat yang sudah dinilai dan SENGAJA tidak dipasang (28 Sep), supaya tidak
+# ditanyakan ulang setiap kali ada permintaan "Vtuber tanpa jendela":
+#   PyQt5 / PySide6  -- frameless + translucent + tool-window + on-top SUDAH
+#     dikerjakan pywebview + Win32 (server_py/jendela.py: tembuskan(),
+#     tempel_ke_dasar(), pantau(), pasang_tray()). Menambah Qt berarti memasang
+#     mesin komposit WebGL KEDUA di laptop Iris Xe 16 GB, dan QWebEngineView tetap
+#     menyusun tampilannya lewat Chromium sendiri -> transparansinya jatuh ke
+#     color-key yang sama, hanya dengan ~250 MB lebih berat dan RAM ekstra.
+#   live2d-py        -- ikatan Python untuk Cubism NATIVE. Butuh compiler C++
+#     (cl/cmake/gcc) yang tidak ada di mesin ini; tercatat di header
+#     server_py/jendela.py:4-7. Tanpa compiler, `pip install live2d-py` berhenti
+#     di build. Jalur yang jalan: Cubism Core (JS, wasm di dalamnya) di WebView2.
+#   pyvts            -- klien websocket untuk aplikasi VTube Studio. Aplikasinya
+#     tidak terpasang di mesin ini, dan karakternya sudah digambar sendiri oleh
+#     web/main.js, jadi tidak ada yang bisa dia bicarakan.
+#   Pillow           -- nol pemakaian: tidak ada satu pun impor PIL di proyek ini
+#     dan tidak ada paket yang menuntutnya. numpy sudah ada (dipin 1.23.5 di bawah).
 #
 # Kalau resolver macet atau mengorbankan numpy, pakai berkas constraints:
 #   .venv\Scripts\python.exe -m pip install -c .pip-constraints.txt -r requirements.txt

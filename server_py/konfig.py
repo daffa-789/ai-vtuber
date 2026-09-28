@@ -117,16 +117,21 @@ def env_web() -> dict[str, str]:
 
 PORT = angka("VTUBER_PORT", 8787)
 
-# Wujud aplikasi: 'browser' = Flask saja, Master buka sendiri di tab (bawaan),
-# 'pet' = jendela melayang tanpa bingkai di desktop (pywebview). Keduanya
+# Wujud aplikasi: 'pet' = jendela melayang tanpa bingkai di desktop (bawaan,
+# pywebview), 'browser' = Flask saja, Master buka sendiri di tab. Keduanya
 # menyajikan HALAMAN YANG SAMA -- lihat web/tampak.js.
 #
-# Bawaannya 'browser' sejak 27 Sep. Jendela pet-nya sendiri bekerja (tembus
-# pandang, tanpa taskbar, tray, hotkey), tapi ia selalu berada DI ATAS jendela
-# lain, jadi begitu Master bekerja dengan jendela maksimal karakternya menutupi
-# isi jendela itu. Mode pet tetap ada dan bisa dinyalakan kapan saja dengan
-# VTUBER_TAMPAK=pet atau `python main.py --pet`; kodenya sengaja tidak dihapus.
-TAMPAK = nilai("VTUBER_TAMPAK", "browser").lower()
+# Bawaannya 'pet' sejak 28 Sep: permintaan Master adalah karakter 2D yang hidup di
+# desktop tanpa jendela biasa, dan itu persis yang dilakukan mode pet (frameless,
+# color-key tembus pandang, WS_EX_TOOLWINDOW jadi tidak muncul di taskbar/Alt+Tab,
+# tray + hotkey untuk memangginya kembali).
+#
+# Harga yang perlu diketahui: dia selalu DI ATAS jendela lain. Karena itu
+# PET_SEMBUNYI bawaannya 'layar-penuh' -- 27 Sep bawaan pernah dipindah ke
+# 'browser' justru karena karakter menutupi jendela yang dimaksimalkan, dan
+# pembatalan itu bukan salah mode pet melainkan karena sembunyi-otomatisnya mati.
+# --browser / VTUBER_TAMPAK=browser tetap ada sebagai jalan kembali.
+TAMPAK = nilai("VTUBER_TAMPAK", "pet").lower()
 
 # ── perilaku jendela pet: "biar tidak terasa seperti jendela" ────────────────
 # Tidak ada cara membuat jendela benar-benar hilang di mesin ini -- menanamnya ke
@@ -135,17 +140,18 @@ TAMPAK = nilai("VTUBER_TAMPAK", "browser").lower()
 # dan Master punya ikon tray + hotkey supaya tidak pernah terkunci.
 #
 # Kapan dia minggir:
-#   'tidak' (bawaan)       = selalu tampil. Ini bawaannya karena sembunyi-otomatis
-#                            yang salah simpul membuat karakternya HILANG tanpa
-#                            pesan -- jauh lebih buruk daripada satu jendela yang
-#                            menempel. Nyalakan kalau memang mau.
-#   'layar-penuh'          = hanya saat jendela depan menutupi SELURUH monitor,
+#   'tidak'                = selalu tampil. Bersama bawaan baru TAMPAK='pet' itu
+#                            berarti dia menutupi jendela kerja yang dimaksimalkan.
+#   'layar-penuh' (bawaan) = hanya saat jendela depan menutupi SELURUH monitor,
 #                            termasuk pita taskbar -- video layar penuh, game.
 #   'maksimal'             = juga saat jendela depan sekadar dimaksimalkan.
 #                            Jangan dipakai kalau Master terbiasa kerja dengan
 #                            jendela maksimal: karakternya akan hampir selalu
 #                            sembunyi dan itu terasa seperti rusak.
-PET_SEMBUNYI = nilai("VTUBER_PET_SEMBUNYI", "tidak").lower()
+# Sembunyi yang salah simpul pernah membuat karakter HILANG tanpa pesan -- itu
+# alasan PET_TRAY bawaannya 'ya': selama tray hidup, Master selalu punya jalan
+# untuk memangginya kembali.
+PET_SEMBUNYI = nilai("VTUBER_PET_SEMBUNYI", "layar-penuh").lower()
 PET_TRAY = bool_("VTUBER_PET_TRAY", True)
 # Kosong = matikan hotkey. Bentuknya bebas urutannya: ctrl+shift+s
 PET_HOTKEY = nilai("VTUBER_PET_HOTKEY", "ctrl+shift+s").lower()

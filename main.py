@@ -13,12 +13,17 @@ kodenya -- dekorator rute, bukan if/elif pada self.path.
 Port dibaca dari VTUBER_PORT. 0 berarti cari port bebas sendiri: mesin ini dipakai
 banyak proyek sekaligus, jadi tidak ada nomor port yang dipatok di kode ini.
 
-Jalankan:  .venv\\Scripts\\python.exe main.py      lalu buka http://127.0.0.1:8787/
+Jalankan:
+  dua-klik, tanpa jendela konsol    : jalankan.pyw  (pythonw, bawaan = mode pet)
+  dari konsol                      : .venv\\Scripts\\python.exe main.py [--pet|--browser]
+Bawaan wujudnya kini 'pet': jendela avatar melayang, tembus pandang, tanpa entri
+taskbar. 'browser' tetap ada lewat VTUBER_TAMPAK=browser atau --browser.
 """
 
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import logging
 import os
@@ -69,9 +74,14 @@ from wav import pcm_ke_wav  # noqa: E402
 PERSONA = AKAR_PERSONA.read_text(encoding="utf-8")
 
 # Aliran kalengan untuk VTUBER_STUB=1. Sengaja dipecah di tengah tag ('[se' +
-# 'nyum]') supaya pengupas tag di web/ekspresi.js ikut terpakai, bukan hanya jalur
-# yang rapi.
-POTONGAN_STUB = ["[se", "nyum] Halo ", "Master.", " [sebal] kok", " diam sih"]
+# 'nyum]') dan di tengah nama pose ('[prop:j' + 'aket]') supaya pengupas tag di
+# web/ekspresi.js ikut terpakai, bukan hanya jalur yang rapi. Tiga kanal pemicu
+# avatar dilewati semua: wajah ([senyum]/[sebal]), gerakan ([gerak:siklus]), dan
+# pose ([prop:jaket]) -- jadi `jalankan.pyw` tanpa model pun bisa diperiksa utuh.
+POTONGAN_STUB = [
+    "[se", "nyum] Halo ", "Master.", " [sebal] kok", " diam sih",
+    " [gerak:siklus] ", "[prop:j", "aket]",
+]
 
 # Pesan "GPU tidak dipakai" terakhir yang sudah diberitakan. Sekali per perubahan,
 # supaya log tidak berteriak 20 kali untuk satu jawaban panjang.
@@ -154,7 +164,7 @@ def port_bebas() -> int:
 @app.after_request
 def _cors(jawab: Response) -> Response:
     # Halaman dan API asalnya sama (127.0.0.1:port), jadi ini hanya menjaga agar
-    # /perkakas.html dan pembuka tab lain di mesin yang sama tidak ditolak browser.
+    # pembuka tab lain di mesin yang sama tidak ditolak browser.
     jawab.headers.setdefault("Access-Control-Allow-Origin", "*")
     jawab.headers.setdefault("Access-Control-Allow-Headers", "content-type")
     jawab.headers.setdefault("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -513,6 +523,42 @@ def baris_banner(nomor: int) -> str:
     return baris
 
 
+def sunyikan_konsol() -> None:
+    """Alihkan jejak ke var/run.log saat dijalankan tanpa konsol (pythonw).
+
+    `print` di bawah pythonw tidak error -- CPython keluar diam kalau sys.stdout
+    None -- jadi tanpa fungsi ini banner, peringatan Vulkan/RVC, dan baris "pet:
+    tembus pandang aktif" hilang tanpa bekas. Tidak ada jendela bukan berarti
+    tidak ada log.
+    """
+    if sys.stdout is not None and sys.stderr is not None:
+        return
+    var = AKAR / "var"
+    var.mkdir(exist_ok=True)
+    jejak = io.TextIOWrapper(
+        open(var / "run.log", "ab", buffering=0), encoding="utf-8", line_buffering=True,
+    )
+    if sys.stdout is None:
+        sys.stdout = jejak
+    if sys.stderr is None:
+        sys.stderr = jejak
+    print(f"\n=== boot {time.strftime('%Y-%m-%d %H:%M:%S')} (tanpa konsol) ===", flush=True)
+
+
+def juru_mudi_gui() -> str:
+    """Interpreter untuk proses anak jendela: tetap di .venv, tanpa konsol.
+
+    python.exe -> pythonw.exe di folder yang sama. Yang tidak boleh adalah jatuh
+    ke interpreter sistem: pywebview dan sisa dependensinya ada di .venv.
+    """
+    jalur = Path(sys.executable)
+    if os.name == "nt" and jalur.name.lower() == "python.exe":
+        pengganti = jalur.with_name("pythonw.exe")
+        if pengganti.exists():
+            return str(pengganti)
+    return str(jalur)
+
+
 def utama(argumen: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description="Silver Wolf -- AI Qoder desktop Live2D, 100% offline.",
@@ -522,6 +568,7 @@ def utama(argumen: list[str] | None = None) -> int:
     p.add_argument("--pet", action="store_true",
                    help="paksa jendela pet melayang di desktop")
     args = p.parse_args(argumen)
+    sunyikan_konsol()
 
     tampak = konfig.TAMPAK
     if args.browser:
@@ -595,11 +642,22 @@ def utama(argumen: list[str] | None = None) -> int:
                 return 1
 
             print(f"  pet: {base}/?tampak=pet  (klik kanan pada dia untuk ngobrol)", flush=True)
+            (AKAR / "var").mkdir(exist_ok=True)
+            # Jendela hidup di proses ANAK (alasannya STA/RVC, lihat catatan di atas).
+            # CREATE_NO_WINDOW + pythonw di sini bukan hiasan: tanpa itu anak yang
+            # lahir dari induk tanpa konsol justru mendapat konsol BARU -- persis
+            # jendela hitam yang diminta hilang. Jejaknya pindah ke var/pet.log.
+            pegang = open(AKAR / "var" / "pet.log", "ab")
             anak = subprocess.Popen(
-                [sys.executable, str(AKAR / "server_py" / "jendela.py"), base, str(os.getpid())],
+                [juru_mudi_gui(), str(AKAR / "server_py" / "jendela.py"), base, str(os.getpid())],
                 cwd=str(AKAR),
+                stdin=subprocess.DEVNULL,
+                stdout=pegang,
+                stderr=subprocess.STDOUT,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
             )
             kode = anak.wait()
+            pegang.close()
             if galat_serve:
                 print(f"  ! sisi web mati: {galat_serve[0]}", file=sys.stderr, flush=True)
                 kode = 1
