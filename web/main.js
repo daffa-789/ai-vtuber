@@ -6,12 +6,14 @@ Live2DModel.registerTicker(PIXI.Ticker);
 
 import { pasangChat } from './chat.js';
 import { pasangIrama } from './iriama.js';
+import { pasangKeadaan } from './keadaan.js';
 import { pasangTampil } from './tampak.js';
 import { setelan, skalaRender, ukuranPanggung } from './setelan.js';
 import { tingkatMulut } from './suara.js';
 import {
   LapisanPose,
   peringatanKonfigurasi,
+  siapkanSettings,
   suntikEkspresi,
   tabelParameter,
 } from './wajah.js';
@@ -130,7 +132,9 @@ function pantauDpr() {
 async function boot() {
   // motionPreload 'none': model ini hanya punya satu motion isyarat, jadi
   // tidak ada gunanya menariknya sebelum benar-benar dipakai.
-  const model = await Live2DModel.from(setelan.modelUrl, {
+  // siapkanSettings: lihat wajah.js -- tanpa itu Motions/Expressions di
+  // model3.json ini tidak pernah terlihat dan wajah serta gerakan mati diam-diam.
+  const model = await Live2DModel.from(await siapkanSettings(setelan.modelUrl), {
     autoInteract: setelan.ikutiKursor,
     motionPreload: MotionPreloadStrategy.NONE,
   });
@@ -141,10 +145,24 @@ async function boot() {
   const inti = model.internalModel.coreModel;
 
   // Motion tidak mengembalikan parameternya ke nilai awal saat selesai, jadi
-  // gerakan "sedih melambai" meninggalkan air mata membeku di 30 selamanya.
-  // Satu frame setelah motion selesai semua parameter ditulis ulang ke default;
-  // aman karena ekspresi, kedip, fokus, dan fisika menulis setelah titik itu.
+  // satu gerakan meninggalkan parameter di posisi akhirnya selamanya (air mata
+  // membeku, tangan menggantung). Satu frame setelah motion selesai semua
+  // parameter ditulis ulang ke default; aman karena ekspresi, kedip, fokus, dan
+  // fisika menulis setelah titik itu.
   let resetSetelahGerak = false;
+
+  const managerGerak = model.internalModel.motionManager;
+
+  // Diarang hanya oleh gerakan sekali-jalan dan oleh bangun dari tidur. Kenapa
+  // perlu arang: motionFinish juga membakar saat motion melooping dipotong, dan
+  // membersihkan parameter di tengah tidur justru membuat dia terlihat terbangun.
+  let perluReset = false;
+  managerGerak.on('motionFinish', () => {
+    if (perluReset) {
+      perluReset = false;
+      resetSetelahGerak = true;
+    }
+  });
 
   // afterMotionUpdate = setelah motion menulis parameter, jadi mulut dari audio
   // tidak ditimpa animasi idle pada frame yang sama.
@@ -234,28 +252,69 @@ async function boot() {
     poseEl.appendChild(btn);
   }
 
-  // Motion bawaan model ini Loop:true di berkas aslinya; salinan hasil pemasangan
-  // sudah diubah jadi sekali-jalan, kalau tidak dia melambai selamanya.
-  const definisiGerak = model.internalModel.motionManager.definitions ?? {};
+  // Motion bawaan model ini Meta.Loop-nya true di berkas aslinya, tetapi pustaka
+  // ini tidak pernah membaca flag itu (dia punya _isLoop sendiri, bawaan false),
+  // jadi semuanya sudah sekali-jalan. Token `ulang=` di .env yang mengendalikan
+  // loop, dan itu dipasang lewat setIsLoop di bawah.
+  const definisiGerak = managerGerak.definitions ?? {};
+  /** nama gerakan -> { grup, indeks, ulang }; hanya yang benar-benar terdaftar. */
+  const gerakTerdaftar = new Map();
+
+  /**
+   * @param {string} nama nama gerakan seperti ditulis di VITE_GERAK_
+   * @param {number} prioritas NONE=0 (ditolak), IDLE=1 (hanya kalau tidak ada
+   *   apa pun yang jalan), NORMAL=2 (hanya menyela yang lebih rendah),
+   *   FORCE=3 (klik/tag, wajib jalan)
+   * @returns {Promise<boolean>} true kalau motion benar-benar mulai.
+   *   WAJIB di-await: motionManager.startMotion() itu async dan selalu
+   *   mengembalikan Promise -- diperiksa sinkron akan selalu truthy, termasuk
+   *   saat pustaka menolak (mis. IDLE ditolak ketika ada motion lain jalan).
+   */
+  function picuGerak(nama, prioritas = 3) {
+    // "kosong" = kata yang sama untuk "hapus resep" di .env: hentikan apa pun
+    // yang sedang jalan dan bersihkan bekasnya.
+    if (nama === 'kosong') {
+      berhentiGerak();
+      return Promise.resolve(true);
+    }
+    const g = gerakTerdaftar.get(nama);
+    if (!g) {
+      console.warn(`gerakan "${nama}" tidak ada di daftar VITE_GERAK_ / model3.json`);
+      return Promise.resolve(false);
+    }
+    return Promise.resolve(managerGerak.startMotion(g.grup, g.indeks, prioritas)).then((jadi) => {
+      // Bekas motion hanya dibersihkan untuk yang sekali-jalan: yang melooping
+      // (tidur) berhenti lewat berhentiGerak(), dan di sanalah arangnya dipasang.
+      if (jadi) perluReset = !g.ulang;
+      return !!jadi;
+    });
+  }
+
+  /** Hentikan apa pun yang jalan dan bersihkan bekasnya (dipakai bangun dari tidur). */
+  function berhentiGerak() {
+    managerGerak.stopAllMotions();
+    perluReset = false;
+    resetSetelahGerak = true;
+  }
+
   for (const g of setelan.gerakan) {
     const grup = definisiGerak[g.grup] ?? [];
     const indeks = grup.findIndex((m) => (m.File ?? '').endsWith(g.berkas));
     if (grup.length === 0) {
       peringatan.push(`gerakan "${g.nama}": grup "${g.grup}" tidak ada di model3.json`);
-    } else if (indeks === -1) {
+      continue;
+    }
+    if (indeks === -1) {
       peringatan.push(
         `gerakan "${g.nama}": ${g.berkas} tidak terdaftar di grup "${g.grup}" — jalankan pemasangan model`,
       );
+      continue;
     }
+    gerakTerdaftar.set(g.nama, { grup: g.grup, indeks, ulang: g.ulang });
+    managerGerak.loadMotion(g.grup, indeks).then((m) => m?.setIsLoop(!!g.ulang));
     const btn = document.createElement('button');
     btn.textContent = g.nama;
-    btn.onclick = () => {
-      model.internalModel.motionManager.once('motionFinish', () => {
-        resetSetelahGerak = true;
-      });
-      // Prioritas 1: wajib, bukan 0 yang ditolak reserve().
-      model.motion(g.grup, indeks === -1 ? undefined : indeks, 1);
-    };
+    btn.onclick = () => picuGerak(g.nama, 3);
     gerakEl.appendChild(btn);
   }
 
@@ -289,7 +348,19 @@ async function boot() {
     },
   });
 
-  pasangChat(setEkspresi, setPose);
+  const keadaan = pasangKeadaan({
+    konfig: setelan,
+    daftar: gerakTerdaftar,
+    picu: picuGerak,
+    berhenti: berhentiGerak,
+    peringatan,
+  });
+  // Ticker yang sama dengan avatar: saat irama menghentikannya (jendela
+  // tersembunyi), mesin keadaan ikut berhenti -- jadi tidak ada gerakan iseng
+  // yang dimulai di belakang punggung Master.
+  app.ticker.add(() => keadaan.perFrame());
+
+  pasangChat(setEkspresi, setPose, picuGerak, keadaan.catat);
   setEkspresi(setelan.ekspresiDasar);
   for (const nama of pose.nyala) tombolPose.get(nama)?.classList.add('aktif');
   peringatan.forEach((p) => console.warn(p));
@@ -303,6 +374,11 @@ async function boot() {
     setEkspresi,
     setPose,
     pose,
+    picuGerak,
+    berhentiGerak,
+    /** nama gerakan yang benar-benar bisa dipanggil (grup + indeks terdaftar). */
+    gerakTersedia: [...gerakTerdaftar.keys()],
+    keadaan,
     konfig: setelan,
     irama,
     ekspresiTerpasang: [...terpasang],

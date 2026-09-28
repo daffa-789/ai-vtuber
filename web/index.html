@@ -319,10 +319,13 @@
       }
       html[data-tampak="pet"] body.panel-terbuka #panel { display: grid; }
       /* Meter FPS, gugus raut/pose/gerak, dan gelar: perkakas mode browser.
-         Di desktop cuma mengganggu. */
+         Di desktop cuma mengganggu. #catatan DIKECUALIKAN walau ber-class gugus:
+         itu riwayat obrolan, dan aturan .gugus yang Buta membuatnya hilang bahkan
+         saat panelnya dibuka -- Master cuma melihat kotak input tanpa pesan mana
+         pun, padahal baris #catatan di bawah justru menata panel itu. */
       html[data-tampak="pet"] #meter,
       html[data-tampak="pet"] #kepala,
-      html[data-tampak="pet"] .gugus { display: none; }
+      html[data-tampak="pet"] .gugus:not(#catatan) { display: none; }
       html[data-tampak="pet"] #catatan { min-height: 0; }
       html[data-tampak="pet"] #catatan h2 { font-size: 11px; margin: 0 0 4px; }
       html[data-tampak="pet"] #log { max-height: 30vh; font-size: 13px; }

@@ -4,10 +4,8 @@
  * ukuran gambar. Semuanya boleh ditimpa dari .env, jadi tidak ada lagi resep
  * yang cuma hidup di kepala atau di ujung skrip.
  *
- * Browser dan halaman perkakas (web/perkakas.html) sama-sama memanggil
- * bacaKonfigurasi(window.__VTUBER_ENV__) -- satu-satunya tempat nilai .env sampai
- * ke halaman. Sisi Python (server_py/konfig.py) membaca berkas yang sama untuk
- * kunci VTUBER_-nya sendiri dan tidak pernah menafsir resep wajah.
+ * Sisi Python (server_py/konfig.py) membaca berkas yang sama untuk kunci
+ * VTUBER_-nya sendiri dan tidak pernah menafsir resep wajah.
  *
  * Aturan penulisan di .env
  *   VITE_WAJAH_<NAMA>   resep ekspresi wajah  -> token `Id=Nilai` dipisah spasi
@@ -16,16 +14,21 @@
  *   Nama kunci = nama setelah prefiks: huruf besar jadi kecil, garis bawah jadi
  *   garis hubung. VITE_POSE_PAMER_BARANG_1 -> "pamer-barang-1".
  *   Blend default `Add` (menambah di atas nilai bawaan parameter). Tulis
- *   `Id=Nilai:Overwrite` untuk menulis mentah, atau :Multiply untuk mengali.
+ *   `Id=Nilai:Overwrite` untuk menulis mentah, :Multiply untuk mengali, dan
+ *   `Id=Nilai:Blend:mati=Angka` untuk parameter yang keadaaan "mati"-nya BUKAN
+ *   nilai bawaan model (key9 kacamata silverwolf lahir dalam keadaan 1 = terpakai).
  *   Nilai negatif boleh: ParamEyeLOpen=-0.35.
  *
  * Kata setelah VITE_WAJAH_ / VITE_POSE_ SELALU dianggap nama ekspresi, jadi
- * knob lain memakai awalan sendiri (VITE_EKSPRESI_DASAR, VITE_AWAL_POSE) supaya
- * tidak menabrak. Itu juga alasan `awal` tidak bisa dipakai sebagai nama pose.
+ * knob lain memakai awalan sendiri (VITE_EKSPRESI_DASAR, VITE_AWAL_POSE,
+ * VITE_KEADAAN_) supaya tidak menabrak. Itu juga alasan `awal` tidak bisa dipakai
+ * sebagai nama pose.
  *
  * Nilai yang tidak ditulis di .env memakai bawaan di berkas ini -- bawaannya
- * sengaja sama persis dengan hasil pemasangan model tanggal 2026-09-24, supaya
- * clone baru tanpa .env tetap menampilkan karakter yang sama.
+ * sengaja sama persis dengan hasil pemasangan silverwolf, supaya clone baru tanpa
+ * .env tetap menampilkan karakter yang sama. Dulu bawaannya masih milik model
+ * penyihir (Param59, gerakan/sedih-melambai), dan itu jadi jebakan: tanpa .env
+ * halaman memuat model yang tidak ada.
  */
 
 const PREFIKS = {
@@ -34,44 +37,57 @@ const PREFIKS = {
   gerak: 'VITE_GERAK_',
 };
 
-/** Resep sembilan wajah yang dipetakan ke tag di persona.md. */
+/**
+ * Sembilan wajah yang dipetakan ke tag di persona.md. Yang dipakai bukan
+ * ParamTinggiLayer/LayeredExpression melainkan sakelar artmesh key1..key17
+ * hasil pemasangan: satu resep menyalakan yang dia mau DAN memadamkan wajah-wajah
+ * lain yang memakai artmesh sama, karena model ini tidak saling-mematikan sendiri.
+ */
 export const WAJAH_BAWAAN = {
-  netral: '',
-  senyum:
-    'ParamMouthForm=1 ParamEyeLSmile=1 ParamEyeRSmile=1 ParamEyeLOpen=-0.35 ParamEyeROpen=-0.35 ParamBrowLY=0.2',
-  semangat:
-    'Param59=30 ParamMouthForm=1 ParamEyeLSmile=0.6 ParamEyeRSmile=0.6 ParamEyeLOpen=0.2 ParamEyeROpen=0.2 ParamBrowLY=0.5',
-  kaget: 'ParamEyeLOpen=0.4 ParamEyeROpen=0.4 ParamBrowLY=1 ParamMouthForm=-0.6 Param50=0.7',
-  bingung: 'Param69=30 ParamMouthForm=-0.4 ParamBrowLForm=-0.5 ParamBrowLY=-0.4',
-  lelah: 'ParamEyeLOpen=-0.7 ParamEyeROpen=-0.7 ParamBrowLY=-0.5 ParamBrowLForm=-0.6 ParamMouthForm=-0.3',
-  goda: 'Param60=30 ParamMouthForm=0.8 ParamEyeLOpen=-0.3 ParamEyeROpen=-0.3 ParamEyeLSmile=0.7 ParamEyeRSmile=0.7',
-  sebal: 'Param67=30 ParamBrowLForm=-0.879 ParamBrowLY=-0.727',
-  sedih: 'Param68=30 ParamBrowLForm=1 ParamBrowLY=-0.788',
+  netral: 'kosong',
+  senyum: 'key5=1 key3=0 key6=0',
+  semangat: 'key7=1 key2=0 key4=0 key8=0',
+  kaget: 'key6=1 key3=0 key5=0',
+  bingung: 'key4=1 key2=0 key3=0 key7=0 key8=0',
+  lelah: 'key10=1',
+  goda: 'key2=1 key3=0 key4=0 key7=0 key8=0',
+  sebal: 'key3=1 key5=0 key6=0',
+  sedih: 'key8=1 key2=0 key4=0 key7=0',
 };
 
 /**
- * Tujuh lapisan model yang bukan wajah: topi, tongkat, kacamata, hantu, tangan
- * memeluk, dan dua kali memamerkan barang. Dipisah dari `wajah` karena mereka
- * ditumpuk DI ATAS emosi, bukan menggantikannya -- lihat LapisanPose di main.ts.
+ * Pose/aksesoris yang bukan wajah: kacamata, jaket, ubah wujud, dan empat
+ * posisi tangan. Dipisah dari `wajah` karena mereka ditumpuk DI ATAS emosi, bukan
+ * menggantikannya -- lihat LapisanPose di wajah.js. Nama berpungkang angka
+ * (tangan-1..4) dihitung satu keluarga di main.js: model kehabisan tangan kalau
+ * dua posisi tangan nyala bersamaan.
+ *
+ * `kacamata` satu-satunya yang perlu `:mati=0` -- moc ini lahir dengan key9 = 1
+ * (terverifikasi 28 Sep: key9=1 berkacamata, key9=0 tidak), jadi "pose mati" bagi
+ * dia berarti menulis 0, bukan kembali ke bawaan. Tanpa itu menyalakan DAN
+ * memadamkan kacamata sama-sama tidak terlihat.
  */
 export const POSE_BAWAAN = {
-  'tanpa-topi': 'Param71=30',
-  tongkat: 'Param72=30',
-  kacamata: 'Param66=30',
-  'hantu-kecil': 'Param64=30',
-  'tangan-memeluk': 'Param65=30',
-  'pamer-barang-1': 'Param61=30',
-  'pamer-barang-2': 'Param62=30',
+  kacamata: 'key9=1:Overwrite:mati=0',
+  jaket: 'key13=1',
+  'ubah-wujud': 'key11=1',
+  'tangan-1': 'key14=1 key15=0 key16=0 key17=0',
+  'tangan-2': 'key16=1 key15=0 key17=0',
+  'tangan-3': 'key17=1 key14=0 key15=0 key16=0',
+  'tangan-4': 'key15=1 key14=0 key16=0 key17=0',
 };
 
+/** Empat motion yang benar-benar ada di public/models/silverwolf/gerakan/. */
 export const GERAK_BAWAAN = {
-  'sedih-melambai':
-    'grup=isyarat berkas=gerakan/sedih-melambai.motion3.json sumber=Scene1.motion3.json ulang=false',
+  'berubah-1': 'grup=isyarat berkas=gerakan/berubah-1.motion3.json ulang=false',
+  'berubah-2': 'grup=isyarat berkas=gerakan/berubah-2.motion3.json ulang=false',
+  siklus: 'grup=isyarat berkas=gerakan/siklus.motion3.json ulang=false',
+  tidur: 'grup=isyarat berkas=gerakan/tidur.motion3.json ulang=true',
 };
 
 /** Bawaan lama: resolution = min(devicePixelRatio, 2), kanvas min(90vh,100%). */
 export const RENDER_BAWAAN = {
-  VITE_MODEL_URL: '/models/penyihir/penyihir.model3.json',
+  VITE_MODEL_URL: '/models/silverwolf/silverwolf.model3.json',
   VITE_RENDER_SKALA: 'auto',
   VITE_RENDER_SKALA_MAKS: '8',
   VITE_RENDER_HALUS: 'true',
@@ -90,12 +106,18 @@ export const RENDER_BAWAAN = {
   VITE_TEKSTUR: '8192',
   VITE_IRAMA_JEDA_SAAT_SEMBUNYI: 'true',
   VITE_IRAMA_FPS_SAAT_TAK_FOKUS: '30',
+  VITE_KEADAAN: 'ya',
+  VITE_KEADAAN_GERAK_DIAM: 'siklus',
+  VITE_KEADAAN_GERAK_BICARA: 'kosong',
+  VITE_KEADAAN_GERAK_TIDUR: 'tidur',
+  VITE_KEADAAN_JEDA_DETIK: '45',
+  VITE_KEADAAN_DETIK_TIDUR: '180',
 };
 
 const BLEND = new Set(['Add', 'Multiply', 'Overwrite']);
 
 /**
- * @typedef {{ id: string, nilai: number, blend: string }} Lapisan
+ * @typedef {{ id: string, nilai: number, blend: string, mati?: number }} Lapisan
  * @typedef {{ nama: string, dariEnv: boolean, lapisan: Lapisan[] }} Ekspresi
  * @typedef {{ nama: string, dariEnv: boolean, grup: string, berkas: string, sumber: string, ulang: boolean }} Gerakan
  * @typedef {{
@@ -104,6 +126,8 @@ const BLEND = new Set(['Add', 'Multiply', 'Overwrite']);
  *   kedip: boolean, napas: boolean, ikutiKursor: boolean, tekstur: string,
  *   render: { skala: number | null, skalaMaks: number, halus: boolean },
  *   irama: { jedaSaatSembunyi: boolean, fpsSaatTakFokus: number },
+ *   keadaan: { hidup: boolean, gerakDiam: string, gerakBicara: string,
+ *              gerakTidur: string, jedaDetik: number, detikTidur: number },
  *   panggung: { ukuran: string, lebar: string, tinggi: string },
  *   avatar: { zoom: number, x: number, jangkar: number },
  *   peringatan: string[],
@@ -132,8 +156,13 @@ export function kunciDariNama(nama, prefiks) {
 const ANGKA = /^-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/;
 
 /**
- * Uraikan token `Id=Nilai[:Blend]`. Daftar token dipecah pada spasi dan koma
- * supaya kedua-duanya nyaman ditulis tangan.
+ * Uraikan token `Id=Nilai[:Blend][:mati=Angka]`. Daftar token dipecah pada spasi
+ * dan koma supaya kedua-duanya nyaman ditulis tangan.
+ *
+ * `mati=` perlu karena model TIDAK selalu lahir dengan parameter dalam keadaan
+ * mati: silverwolf punya key9 (kacamata) dengan nilai bawaan 1, jadi "pose mati"
+ * bagi dia bukan kembali ke bawaan melainkan menulis 0. Tanpa ini, menyalakan dan
+ * memadamkan kacamata sama-sama tidak ada efeknya.
  *
  * @param {string} teks
  * @param {string} nama untuk awalan pesan peringatan
@@ -154,28 +183,43 @@ function uraiLapisan(teks, nama, peringatan) {
       continue;
     }
     const id = t.slice(0, i).trim();
-    const [mentahNilai, mentahBlend] = t.slice(i + 1).split(':');
+    const [mentahNilai, ...sisa] = t.slice(i + 1).split(':');
     if (!ANGKA.test(mentahNilai.trim())) {
       peringatan.push(`${nama}: nilai "${mentahNilai}" untuk ${id} bukan angka`);
       continue;
     }
     let blend = 'Add';
-    if (mentahBlend) {
-      // Huruf besar-kecil berkas exp3.json sensitif: 'add' bukan 'Add'.
-      const cocok = [...BLEND].find((b) => b.toLowerCase() === mentahBlend.trim().toLowerCase());
-      if (!cocok) {
-        peringatan.push(`${nama}: blend "${mentahBlend}" tidak ada (Add / Multiply / Overwrite)`);
-        continue;
+    let mati;
+    for (const bagian of sisa) {
+      const potong = bagian.indexOf('=');
+      const kunci = (potong === -1 ? bagian : bagian.slice(0, potong)).trim().toLowerCase();
+      if (potong === -1) {
+        // `Id=Nilai:Overwrite` -- satu kata tanpa '=' adalah blend.
+        const cocok = [...BLEND].find((b) => b.toLowerCase() === kunci);
+        if (!cocok) {
+          peringatan.push(`${nama}: blend "${bagian}" tidak ada (Add / Multiply / Overwrite)`);
+          continue;
+        }
+        blend = cocok;
+      } else if (kunci === 'mati') {
+        const mentahMati = bagian.slice(potong + 1).trim();
+        if (!ANGKA.test(mentahMati)) {
+          peringatan.push(`${nama}: mati="${mentahMati}" untuk ${id} bukan angka`);
+          continue;
+        }
+        mati = Number(mentahMati);
+      } else {
+        peringatan.push(`${nama}: penanda "${bagian}" untuk ${id} tidak dikenal (pakai :Blend atau :mati=Angka)`);
       }
-      blend = cocok;
     }
     const duplikat = lapisan.find((l) => l.id === id && l.blend === blend);
     if (duplikat) {
       peringatan.push(`${nama}: ${id} ditulis dua kali, nilai terakhir yang dipakai`);
       duplikat.nilai = Number(mentahNilai);
+      if (mati !== undefined) duplikat.mati = mati;
       continue;
     }
-    lapisan.push({ id, nilai: Number(mentahNilai), blend });
+    lapisan.push({ id, nilai: Number(mentahNilai), blend, ...(mati === undefined ? {} : { mati }) });
   }
   return lapisan;
 }
@@ -323,6 +367,14 @@ export function bacaKonfigurasi(env = {}) {
       jedaSaatSembunyi: bool('VITE_IRAMA_JEDA_SAAT_SEMBUNYI', true),
       fpsSaatTakFokus: angka('VITE_IRAMA_FPS_SAAT_TAK_FOKUS', 30),
     },
+    keadaan: {
+      hidup: bool('VITE_KEADAAN', true),
+      gerakDiam: teks('VITE_KEADAAN_GERAK_DIAM', RENDER_BAWAAN.VITE_KEADAAN_GERAK_DIAM),
+      gerakBicara: teks('VITE_KEADAAN_GERAK_BICARA', RENDER_BAWAAN.VITE_KEADAAN_GERAK_BICARA),
+      gerakTidur: teks('VITE_KEADAAN_GERAK_TIDUR', RENDER_BAWAAN.VITE_KEADAAN_GERAK_TIDUR),
+      jedaDetik: Math.max(1, angka('VITE_KEADAAN_JEDA_DETIK', 45)),
+      detikTidur: Math.max(5, angka('VITE_KEADAAN_DETIK_TIDUR', 180)),
+    },
     panggung: {
       ukuran: teks('VITE_PANGGUNG_UKURAN', RENDER_BAWAAN.VITE_PANGGUNG_UKURAN),
       lebar: teks('VITE_PANGGUNG_LEBAR', ''),
@@ -350,11 +402,11 @@ export function bacaKonfigurasi(env = {}) {
 }
 
 /**
- * Bentuk berkas exp3.json dari satu resep. Dipakai browser (untuk menyuntik
- * ekspresi tanpa menulis berkas) DAN web/perkakas.html (untuk mengunduh berkasnya
- * bagi perkakas luar), jadi format ekspresi tidak mungkin beda di dua tempat.
- * Terukur 2026-09-26: 16 dari 16 resep menghasilkan byte yang sama persis dengan
- * berkas yang ada di public/models/penyihir/ekspresi/.
+ * Bentuk berkas exp3.json dari satu resep. Ini satu-satunya tempat bentuk itu
+ * ditulis: browser menyuntik hasilnya langsung ke expression manager (lihat
+ * suntikEkspresi di web/wajah.js), sementara berkas .exp3.json di folder model
+ * hanyalah salinan untuk perkakas luar (Cubism Editor / VTube Studio) keluaran
+ * pemasangan model.
  * @param {Ekspresi} e
  * @param {number} pudarDetik
  */
@@ -410,6 +462,34 @@ export function periksaTerhadapModel(konfig, tabel) {
     }
   }
 
+  // Wajah dan pose boleh menulis parameter yang sama (key1..key17 dipakai dua
+  //-duanya), dan keduanya jalan BERSAMAAN: wajah lewat expression manager, pose
+  // lewat LapisanPose yang menulis paling akhir. Kalau targetnya beda, yang
+  // tertulis di .env tidak akan pernah kelihatan -- jadi dikatakan, tidak ditebak.
+  /** @type {Map<string, {jenis: string, nama: string, target: number}[]>} */
+  const penulis = new Map();
+  for (const [jenis, daftar] of kumpulan) {
+    for (const e of daftar) {
+      for (const l of e.lapisan) {
+        const i = indeks.get(l.id);
+        if (i === undefined) continue;
+        const target = l.blend === 'Add' ? Number(tabel.defaultValues[i]) + l.nilai : l.nilai;
+        penulis.set(l.id, [...(penulis.get(l.id) ?? []), { jenis, nama: e.nama, target }]);
+      }
+    }
+  }
+  for (const [id, ts] of penulis) {
+    const wajah = ts.filter((t) => t.jenis === 'wajah').map((t) => t.nama);
+    const pose = ts.filter((t) => t.jenis === 'pose').map((t) => t.nama);
+    if (!wajah.length || !pose.length) continue;
+    const beda = ts.some((t) => Math.abs(t.target - ts[0].target) > 1e-6);
+    if (beda) {
+      keluar.push(
+        `${id}: wajah "${wajah.join(', ')}" dan pose "${pose.join(', ')}" menulis target berbeda -- pose yang menang, dia menulis paling akhir`,
+      );
+    }
+  }
+
   return keluar;
 }
 
@@ -429,7 +509,9 @@ export function blokEnv(konfig) {
    */
   const tulis = (daftar, prefiks) => {
     for (const e of daftar) {
-      const teks = e.lapisan.map((l) => `${l.id}=${l.nilai}${l.blend === 'Add' ? '' : `:${l.blend}`}`).join(' ');
+      const teks = e.lapisan
+        .map((l) => `${l.id}=${l.nilai}${l.blend === 'Add' ? '' : `:${l.blend}`}${l.mati === undefined ? '' : `:mati=${l.mati}`}`)
+        .join(' ');
       // "kosong" ditulis eksplisit: baris KEY= dengan nilai kosong tidak selalu
       // bertahan sampai ke parser.
       baris.push(`${kunciDariNama(e.nama, prefiks)}=${petik(teks || 'kosong')}`);
@@ -458,6 +540,16 @@ export function blokEnv(konfig) {
   baris.push('# fpsSaatTakFokus = batas FPS saat jendela terlihat tapi tidak fokus; 0 = penuh.');
   baris.push(`VITE_IRAMA_JEDA_SAAT_SEMBUNYI=${petik(String(konfig.irama.jedaSaatSembunyi))}`);
   baris.push(`VITE_IRAMA_FPS_SAAT_TAK_FOKUS=${petik(String(konfig.irama.fpsSaatTakFokus))}`);
+  baris.push('');
+  baris.push('# ---- mesin keadaan gerak (diam / bicara / tidur) ----');
+  baris.push('# hidup=tidak = hanya bergerak karena tombol atau tag chat, persis perilaku lama.');
+  baris.push('# Nama gerakan harus ada di daftar VITE_GERAK_ ; "kosong" = tidak ada isyarat.');
+  baris.push(`VITE_KEADAAN=${petik(String(konfig.keadaan.hidup))}`);
+  baris.push(`VITE_KEADAAN_GERAK_DIAM=${petik(konfig.keadaan.gerakDiam)}`);
+  baris.push(`VITE_KEADAAN_GERAK_BICARA=${petik(konfig.keadaan.gerakBicara)}`);
+  baris.push(`VITE_KEADAAN_GERAK_TIDUR=${petik(konfig.keadaan.gerakTidur)}`);
+  baris.push(`VITE_KEADAAN_JEDA_DETIK=${petik(String(konfig.keadaan.jedaDetik))}`);
+  baris.push(`VITE_KEADAAN_DETIK_TIDUR=${petik(String(konfig.keadaan.detikTidur))}`);
   baris.push('');
   baris.push('# ---- wajah (tag chat) ----');
   baris.push(`VITE_EKSPRESI_DASAR=${petik(konfig.ekspresiDasar)}`);

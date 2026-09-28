@@ -27,6 +27,40 @@ export function tabelParameter(inti) {
 }
 
 /**
+ * Perbaiki settings SEBELUM dibaca pustaka.
+ *
+ * Kenapa perlu: silverwolf.model3.json hasil pemasangan menaruh "Motions" dan
+ * "Expressions" di level teratas, padahal Cubism4ModelSettings membacanya dari
+ * FileReferences (this.motions = t.FileReferences.Motions). Selama keduanya di
+ * luar, dua hal mati tanpa pesan: expressionManager tidak pernah dibuat -- jadi
+ * suntikEkspresi() di bawah cabut dan sembilan wajah dari .env tidak terpasang --
+ * dan motionManager.definitions jadi {} -- jadi keempat gerakan tidak bisa
+ * dipanggil sama sekali.
+ *
+ * Kenapa di kode, bukan di berkas: public/models/ di-gitignore (aset lisensi) dan
+ * server_py/statis.py menyajikan /models/ sebagai `immutable, max-age=31536000`,
+ * jadi suntingan di disk belum tentu terlihat oleh WebView2. Fungsi ini idempoten:
+ * kalau nanti model3.json-nya sudah benar, tidak ada yang diubah.
+ *
+ * `url` wajib diisi: settings.resolveURL() memakai e.url.resolve(this.url, t) dan
+ * tanpa itu setiap jalur relatif (moc, tekstur, gerakan/, ekspresi/) melempar.
+ * Pustaka sendiri melakukan hal yang sama pada berkas hasil upload (s.url = ...).
+ */
+export async function siapkanSettings(url) {
+  const res = await fetch(url, { cache: 'no-cache' });
+  if (!res.ok) throw new Error(`model3.json ${res.status}: ${url}`);
+  const json = await res.json();
+  const ref = json.FileReferences ?? {};
+  for (const kunci of ['Motions', 'Expressions']) {
+    if (ref[kunci] === undefined && json[kunci] !== undefined) ref[kunci] = json[kunci];
+    delete json[kunci];
+  }
+  json.FileReferences = ref;
+  json.url = url;
+  return json;
+}
+
+/**
  * Ganti (atau tambahkan) definisi ekspresi pada model dengan resep dari .env.
  * `expressions[i]` yang sudah terisi membuat pustaka melewati unduhan berkas
  * sama sekali, jadi berkas ekspresi di disk hanya dipakai alat luar
@@ -77,6 +111,18 @@ export class LapisanPose {
     this.tabel = tabel;
     this.daftar = daftar;
     this.pudarDetik = pudarDetik;
+    /**
+     * Parameter yang punya nilai-mati sendiri (`:mati=Angka` di .env). Dia ditulis
+     * SEJAK AWAL walau posenya tidak aktif, karena "mati" bagi parameter itu bukan
+     * nilai bawaan model -- kacamata silverwolf misalnya, lahir dalam keadaan pakai.
+     */
+    this.mati = new Map();
+    for (const e of daftar) {
+      for (const l of e.lapisan) {
+        if (l.mati !== undefined) this.mati.set(l.id, l.mati);
+      }
+    }
+    this.hitung();
   }
 
   nilaiAbsolut(l) {
@@ -99,11 +145,14 @@ export class LapisanPose {
         berikut.set(l.id, this.nilaiAbsolut(l));
       }
     }
-    // Pose yang dimatikan harus kembali ke nilai bawaan, bukan berhenti di tengah.
-    for (const id of [...this.target.keys(), ...berikut.keys()]) {
+    // Pose yang dimatikan harus kembali ke nilai bawaan -- atau ke nilai matinya
+    // kalau ada -- bukan berhenti di tengah. Parameter bermati ikut didaftar
+    // walaupun belum pernah dinyalakan, supaya state awalnya benar.
+    for (const id of [...this.target.keys(), ...berikut.keys(), ...this.mati.keys()]) {
       if (!berikut.has(id)) {
         const i = this.tabel.indeks.get(id);
-        if (i !== undefined) berikut.set(id, this.tabel.default[i]);
+        if (i === undefined) continue;
+        berikut.set(id, this.mati.has(id) ? this.mati.get(id) : this.tabel.default[i]);
       }
     }
     this.target = berikut;
@@ -142,8 +191,10 @@ export class LapisanPose {
       const punya = this.kini.get(id) ?? this.asli(id);
       const nilai = Math.abs(tujuan - punya) < 1e-4 ? tujuan : punya + (tujuan - punya) * laju;
       this.kini.set(id, nilai);
-      if (nilai === tujuan && this.hidup.size === 0) {
+      if (nilai === tujuan && this.hidup.size === 0 && !this.mati.has(id)) {
         // Semua pose mati dan sudah pulang: jangan tulis terus, biar motion bebas.
+        // Parameter bermati TETAP ditulis -- melepaskannya berarti model kembali ke
+        // bawaannya, dan bawaan kacamata justru "pakai".
         this.kini.delete(id);
         this.target.delete(id);
       }

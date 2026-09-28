@@ -1,4 +1,4 @@
-import { EKSPRESI_DASAR, NAMA_POSE, NAMA_WAJAH, kupasTag } from './ekspresi.js';
+import { EKSPRESI_DASAR, NAMA_GERAK, NAMA_POSE, NAMA_WAJAH, kupasTag } from './ekspresi.js';
 import { kalimatSiap } from './kalimat.js';
 import { jedaMikrofon, lanjutMikrofon, pasangKontrolMikrofon } from './mikrofon.js';
 import { antre, bicarakan, hentikan, pasangStatusSuara, selesai } from './suara.js';
@@ -32,7 +32,13 @@ const API_BASE = typeof window !== 'undefined' && window.location?.protocol === 
   ? 'http://127.0.0.1:8787'
   : '';
 
-export function pasangChat(picuEkspresi, picuPose = () => {}) {
+/**
+ * @param {(nama: string) => void} picuEkspresi
+ * @param {(nama: string, hidup: boolean) => void} picuPose
+ * @param {(nama: string, prioritas: number) => boolean} picuGerak false = tidak jadi jalan
+ * @param {(apa: 'kirim' | 'gerak') => void} catat untuk mesin keadaan, lihat web/keadaan.js
+ */
+export function pasangChat(picuEkspresi, picuPose = () => {}, picuGerak = () => false, catat = () => {}) {
   const riwayat = muat();
   const form = document.getElementById('form');
   const isi = document.getElementById('isi');
@@ -94,6 +100,9 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
     if (sibuk) return;
 
     sibuk = true;
+    // Awal balasan: mesin keadaan butuh tahu bahwa ini bukan sisa waktu idle,
+    // dan bahwa gerakan balasan belum tentu membawa tag [gerak:] sendiri.
+    catat('kirim');
     jedaMikrofon();
     hentikan();
     gelembung('user', teks);
@@ -106,8 +115,27 @@ export function pasangChat(picuEkspresi, picuPose = () => {}) {
       const prop = /^prop[:=](.+)$/.exec(tag);
       if (prop) {
         const [nama, mode] = prop[1].split(/[=:]/);
+        // [prop:kosong] adalah janji persona.md:96: lepas SEMUA aksesoris, bukan
+        // satu pose bernama "kosong".
+        if (nama === 'kosong') {
+          for (const n of NAMA_POSE) picuPose(n, false);
+          return;
+        }
         if (!NAMA_POSE.has(nama)) console.warn('tag pose tidak dikenal:', tag);
         else picuPose(nama, !/^(mati|off|false|0)$/.test(mode ?? ''));
+        return;
+      }
+      const gerak = /^gerak[:=](.+)$/.exec(tag);
+      if (gerak) {
+        const nama = gerak[1].split(/[=:]/)[0].trim();
+        if (nama !== 'kosong' && !NAMA_GERAK.has(nama)) console.warn('tag gerakan tidak dikenal:', tag);
+        else {
+          // Ditandai lebih dulu, tanpa menunggu motionnya jadi: yang perlu
+          // diketahui mesin keadaan hanyalah "balasan ini sudah punya gerakan
+          // sendiri", bukan apakah pustaka memberinya giliran.
+          picuGerak(nama, 3);
+          catat('gerak');
+        }
         return;
       }
       if (NAMA_WAJAH.has(tag)) {

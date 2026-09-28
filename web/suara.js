@@ -9,13 +9,32 @@ let mulut = 0;
 /** Ekor antrean putar + nomor generasi supaya "hentikan" membatalkan yang belum mulai. */
 let ekor = Promise.resolve();
 let generasi = 0;
-let cbStatus = null;
+/**
+ * Pendaftar keadaan suara. Himpunan, bukan satu slot: chat.js memakainya untuk
+ * lampu indikator di layar, dan web/keadaan.js memakainya untuk mesin gerak.
+ * Dengan satu slot (bentuk lama) pendaftar kedua diam-diam mencabut yang pertama.
+ */
+const daftarStatus = new Set();
 
 const LANTAI_NOISE = 0.012;
 const PENGUAT = 7;
 
+/** @param {(keadaan: string) => void} cb @returns {() => void} lepas lagi */
 export function pasangStatusSuara(cb) {
-  cbStatus = cb;
+  daftarStatus.add(cb);
+  return () => daftarStatus.delete(cb);
+}
+
+/** @param {string} keadaan */
+function panggilStatus(keadaan) {
+  for (const cb of daftarStatus) {
+    try {
+      cb(keadaan);
+    } catch (err) {
+      // Satu pendaftar yang galat tidak boleh membunyikan suara jadi mati.
+      console.warn('pendaftar status suara gugur:', err instanceof Error ? err.message : err);
+    }
+  }
 }
 
 async function pastikanKonteks() {
@@ -53,7 +72,7 @@ export function tingkatMulut() {
 
 export function hentikan() {
   generasi += 1; // antrean yang belum kebagian tempat ikut gugur
-  if (cbStatus) cbStatus('diam');
+  panggilStatus('diam');
   if (!sumber) return;
   sumber.onended = null;
   try {
@@ -95,7 +114,7 @@ async function putarBuffer(buffer, angka) {
   if (generasi !== angka) return;
   const audio = await pastikanKonteks();
   berbicara = true;
-  if (cbStatus) cbStatus('berbicara');
+  panggilStatus('berbicara');
   await new Promise((selesai) => {
     const src = audio.createBufferSource();
     src.buffer = buffer;
@@ -103,7 +122,7 @@ async function putarBuffer(buffer, angka) {
     src.onended = () => {
       berbicara = false;
       sumber = null;
-      if (cbStatus) cbStatus('diam');
+      panggilStatus('diam');
       selesai();
     };
     src.start();

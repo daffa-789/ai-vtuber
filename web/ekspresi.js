@@ -1,6 +1,6 @@
 // Gerbang tag ekspresi: mana yang boleh dipanggil chat, dan bagaimana bentuknya
-// di layar. Nama wajah dan nama pose TIDAK ditulis di sini -- keduanya datang
-// dari .env (VITE_WAJAH_* dan VITE_POSE_*), lihat setelan.js.
+// di layar. Nama wajah, pose, dan gerakan TIDAK ditulis di sini -- ketiganya
+// datang dari .env (VITE_WAJAH_*, VITE_POSE_*, VITE_GERAK_*), lihat setelan.js.
 import { setelan } from './setelan.js';
 
 /** Tag yang mengganti raut wajah; satu wajah aktif pada satu waktu. */
@@ -8,6 +8,9 @@ export const NAMA_WAJAH = new Set(setelan.wajah.map((w) => w.nama));
 
 /** Tag `[prop:nama]`; pose/aksesoris ini ditumpuk di atas wajah, bukan menggantikannya. */
 export const NAMA_POSE = new Set(setelan.pose.map((p) => p.nama));
+
+/** Tag `[gerak:nama]`; sekali jalan, namanya dari VITE_GERAK_ yang sama. */
+export const NAMA_GERAK = new Set(setelan.gerakan.map((g) => g.nama));
 
 export const EKSPRESI_DASAR = setelan.ekspresiDasar;
 
@@ -17,7 +20,7 @@ export const EKSPRESI_DASAR = setelan.ekspresiDasar;
  * penonton tidak pernah melihat `[se` lewat di gelembung chat.
  */
 export function kupasTag(picu) {
-  // 1..26 karakter: cukup untuk kanal kedua, `[prop:pamer-barang-1=mati]`,
+  // 1..26 karakter: cukup untuk kanal kedua, `[prop:tangan-1=mati]`,
   // tapi masih cukup pendek untuk tidak salah menelan kurung siku biasa.
   const TAG = /\[([^\n[]{1,26})\]/g;
   let simpan = '';
