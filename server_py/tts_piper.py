@@ -3,7 +3,7 @@
 Voice-nya `id_ID-news_tts-medium` -- 61 MB, 22,05 kHz, jalan di CPU tanpa GPU.
 MODEL CARD-nya jujur: satu penutur, kualitas medium, hasil fine-tune dari suara
 Inggris `lessac`. Jadi yang didengar itu suara berita laki-laki berlogat asing,
-BUKAN suara Elaina. Warna suaranya baru datang dari RVC (tts_rvc.py); Piper
+BUKAN suara karakter. Warna suaranya baru datang dari RVC (tts_rvc.py); Piper
 menyumbang lafal dan irama.
 
 Impor `piper` sengaja diletakkan DI DALAM fungsi. Itu keputusan struktural, bukan

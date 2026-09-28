@@ -660,8 +660,17 @@ rim color-key di tepi antialias masih mengganggu. Dua-duanya butuh mata Master.
 ```
 
 Satu-satunya perkakas yang tersisa di `scripts/` itu membaca `.env` lewat
-`server_py/konfig.py` yang sama dengan server, dan `update_waifu_memory.py`
-(penjaga pulau memori karakter -- bukan perkakas teknis).
+`server_py/konfig.py` yang sama dengan server.
+
+`scripts/update_waifu_memory.py` **dibuang 28 Sep**. Dulu itu penjaga pulau memori
+karakter, tapi isinya kerasan (hardcode) pada lembar persona Elaina -- sekali jalan
+dia akan menghidupkan kembali karakter yang sudah diganti. Catatan karakter sekarang
+ditulis oleh `server_py/vault.py` (Fakta/Mood/Riwayat tiap balasan) dan dikurasi
+langsung di vault. **Catatan yang perlu diketahui:** berkas yang dibuang itu ikut
+ter-commit dan ter-push ke repo publik pada `e00f67f`, dan isinya memuat fakta nyata
+tentang Master (kota, nama toko, spesifikasi mesin). Menghapusnya dari HEAD tidak
+menghapusnya dari riwayat -- kalau itu ganggu, riwayat cabang harus dibersihkan
+(`git filter-repo` + force push) atas izin Master.
 
 Yang **tidak ada lagi**: pengunduh aset (`unduh_*`, `sedia_*`) dan seluruh suiter
 tes (`uji_jalan`, `uji_suara`, `uji_kontrak` + `kontrak.json`). Itu pilihan pada

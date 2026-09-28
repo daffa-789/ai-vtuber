@@ -79,7 +79,7 @@ def _unduh(path: str, metode: str = "GET", isi: str | None = None) -> tuple[int,
 # Links wajib ditulis: tanpa field `links`, file hasil auto-save jadi node yatim
 # di graph view. `_Index` SENGAJA tidak ada di sini -- satu tautan itu menyeret
 # seluruh folder waifu ke graph Qoder Memory. Lihat Waifu Memory/_PETUNJUK.md.
-TAUTAN_DASAR = ["elaina-persona"]
+TAUTAN_DASAR = ["silverwolf-persona"]
 
 
 def _tanggal() -> str:
@@ -127,8 +127,8 @@ def simpan_fakta(fakta: list[str]) -> None:
         f"{PANGKAL}/Fakta.md",
         "PUT",
         _kerangka(
-            "fakta-elaina",
-            "Fakta yang Elaina ingat tentang Master",
+            "fakta-silverwolf",
+            "Fakta yang Silver Wolf ingat tentang Master",
             isi,
             ["Mood", "Quotes", "Riwayat", "Dugaan", "Preferences", "Scenario_Library", "System_Documentation", "_PETUNJUK"],
         ),
@@ -167,8 +167,8 @@ def simpan_mood(mood: dict) -> None:
         f"{PANGKAL}/Mood.md",
         "PUT",
         _kerangka(
-            "mood-elaina",
-            "Suasana hati Elaina saat ini",
+            "mood-silverwolf",
+            "Suasana hati Silver Wolf saat ini",
             isi,
             ["Fakta", "Quotes", "Riwayat", "Preferences", "Dugaan", "Scenario_Library", "System_Documentation", "_PETUNJUK"],
         ),

@@ -168,7 +168,7 @@ function mulaiMerekam() {
       audio: {
         // noiseSuppression/autoGainControl sengaja dimatikan: keduanya mengubah
         // audio sebelum kami dengar, dan hasil yang sudah "dipoles" justru lebih
-        // buruk di Whisper. echoCancellation tetap on supaya suara Elaina sendiri
+        // buruk di Whisper. echoCancellation tetap on supaya suaranya sendiri
         // tidak ikut tertangkap.
         echoCancellation: true,
         noiseSuppression: false,
@@ -284,7 +284,7 @@ export function pasangKontrolMikrofon(btnMic, inputEl, onKirim) {
 }
 
 /**
- * Buang rekaman yang sedang berjalan -- dipanggil saat Elaina mulai bicara supaya
+ * Buang rekaman yang sedang berjalan -- dipanggil saat dia mulai bicara supaya
  * suaranya sendiri tidak masuk sebagai pertanyaan Master. Sengaja BUANG, bukan
  * kirim: yang tertangkap pada titik itu sudah pasti suara dia sendiri.
  */

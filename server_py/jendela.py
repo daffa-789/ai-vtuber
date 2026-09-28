@@ -1,4 +1,4 @@
-"""Jendela pet: Elaina melayang di desktop, tanpa bingkai, tembus pandang.
+"""Jendela pet: Silver Wolf melayang di desktop, tanpa bingkai, tembus pandang.
 
 Dijalankan lewat pywebview + WebView2 (runtime Edge sudah ada di mesin ini, v153).
 Kenapa bukan render Live2D langsung dari Python: SDK Cubism tidak punya jalur

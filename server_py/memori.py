@@ -58,11 +58,11 @@ def gabung_system(persona: str, fakta: list[str], mood: dict | None) -> str:
     bagian = [persona]
     if fakta:
         bagian.append(
-            "## Yang saya ingat tentang Master\n" + "\n".join(f"- {f}" for f in fakta)
+            "## Yang aku ingat tentang Master\n" + "\n".join(f"- {f}" for f in fakta)
         )
     suasana = suasanaku(mood)
     if suasana:
-        bagian.append(f"## Suasana hati saya sekarang\n{suasana}")
+        bagian.append(f"## Suasana hatiku sekarang\n{suasana}")
     return "\n\n".join(bagian)
 
 
@@ -115,7 +115,7 @@ def gabung_system_lokal(fakta: list[str], mood: dict | None) -> str:
         _ringkas_persona(PERSONA),
         "WAJIB: Awali setiap balasanmu dengan satu tag emosi di paling depan, persis satu dari "
         "[netral], [senyum], [semangat], [kaget], [bingung], [lelah], [goda], [sebal], [sedih]. "
-        "Contoh: [senyum] Halo Master, ada yang bisa saya bantu?",
+        "Contoh: [senyum] Beres, Master. Tinggal bilang bagian mana yang macet.",
     ]
     if fakta:
         bagian.append("Fakta tentang Master:\n" + "\n".join(f"- {f}" for f in fakta[-5:]))

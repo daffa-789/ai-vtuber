@@ -140,7 +140,7 @@ def _kernel32():
     begitu sapu_yatim dilewati).
     """
     k32 = ctypes.windll.kernel32
-    if getattr(k32, "_elaina_ditandatangani", False):
+    if getattr(k32, "_win_ditandatangani", False):
         return k32
     k32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
     k32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
@@ -156,7 +156,7 @@ def _kernel32():
         wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)
     ]
     k32.QueryFullProcessImageNameW.restype = wintypes.BOOL
-    k32._elaina_ditandatangani = True
+    k32._win_ditandatangani = True
     return k32
 
 
