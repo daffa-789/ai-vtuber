@@ -1,5 +1,12 @@
 node_modules/
 dist/
+out/
+# Keluaran electron-vite + installer electron-builder.
+release/
+.vite/
+.turbo/
+# Berkas sementara yang ditulis vitest saat membundel vitest.config.ts.
+vitest.config.ts.timestamp-*.mjs
 # Lingkungan Python: interpreter + salinan paket, bukan sumber.
 .venv/
 __pycache__/
@@ -9,6 +16,7 @@ __pycache__/
 .env.*
 !.env.example
 .shots/
+.workbuddy-ai/
 # Log sementara (mis. sidecar yang dijalankan dari skrip uji).
 *.log
 
@@ -43,5 +51,24 @@ model/
 # Binary llama.cpp (llama-server + DLL Vulkan) hasil scripts/unduh_llama.py:
 # 92 MB pihak ketiga, bisa dibangkitkan ulang, dan bukan sumber proyek ini.
 bin/
+
+# Memori karakter: FAKTA NYATA TENTANG MASTER (kota, nama toko, kebiasaan) + log
+# percakapan. Repo ini publik -- dulu satu berkas semacam ini ter-commit dan ter-push
+# (e00f67f) dan isinya memuat fakta pribadi. Jangan pernah melepas baris ini, dan
+# jangan pernah memindahkan isinya ke berkas yang ikut ter-commit.
+memori-waifu/
+silver_wolf memory/
+silver_wolf_memory/
+
+# ── aset monorepo TypeScript ────────────────────────────────────────────────
+# Rumah baru untuk model RVC/Piper/Whisper/LLM dan encoder ONNX. Isinya sama
+# dengan aset/suara + model/ di atas, hanya ditata ulang mengikuti struktur
+# monorepo. Semua berkas besar (>100 MB) — tidak pernah masuk git.
+assets/
+# Salinan core Cubism untuk stage-web (lisensi Live2D: jangan diedarkan).
+apps/*/public/models/
+apps/*/public/live2dcubismcore.min.js
+# Aset wasm onnxruntime-web yang disalin ke public/ort/ saat build.
+apps/*/public/ort/
 
 

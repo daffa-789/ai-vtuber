@@ -1,0 +1,38 @@
+{
+  "name": "silver-wolf",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "description": "Silver Wolf — AI companion. Monorepo TypeScript (paritas arsitektur Airi).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @silverwolf/stage-web dev",
+    "dev:tamagotchi": "pnpm --filter @silverwolf/stage-tamagotchi dev",
+    "dev:server": "pnpm --filter @silverwolf/server dev",
+    "build": "pnpm -r build",
+    "build:packages": "pnpm --filter './packages/*' -r build",
+    "build:apps": "pnpm --filter './apps/*' -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "voice:convert": "pnpm --filter @silverwolf/pipelines-audio voice:convert",
+    "spike:rvc": "pnpm --filter @silverwolf/pipelines-audio spike:rvc",
+    "assets:verify": "node scripts/verify-assets.mjs",
+    "turbo:typecheck": "turbo run typecheck",
+    "turbo:test": "turbo run test",
+    "turbo:build": "turbo run build",
+    "clean": "pnpm -r clean && rimraf node_modules"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "happy-dom": "catalog:",
+    "rimraf": "^6.0.1",
+    "tsx": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

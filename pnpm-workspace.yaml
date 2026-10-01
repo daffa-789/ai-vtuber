@@ -1,0 +1,40 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Versi terpusat (ala `catalog:` Airi) supaya tidak ada paket yang menyimpang
+# versi satu sama lain. Paket internal merujuk `workspace:*`, paket eksternal
+# merujuk `catalog:`.
+catalog:
+  # --- bahasa & alat ---
+  typescript: ^5.7.2
+  vitest: ^2.1.8
+  tsx: ^4.19.2
+  turbo: ^2.3.3
+  '@types/node': ^22.10.2
+
+  # --- validasi & konfigurasi ---
+  zod: ^3.24.1
+  dotenv: ^16.4.7
+  consola: ^3.4.0
+
+  # --- frontend ---
+  vue: ^3.5.13
+  pinia: ^2.3.0
+  vite: ^6.0.7
+  '@vitejs/plugin-vue': ^5.2.1
+  unocss: ^0.65.4
+  happy-dom: ^15.11.7
+
+  # --- render Live2D ---
+  pixi.js: ^7.4.2
+  'pixi-live2d-display': ^0.4.0
+
+  # --- inferensi onnx di browser ---
+  onnxruntime-web: ^1.20.1
+  rvc-onnx-web: ^1.0.0
+
+  # --- desktop ---
+  electron: ^33.3.1
+  electron-vite: ^3.0.0
+  electron-builder: ^25.1.8
