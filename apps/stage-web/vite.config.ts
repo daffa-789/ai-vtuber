@@ -1,13 +1,13 @@
 import { resolve } from 'node:path'
-import { defineConfig } from 'vite'
+import { defineConfig, normalizePath } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 export default defineConfig({
   plugins: [
     vue(),
     viteStaticCopy({ targets: [
-      { src: resolve(__dirname, 'node_modules/onnxruntime-web/dist/*.wasm'), dest: 'onnx' },
-      { src: resolve(__dirname, 'node_modules/piper-tts-web/dist/piper/*'), dest: 'piper' },
+      { src: normalizePath(resolve(__dirname, 'node_modules/onnxruntime-web/dist/*.wasm')), dest: 'onnx' },
+      { src: normalizePath(resolve(__dirname, 'node_modules/piper-tts-web/dist/piper/*')), dest: 'piper' },
     ] }),
   ],
   // Aset berlisensi tetap berada di public/ root dan tidak pernah masuk bundle/git.

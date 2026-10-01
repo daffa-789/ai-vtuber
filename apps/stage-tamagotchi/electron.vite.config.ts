@@ -1,4 +1,5 @@
 import { resolve } from 'node:path'
+import { normalizePath } from 'vite'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
@@ -25,8 +26,8 @@ export default defineConfig({
     root: web,
     publicDir: resolve(__dirname, '../../public'),
     plugins: [vue(), viteStaticCopy({ targets: [
-      { src: resolve(web, 'node_modules/onnxruntime-web/dist/*.wasm'), dest: 'onnx' },
-      { src: resolve(web, 'node_modules/piper-tts-web/dist/piper/*'), dest: 'piper' },
+      { src: normalizePath(resolve(web, 'node_modules/onnxruntime-web/dist/*.wasm')), dest: 'onnx' },
+      { src: normalizePath(resolve(web, 'node_modules/piper-tts-web/dist/piper/*')), dest: 'piper' },
     ] })],
     build: { rollupOptions: { input: resolve(web, 'index.html') } },
   },
