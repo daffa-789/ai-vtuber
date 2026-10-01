@@ -5,7 +5,7 @@ dan mengingat percakapan. Monorepo TypeScript dengan arsitektur mengikuti
 [Project AIRI](https://github.com/moeru-ai/airi) (pnpm workspaces + Turborepo + Vue 3 + Vite + Electron).
 
 > **Status: migrasi berjalan.** Runtime Python/Flask lama sudah dihapus; app TypeScript
-> baru sampai Fase 0 (scaffold). Belum ada endpoint yang berfungsi. Lihat "Peta jalan" di bawah.
+> sudah menyelesaikan Fase 1: sidecar Node, chat streaming, persona, mood, dan vault memori lokal. Lihat "Peta jalan" di bawah.
 
 ## Struktur
 
@@ -42,6 +42,9 @@ pnpm test        # vitest di semua paket
 pnpm dev         # stage-web (Vite)
 pnpm dev:tamagotchi
 ```
+
+Sidecar Fase 1 menyediakan `GET /api/health` dan `POST /api/chat` (stream teks UTF-8).
+Untuk menguji tanpa model besar, isi `VTUBER_STUB=ya` lalu jalankan `pnpm dev:server`.
 
 > **Catatan lingkungan (Windows terkunci):** `pnpm install` memakai `ignore-scripts=true`
 > karena sebagian postinstall memanggil `wmic.exe` yang diblokir kebijakan keamanan mesin.
@@ -94,8 +97,8 @@ ContentVec 768-dim layer-12 — **bukan** `hubert-base-ls960`.
 | Fase | Isi | Status |
 |---|---|---|
 | 0 | Scaffold monorepo (pnpm, turbo, tsconfig, uno, vitest) | **selesai** |
-| 1 | Inti sidecar Node (`core-config`, `core-character`, `core-agent`, `apps/server`) | berikutnya |
-| 2 | Stage web MVP (Vue 3 + Live2D, chat + TTS + mic) | |
+| 1 | Inti sidecar Node (`core-config`, `core-character`, `core-agent`, `apps/server`) | **selesai** |
+| 2 | Stage web MVP (Vue 3 + Live2D, chat + TTS + mic) | **berjalan** — web, Live2D, chat selesai; TTS/STT berikutnya |
 | 3 | Rantai TTS di browser (piper ONNX + espeak-ng WASM + cache) | |
 | 4 | Pipeline RVC di browser (ContentVec → RMVPE → generator, onnxruntime-web) | |
 | 5 | Jendela pet Electron (transparan, tray, hotkey, tembus klik) | |

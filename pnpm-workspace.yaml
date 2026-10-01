@@ -27,7 +27,8 @@ catalog:
   happy-dom: ^15.11.7
 
   # --- render Live2D ---
-  pixi.js: ^7.4.2
+  # pixi-live2d-display 0.4 memakai kontrak PIXI 6 (bukan 7).
+  pixi.js: ^6.5.10
   'pixi-live2d-display': ^0.4.0
 
   # --- inferensi onnx di browser ---
