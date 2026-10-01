@@ -7,3 +7,6 @@
 
 export * from './wav.ts'
 export * from './rvc/params.ts'
+export * from './browser-piper.ts'
+export * from './browser-rvc.ts'
+export * from './browser-voice.ts'

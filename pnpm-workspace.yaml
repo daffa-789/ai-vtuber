@@ -27,14 +27,19 @@ catalog:
   happy-dom: ^15.11.7
 
   # --- render Live2D ---
-  pixi.js: ^7.4.2
+  # pixi-live2d-display 0.4 memakai kontrak PIXI 6 (bukan 7).
+  pixi.js: ^6.5.10
   'pixi-live2d-display': ^0.4.0
 
   # --- inferensi onnx di browser ---
   onnxruntime-web: ^1.20.1
+  '@huggingface/transformers': ^4.3.0
+  piper-tts-web: ^1.1.2
+  '@mintplex-labs/piper-tts-web': ^1.0.5
+  vite-plugin-static-copy: ^3.1.2
   rvc-onnx-web: ^1.0.0
 
   # --- desktop ---
-  electron: ^33.3.1
-  electron-vite: ^3.0.0
-  electron-builder: ^25.1.8
+  electron: ^44.5.1
+  electron-vite: ^5.0.0
+  electron-builder: ^26.15.3

@@ -1,0 +1,21 @@
+{
+  "name": "@silverwolf/audio",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --root ../.. packages/audio --passWithNoTests",
+    "clean": "rimraf node_modules"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "catalog:"
+  }
+}

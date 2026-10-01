@@ -17,7 +17,9 @@
   "dependencies": {
     "@silverwolf/core-config": "workspace:*",
     "@silverwolf/provider-inference": "workspace:*",
-    "rvc-onnx-web": "catalog:"
+    "rvc-onnx-web": "catalog:",
+    "onnxruntime-web": "catalog:",
+    "@mintplex-labs/piper-tts-web": "catalog:"
   },
   "devDependencies": {
     "onnxruntime-node": "^1.20.1",

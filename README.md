@@ -5,7 +5,7 @@ dan mengingat percakapan. Monorepo TypeScript dengan arsitektur mengikuti
 [Project AIRI](https://github.com/moeru-ai/airi) (pnpm workspaces + Turborepo + Vue 3 + Vite + Electron).
 
 > **Status: migrasi berjalan.** Runtime Python/Flask lama sudah dihapus; app TypeScript
-> baru sampai Fase 0 (scaffold). Belum ada endpoint yang berfungsi. Lihat "Peta jalan" di bawah.
+> sudah menyelesaikan Fase 1: sidecar Node, chat streaming, persona, mood, dan vault memori lokal. Lihat "Peta jalan" di bawah.
 
 ## Struktur
 
@@ -42,6 +42,9 @@ pnpm test        # vitest di semua paket
 pnpm dev         # stage-web (Vite)
 pnpm dev:tamagotchi
 ```
+
+Sidecar Fase 1 menyediakan `GET /api/health` dan `POST /api/chat` (stream teks UTF-8).
+Untuk menguji tanpa model besar, isi `VTUBER_STUB=ya` lalu jalankan `pnpm dev:server`.
 
 > **Catatan lingkungan (Windows terkunci):** `pnpm install` memakai `ignore-scripts=true`
 > karena sebagian postinstall memanggil `wmic.exe` yang diblokir kebijakan keamanan mesin.
@@ -94,11 +97,11 @@ ContentVec 768-dim layer-12 — **bukan** `hubert-base-ls960`.
 | Fase | Isi | Status |
 |---|---|---|
 | 0 | Scaffold monorepo (pnpm, turbo, tsconfig, uno, vitest) | **selesai** |
-| 1 | Inti sidecar Node (`core-config`, `core-character`, `core-agent`, `apps/server`) | berikutnya |
-| 2 | Stage web MVP (Vue 3 + Live2D, chat + TTS + mic) | |
-| 3 | Rantai TTS di browser (piper ONNX + espeak-ng WASM + cache) | |
-| 4 | Pipeline RVC di browser (ContentVec → RMVPE → generator, onnxruntime-web) | |
-| 5 | Jendela pet Electron (transparan, tray, hotkey, tembus klik) | |
+| 1 | Inti sidecar Node (`core-config`, `core-character`, `core-agent`, `apps/server`) | **selesai** |
+| 2 | Stage web MVP (Vue 3 + Live2D, chat + TTS + mic) | **selesai** |
+| 3 | Rantai TTS di browser (piper ONNX + espeak-ng WASM + cache) | **selesai** |
+| 4 | Pipeline RVC di browser (ContentVec → F0 → generator, onnxruntime-web) | **selesai** — aset model diperlukan |
+| 5 | Aplikasi Electron Windows (tray, hotkey, installer NSIS) | **selesai** |
 | 6 | Verifikasi paritas + penutupan | |
 
 Rencana lengkap: `~/.workbuddy-ai/plans/` (dokumen rencana migrasi).
@@ -113,3 +116,41 @@ skrip `var/`) dari saat migrasi. Boleh dihapus setelah Fase 2 terbukti stabil.
 Model Live2D dan Cubism Core tunduk pada lisensi Live2D Inc. dan tidak boleh diedarkan
 sebagai berkas lepas. Teknologi kloning suara hanya untuk proyek kreatif dengan izin —
 jangan untuk peniruan identitas, penipuan, atau pelecehan.
+
+## Desktop Windows, suara, dan mikrofon
+
+Aplikasi desktop berada di `apps/stage-tamagotchi`. Ia menyediakan jendela native,
+tray, close-to-tray, dan hotkey global **Ctrl+Shift+S**. Data pribadi dan model tidak
+ditanam di installer. Pada Windows, klik tray → **Buka folder model & konfigurasi**,
+lalu isi tata letak berikut di folder tersebut:
+
+```text
+.env
+assets/
+  piper/id_ID-news_tts-medium.onnx
+  piper/id_ID-news_tts-medium.onnx.json
+  encoders/vec-768-layer-12.onnx
+  voices/silverwolf/model.onnx
+  live2d/live2dcubismcore.min.js
+  live2d/silverwolf/silverwolf.model3.json (+ tekstur/ekspresi/gerakan)
+model/Llama-3.2-3B-Instruct-Q4_K_M.gguf
+bin/llama/llama-server.exe (+ DLL Vulkan)
+silver_wolf_memory/persona.md
+```
+
+- **STT:** Whisper ONNX melalui `@huggingface/transformers`; model diunduh dan di-cache
+  saat pemakaian pertama, lalu inferensi berjalan lokal.
+- **TTS:** Piper + eSpeak-ng WASM melalui `@mintplex-labs/piper-tts-web`, memakai model
+  Indonesia lokal di atas.
+- **RVC:** ContentVec 768 + ekstraksi F0 lokal + generator RVC v2 melalui
+  `onnxruntime-web`. Bila model RVC tidak ada/gagal, audio Piper tetap diputar.
+
+```bash
+pnpm assets:verify
+pnpm dev:tamagotchi       # pengembangan desktop
+pnpm --filter @silverwolf/stage-tamagotchi build:win
+```
+
+Perintah terakhir menghasilkan `apps/stage-tamagotchi/release/Silver-Wolf-Setup-0.1.0.exe`.
+Workflow `.github/workflows/build-windows.yml` juga membangun installer pada runner
+Windows dan mengunggahnya sebagai artifact, sehingga build tidak bergantung pada Wine.

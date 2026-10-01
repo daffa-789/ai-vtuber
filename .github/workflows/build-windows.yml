@@ -1,0 +1,35 @@
+name: Build Windows installer
+on:
+  workflow_dispatch:
+  push:
+    branches: ['arena/**']
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/build-windows.yml'
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Install Electron runtime explicitly
+        shell: bash
+        run: node apps/stage-tamagotchi/node_modules/electron/install.js
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Build installer
+        run: pnpm --filter @silverwolf/stage-tamagotchi build:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Silver-Wolf-Windows
+          path: apps/stage-tamagotchi/release/*.exe
+          if-no-files-found: error
+          retention-days: 14
