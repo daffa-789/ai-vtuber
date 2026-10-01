@@ -98,10 +98,10 @@ ContentVec 768-dim layer-12 — **bukan** `hubert-base-ls960`.
 |---|---|---|
 | 0 | Scaffold monorepo (pnpm, turbo, tsconfig, uno, vitest) | **selesai** |
 | 1 | Inti sidecar Node (`core-config`, `core-character`, `core-agent`, `apps/server`) | **selesai** |
-| 2 | Stage web MVP (Vue 3 + Live2D, chat + TTS + mic) | **berjalan** — web, Live2D, chat selesai; TTS/STT berikutnya |
-| 3 | Rantai TTS di browser (piper ONNX + espeak-ng WASM + cache) | |
-| 4 | Pipeline RVC di browser (ContentVec → RMVPE → generator, onnxruntime-web) | |
-| 5 | Jendela pet Electron (transparan, tray, hotkey, tembus klik) | |
+| 2 | Stage web MVP (Vue 3 + Live2D, chat + TTS + mic) | **selesai** |
+| 3 | Rantai TTS di browser (piper ONNX + espeak-ng WASM + cache) | **selesai** |
+| 4 | Pipeline RVC di browser (ContentVec → F0 → generator, onnxruntime-web) | **selesai** — aset model diperlukan |
+| 5 | Aplikasi Electron Windows (tray, hotkey, installer NSIS) | **selesai** |
 | 6 | Verifikasi paritas + penutupan | |
 
 Rencana lengkap: `~/.workbuddy-ai/plans/` (dokumen rencana migrasi).
@@ -116,3 +116,41 @@ skrip `var/`) dari saat migrasi. Boleh dihapus setelah Fase 2 terbukti stabil.
 Model Live2D dan Cubism Core tunduk pada lisensi Live2D Inc. dan tidak boleh diedarkan
 sebagai berkas lepas. Teknologi kloning suara hanya untuk proyek kreatif dengan izin —
 jangan untuk peniruan identitas, penipuan, atau pelecehan.
+
+## Desktop Windows, suara, dan mikrofon
+
+Aplikasi desktop berada di `apps/stage-tamagotchi`. Ia menyediakan jendela native,
+tray, close-to-tray, dan hotkey global **Ctrl+Shift+S**. Data pribadi dan model tidak
+ditanam di installer. Pada Windows, klik tray → **Buka folder model & konfigurasi**,
+lalu isi tata letak berikut di folder tersebut:
+
+```text
+.env
+assets/
+  piper/id_ID-news_tts-medium.onnx
+  piper/id_ID-news_tts-medium.onnx.json
+  encoders/vec-768-layer-12.onnx
+  voices/silverwolf/model.onnx
+  live2d/live2dcubismcore.min.js
+  live2d/silverwolf/silverwolf.model3.json (+ tekstur/ekspresi/gerakan)
+model/Llama-3.2-3B-Instruct-Q4_K_M.gguf
+bin/llama/llama-server.exe (+ DLL Vulkan)
+silver_wolf_memory/persona.md
+```
+
+- **STT:** Whisper ONNX melalui `@huggingface/transformers`; model diunduh dan di-cache
+  saat pemakaian pertama, lalu inferensi berjalan lokal.
+- **TTS:** Piper + eSpeak-ng WASM melalui `@mintplex-labs/piper-tts-web`, memakai model
+  Indonesia lokal di atas.
+- **RVC:** ContentVec 768 + ekstraksi F0 lokal + generator RVC v2 melalui
+  `onnxruntime-web`. Bila model RVC tidak ada/gagal, audio Piper tetap diputar.
+
+```bash
+pnpm assets:verify
+pnpm dev:tamagotchi       # pengembangan desktop
+pnpm --filter @silverwolf/stage-tamagotchi build:win
+```
+
+Perintah terakhir menghasilkan `apps/stage-tamagotchi/release/Silver-Wolf-Setup-0.1.0.exe`.
+Workflow `.github/workflows/build-windows.yml` juga membangun installer pada runner
+Windows dan mengunggahnya sebagai artifact, sehingga build tidak bergantung pada Wine.

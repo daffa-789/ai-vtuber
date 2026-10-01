@@ -30,3 +30,5 @@ export class MicrophoneRecorder {
     this.context = undefined; return wav(joined, sampleRate)
   }
 }
+
+export * from './whisper.ts'

@@ -23,8 +23,8 @@ export const useCompanionStore = defineStore('companion', () => {
     } catch (error) { healthError.value = error instanceof Error ? error.message : String(error) }
   }
 
-  async function send(text: string): Promise<void> {
-    const clean = text.trim(); if (!clean || sending.value) return
+  async function send(text: string): Promise<string> {
+    const clean = text.trim(); if (!clean || sending.value) return ''
     messages.value.push({ id: nextId++, role: 'user', content: clean })
     const reply: UiMessage = { id: nextId++, role: 'assistant', content: '', pending: true }
     messages.value.push(reply); sending.value = true
@@ -38,6 +38,7 @@ export const useCompanionStore = defineStore('companion', () => {
       const parsed = bersihkanTagAwal(reply.content); reply.content = parsed.teks; if (parsed.tag) expression.value = parsed.tag
     } catch (error) { reply.error = true; reply.content = error instanceof Error ? error.message : String(error) }
     finally { reply.pending = false; sending.value = false }
+    return reply.error ? '' : reply.content
   }
 
   return { messages, health, healthError, sending, expression, ready, checkHealth, send }

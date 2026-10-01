@@ -1,15 +1,39 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
+import { readFile, stat } from 'node:fs/promises'
+import { extname, resolve, sep } from 'node:path'
 import type { ChatMessage, LlmProvider } from '@silverwolf/provider-inference'
 import type { Konfig } from '@silverwolf/core-config'
 import type { CharacterAgent } from '@silverwolf/core-agent'
 import type { CharacterVault } from '@silverwolf/core-character'
 import type { HealthResponse } from '@silverwolf/server-shared'
 
-export interface HttpRuntime { config: Konfig; agent: CharacterAgent; provider: LlmProvider; vault: CharacterVault; modelName: string }
+export interface HttpRuntime {
+  config: Konfig
+  agent: CharacterAgent
+  provider: LlmProvider
+  vault: CharacterVault
+  modelName: string
+  /** Folder hasil build stage-web; bila diisi server juga menjadi host UI desktop. */
+  staticRoot?: string
+  /** Folder model besar yang disajikan hanya di bawah /assets/. */
+  assetRoot?: string
+}
+const MIME: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.wasm': 'application/wasm', '.onnx': 'application/octet-stream', '.png': 'image/png', '.wav': 'audio/wav' }
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'GET, POST, OPTIONS' }
 function json(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { ...cors, 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); res.end(JSON.stringify(body))
+}
+async function staticFile(res: ServerResponse, root: string, requested: string): Promise<boolean> {
+  const path = resolve(root, `.${requested}`)
+  if (path !== root && !path.startsWith(`${resolve(root)}${sep}`)) return false
+  try {
+    const info = await stat(path)
+    const file = info.isDirectory() ? resolve(path, 'index.html') : path
+    const content = await readFile(file)
+    res.writeHead(200, { ...cors, 'content-type': MIME[extname(file).toLowerCase()] ?? 'application/octet-stream', 'cache-control': extname(file) === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable' })
+    res.end(content); return true
+  } catch { return false }
 }
 async function body(req: IncomingMessage, max: number): Promise<Buffer> {
   const declared = Number(req.headers['content-length'] ?? 0); if (declared > max) throw new RangeError('body terlalu besar')
@@ -61,6 +85,20 @@ export function createApiServer(runtime: HttpRuntime): Server {
         if (!first.done) res.write(first.value)
         for await (const chunk of chat.stream) { if (!res.write(chunk)) await new Promise<void>(resolve => res.once('drain', resolve)) }
         res.end(); return
+      }
+      if (req.method === 'GET' && url.pathname.startsWith('/assets/') && runtime.assetRoot) {
+        if (await staticFile(res, runtime.assetRoot, url.pathname.slice('/assets'.length))) return
+      }
+      if (req.method === 'GET' && url.pathname.startsWith('/models/') && runtime.assetRoot) {
+        if (await staticFile(res, resolve(runtime.assetRoot, 'live2d'), url.pathname.slice('/models'.length))) return
+      }
+      if (req.method === 'GET' && url.pathname === '/live2dcubismcore.min.js' && runtime.assetRoot) {
+        if (await staticFile(res, resolve(runtime.assetRoot, 'live2d'), '/live2dcubismcore.min.js')) return
+      }
+      if (req.method === 'GET' && runtime.staticRoot && !url.pathname.startsWith('/api/')) {
+        if (await staticFile(res, runtime.staticRoot, url.pathname)) return
+        // SPA fallback untuk navigasi renderer Electron.
+        if (await staticFile(res, runtime.staticRoot, '/index.html')) return
       }
       json(res, 404, { error: 'tidak ditemukan' })
     } catch (error) {

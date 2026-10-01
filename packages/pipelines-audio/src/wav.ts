@@ -166,6 +166,33 @@ export function puncak(bin: Uint8Array, batasFrame = 4_000_000): number {
   return tertinggi
 }
 
+/** Ubah WAV PCM16 menjadi mono float32 untuk pipeline ONNX browser. */
+export function wavKeFloat32(bin: Uint8Array): { samples: Float32Array; sampleRate: number } {
+  const h = bacaHeader(bin)
+  if (h.bitDepth !== 16)
+    throw new WavRusak(`pipeline browser hanya mendukung PCM16, menerima ${h.bitDepth}-bit`)
+  const view = new DataView(bin.buffer, bin.byteOffset, bin.byteLength)
+  const samples = new Float32Array(h.jumlahFrame)
+  for (let frame = 0; frame < h.jumlahFrame; frame++) {
+    let value = 0
+    for (let channel = 0; channel < h.kanal; channel++)
+      value += view.getInt16(h.offsetData + (frame * h.kanal + channel) * 2, true) / 32768
+    samples[frame] = value / h.kanal
+  }
+  return { samples, sampleRate: h.laju }
+}
+
+/** Bungkus float32 mono menjadi WAV PCM16. */
+export function float32KeWav(samples: Float32Array, sampleRate: number): Uint8Array {
+  const pcm = new Uint8Array(samples.length * 2)
+  const view = new DataView(pcm.buffer)
+  for (let i = 0; i < samples.length; i++) {
+    const value = Math.max(-1, Math.min(1, samples[i] ?? 0))
+    view.setInt16(i * 2, Math.round(value * (value < 0 ? 32768 : 32767)), true)
+  }
+  return pcmKeWav(pcm, sampleRate, 1)
+}
+
 /** True bila berkas lolos ambang dengar (padanan pemeriksaan di jalur_suara). */
 export function adaBunyi(bin: Uint8Array): boolean {
   return puncak(bin) > AMBANG_DENGAR
