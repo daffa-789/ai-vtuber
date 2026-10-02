@@ -6,9 +6,9 @@ on:
     paths:
       - 'apps/**'
       - 'packages/**'
+      - 'sidecar/**'
       - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
+      - 'package-lock.json'
       - '.github/workflows/build-windows.yml'
 jobs:
   windows:
@@ -18,15 +18,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: corepack enable
-      - run: pnpm install --frozen-lockfile
+      # Sidecar Go ikut dikompilasi di runner, jadi build tidak bergantung pada
+      # binary yang ter-commit.
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.24' }
+      - run: npm ci
       - name: Install Electron runtime explicitly
         shell: bash
-        run: node apps/stage-tamagotchi/node_modules/electron/install.js
-      - run: pnpm typecheck
-      - run: pnpm test
+        run: node node_modules/electron/install.js
+      - run: npm run typecheck
+      # Menjalankan suite TypeScript (vitest) sekaligus suite Go (go test).
+      - run: npm test
       - name: Build installer
-        run: pnpm --filter @silverwolf/stage-tamagotchi build:win
+        run: npm run build:win
       - uses: actions/upload-artifact@v4
         with:
           name: Silver-Wolf-Windows

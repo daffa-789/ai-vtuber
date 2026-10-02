@@ -2,7 +2,21 @@ import { EMOTION_TAGS, type Mood, suasana } from './mood.ts'
 
 export interface RingkasanPersona { teks: string; terpotong: boolean; bagianHilang: string[] }
 
-export function ringkasPersona(teks: string, batas = 9000): RingkasanPersona {
+/**
+ * Potong persona kalau kepanjangan, di batas paragraf.
+ *
+ * Batas 18.000 dipilih dari persona Silver Wolf yang sekarang (~15.200 karakter).
+ * Dengan batas lama 9.000, bagian terakhir — aturan larangan emoji dan contoh
+ * nada — ikut terbuang tanpa suara, sehingga model bebas menempelkan emoji.
+ *
+ * Persona ini juga disusun ulang pada 1 Okt: aturan keras (kontrak balasan,
+ * daftar tag wajah, batas perilaku) dipindah ke PALING ATAS. Jadi kalau suatu
+ * hari tetap kepotong, yang hilang cuma contoh nada — bukan aturannya.
+ *
+ * Ada tes yang membaca `silver_wolf_memory/persona.md` dan gagal kalau berkas
+ * itu jadi lebih panjang dari batas ini.
+ */
+export function ringkasPersona(teks: string, batas = 18000): RingkasanPersona {
   if (teks.length <= batas) return { teks, terpotong: false, bagianHilang: [] }
   let hasil = teks.slice(0, batas)
   const paragraf = hasil.lastIndexOf('\n\n')

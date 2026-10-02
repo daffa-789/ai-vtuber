@@ -6,7 +6,7 @@
  *   2. nama + dimensi tensor masuk/keluar setiap model ONNX yang kita punya;
  *   3. laju sampel yang dinyatakan checkpoint.
  *
- * Jalankan: pnpm --filter @silverwolf/pipelines-audio spike:rvc
+ * Jalankan: npm run spike:rvc
  */
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'

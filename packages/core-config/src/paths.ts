@@ -7,14 +7,14 @@ import { bacaEnv } from './env-file.ts'
  * Penemuan akar repo + jalur aset, padanan `AKAR` dan `_temukan_persona()`
  * di `server_py/konfig.py`.
  *
- * Akar dicari dengan menaiki direktori sampai menemukan `pnpm-workspace.yaml`
+ * Akar dicari dengan menaiki direktori sampai menemukan manifest project
  * (penanda monorepo). Ini menggantikan `Path(__file__).parent.parent` yang
  * rapuh terhadap posisi berkas.
  */
 export function cariAkarRepo(dari: string = fileURLToPath(import.meta.url)): string {
   let dir = dirname(dari)
   for (let i = 0; i < 12; i++) {
-    if (existsSync(join(dir, 'pnpm-workspace.yaml')) || existsSync(join(dir, '.git')))
+    if (existsSync(join(dir, 'package.json')) || existsSync(join(dir, '.git')))
       return dir
     const naik = dirname(dir)
     if (naik === dir)

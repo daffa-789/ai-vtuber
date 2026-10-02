@@ -37,6 +37,19 @@ export interface Konfig {
   localModelPath: string
   localModelThreads: number
   localModelCtx: number
+  /** Nama yang dilaporkan `/v1/chat/completions`; kosong = turun dari nama berkas. */
+  localModelAlias: string
+  /**
+   * min_p untuk llama-server. WAJIB 0 untuk MiniCPM5: bawaan llama.cpp 0,05
+   * membuat model ini mengulang kalimat (peringatan eksplisit OpenBMB).
+   */
+  localMinP: number
+  localTopP: number
+  /**
+   * `-rea` llama-server. MiniCPM5 punya mode berpikir; kalau hidup, balasan
+   * diawali blok <think> sehingga `bacaTagAwal()` gagal menemukan tag emosi.
+   */
+  localReasoning: 'on' | 'off' | 'auto'
   llamaServer: string
   vulkanNgl: number
   vulkanFa: boolean
@@ -190,6 +203,12 @@ export function bacaKonfig(
     localModelPath: nilai(env, 'VTUBER_LOCAL_MODEL_PATH', ''),
     localModelThreads: angka(env, 'VTUBER_LOCAL_MODEL_THREADS', 4),
     localModelCtx,
+    localModelAlias: nilai(env, 'VTUBER_LOCAL_MODEL_ALIAS', ''),
+    localMinP: angkaFloat(env, 'VTUBER_LOCAL_MIN_P', 0),
+    localTopP: angkaFloat(env, 'VTUBER_LOCAL_TOP_P', 0.95),
+    localReasoning: (['on', 'off', 'auto'].includes(nilai(env, 'VTUBER_LOCAL_REASONING', 'off').toLowerCase())
+      ? nilai(env, 'VTUBER_LOCAL_REASONING', 'off').toLowerCase()
+      : 'off') as Konfig['localReasoning'],
     llamaServer: nilai(env, 'VTUBER_LLAMA_SERVER', 'bin/llama'),
     vulkanNgl: angka(env, 'VTUBER_VULKAN_NGL', 99),
     vulkanFa: bool_(env, 'VTUBER_VULKAN_FA', true),

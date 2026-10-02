@@ -17,7 +17,7 @@
     "noEmit": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node"],
+    "types": ["node", "vite/client"],
     "paths": {
       "@silverwolf/provider-inference": ["./packages/provider-inference/src/index.ts"],
       "@silverwolf/provider-inference/*": ["./packages/provider-inference/src/*"],
@@ -25,8 +25,6 @@
       "@silverwolf/core-config/*": ["./packages/core-config/src/*"],
       "@silverwolf/core-character": ["./packages/core-character/src/index.ts"],
       "@silverwolf/core-character/*": ["./packages/core-character/src/*"],
-      "@silverwolf/core-agent": ["./packages/core-agent/src/index.ts"],
-      "@silverwolf/core-agent/*": ["./packages/core-agent/src/*"],
       "@silverwolf/pipelines-audio": ["./packages/pipelines-audio/src/index.ts"],
       "@silverwolf/pipelines-audio/*": ["./packages/pipelines-audio/src/*"],
       "@silverwolf/audio": ["./packages/audio/src/index.ts"],
@@ -34,11 +32,7 @@
       "@silverwolf/stage-ui": ["./packages/stage-ui/src/index.ts"],
       "@silverwolf/stage-ui/*": ["./packages/stage-ui/src/*"],
       "@silverwolf/stage-ui-live2d": ["./packages/stage-ui-live2d/src/index.ts"],
-      "@silverwolf/stage-ui-live2d/*": ["./packages/stage-ui-live2d/src/*"],
-      "@silverwolf/server-shared": ["./packages/server-shared/src/index.ts"],
-      "@silverwolf/server-shared/*": ["./packages/server-shared/src/*"],
-      "@silverwolf/server-runtime": ["./packages/server-runtime/src/index.ts"],
-      "@silverwolf/server-runtime/*": ["./packages/server-runtime/src/*"]
+      "@silverwolf/stage-ui-live2d/*": ["./packages/stage-ui-live2d/src/*"]
     }
   },
   "exclude": [
@@ -54,6 +48,7 @@
     "server_py",
     "scripts",
     "silverwolf-pet",
+    "sidecar",
     ".venv"
   ]
 }

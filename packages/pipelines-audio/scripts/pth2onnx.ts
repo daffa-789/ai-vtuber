@@ -1,5 +1,5 @@
 /**
- * `pnpm voice:convert` — konversi checkpoint RVC `.pth` → `.onnx` memakai
+ * `npm run voice:convert` — konversi checkpoint RVC `.pth` → `.onnx` memakai
  * `rvc-onnx-web` (murni TypeScript, tanpa Python).
  *
  * Peringatan yang WAJIB disampaikan ke pengguna (dan dicetak di sini):
@@ -9,8 +9,8 @@
  *   - berkas `.index` FAISS 178 MB TIDAK ditangani di sini.
  *
  * Pemakaian:
- *   pnpm voice:convert                       # model dari .env
- *   pnpm voice:convert -- masuk.pth keluar.onnx
+ *   npm run voice:convert                    # model dari .env
+ *   npm run voice:convert -- masuk.pth keluar.onnx
  */
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'

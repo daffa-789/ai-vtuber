@@ -18,7 +18,6 @@ words:
   - pinia
   - unocss
   - turbo
-  - pnpm
   - tamagotchi
   - live2d
   - cubism
@@ -52,4 +51,3 @@ ignorePaths:
   - web/**
   - model/**
   - "**/*.py"
-  - pnpm-lock.yaml

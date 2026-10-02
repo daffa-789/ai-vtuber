@@ -29,3 +29,36 @@ describe('karakter', () => {
     expect(await readFile(join(root, 'Fakta.md'), 'utf8')).toContain('[[Mood]]')
   })
 })
+
+/**
+ * Model 2B kadang mengarang tag wajah di luar daftar tertutup, atau membalik
+ * kurungnya. Kalau tag asing itu tidak dibuang, dia tampil di chat DAN
+ * dibacakan mesin suara sebagai kata.
+ *
+ * Contoh nyata dari `silver_wolf_memory/Riwayat/2026-10-01.md`: `[kosakata]`,
+ * `[Kegagalan]`, dan `[semangat]` yang muncul di AKHIR kalimat.
+ */
+describe('tag asing', () => {
+  it('membuang tag di luar daftar tanpa mengubah mood', () => {
+    expect(bersihkanTagAwal('[kosakata] Halo, Master.')).toEqual({ teks: 'Halo, Master.' })
+    expect(bersihkanTagAwal('[Kegagalan] Tidak ada info.')).toEqual({ teks: 'Tidak ada info.' })
+  })
+
+  it('membetulkan tag yang kurung siku-nya dobel', () => {
+    expect(bersihkanTagAwal('[[senyum] Halo')).toEqual({ teks: 'Halo', tag: 'senyum' })
+    expect(bersihkanTagAwal('[[kaget]] Halo')).toEqual({ teks: 'Halo', tag: 'kaget' })
+  })
+
+  it('tetap menerima tag dikenal dan mengembalikan tag-nya', () => {
+    expect(bersihkanTagAwal('[Bingung] Siapa kamu?')).toEqual({ teks: 'Siapa kamu?', tag: 'bingung' })
+  })
+
+  it('tidak menyentuh kode di awal kalimat', () => {
+    expect(bersihkanTagAwal('arr[0] itu elemen pertama')).toEqual({ teks: 'arr[0] itu elemen pertama' })
+    expect(bersihkanTagAwal('[1, 2, 3] itu array')).toEqual({ teks: '[1, 2, 3] itu array' })
+  })
+
+  it('tidak menyentuh tag di tengah kalimat', () => {
+    expect(bersihkanTagAwal('Halo Master. [kosakata]')).toEqual({ teks: 'Halo Master. [kosakata]' })
+  })
+})
