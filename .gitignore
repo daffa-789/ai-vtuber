@@ -5,8 +5,8 @@ out/
 release/
 .vite/
 .turbo/
-# Berkas sementara yang ditulis vitest saat membundel vitest.config.ts.
-vitest.config.ts.timestamp-*.mjs
+# Berkas sementara yang ditulis electron-vite saat membundel konfigurasi.
+electron.vite.config.*
 # Lingkungan Python: interpreter + salinan paket, bukan sumber.
 .venv/
 __pycache__/
@@ -17,7 +17,7 @@ __pycache__/
 !.env.example
 .shots/
 .workbuddy-ai/
-# Log sementara (mis. sidecar yang dijalankan dari skrip uji).
+# Log sementara (mis. server Bun yang dijalankan dari skrip uji).
 *.log
 
 # Aset berlisensi Live2D: diunduh ulang dengan `python scripts/unduh_aset.py`,
@@ -32,14 +32,6 @@ public/ort/
 # ikut ter-commit kalau baris ini menyebut satu folder saja.
 public/models/
 
-# Aset jalur suara, disediakan scripts/sedia_suara.py, bukan untuk di-commit:
-# voice Piper 61 MB, model dasar RVC (hubert + rmvpe) ~730 MB, checkpoint Furina.
-aset/suara/piper/
-aset/suara/rvc/
-aset/suara/model-dasar/
-# Model Whisper untuk mic lokal (base 142 MB / small 470 MB): disediakan
-# scripts/sedia_stt.py, bukan untuk di-commit.
-aset/suara/whisper/
 # Hasil sintesis + berkas temp + jejak ukur. `var/` sengaja di luar web/ dan
 # public/ supaya statis.py tidak pernah bisa menyajikannya lewat HTTP.
 var/

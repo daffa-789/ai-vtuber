@@ -2,30 +2,27 @@
   "name": "silver-wolf",
   "version": "0.1.0",
   "private": true,
-  "description": "Silver Wolf — AI companion. Monorepo TypeScript (paritas arsitektur Airi).",
+  "description": "Silver Wolf — AI companion. Monorepo JavaScript (UI Vue JSX, backend Node).",
   "type": "module",
   "main": "out/main/index.js",
   "engines": {
-    "node": ">=20"
+    "node": ">=20.6"
   },
   "scripts": {
-    "sidecar:build": "cd sidecar && go build -o ../bin/silverwolf-sidecar.exe .",
-    "sidecar:test": "cd sidecar && go test ./...",
-    "dev": "electron-vite --config apps/stage-tamagotchi/electron.vite.config.ts dev",
-    "dev:tamagotchi": "electron-vite --config apps/stage-tamagotchi/electron.vite.config.ts dev",
-    "build": "npm run sidecar:build && electron-vite --config apps/stage-tamagotchi/electron.vite.config.ts build",
+    "server:dev": "node apps/server-node/src/main.js",
+    "server:bundle": "esbuild apps/server-node/src/main.js --bundle --platform=node --format=esm --target=node20 --outfile=out/server/main.js",
+    "dev": "electron-vite --config apps/stage-tamagotchi/electron.vite.config.js dev",
+    "dev:tamagotchi": "electron-vite --config apps/stage-tamagotchi/electron.vite.config.js dev",
+    "build": "npm run server:bundle && electron-vite --config apps/stage-tamagotchi/electron.vite.config.js build",
+    "start": "node scripts/jalankan.js",
+    "start:software": "node scripts/jalankan.js --sw-software",
     "build:win": "npm run build && electron-builder --win nsis",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run && npm run sidecar:test",
-    "test:ts": "vitest run",
-    "voice:convert": "tsx packages/pipelines-audio/scripts/pth2onnx.ts",
-    "spike:rvc": "tsx packages/pipelines-audio/scripts/spike-rvc.ts",
-    "assets:verify": "node scripts/verify-assets.mjs",
-    "ukur:latensi": "node scripts/ukur/ukur-p0.mjs",
-    "ukur:tag": "node scripts/ukur/ukur-tag.mjs",
+    "voice:convert": "node packages/pipelines-audio/scripts/pth2onnx.js",
+    "spike:rvc": "node packages/pipelines-audio/scripts/spike-rvc.js",
+    "assets:verify": "node scripts/verify-assets.js",
+    "ukur:latensi": "node scripts/ukur/ukur-p0.js",
+    "ukur:tag": "node scripts/ukur/ukur-tag.js",
     "clean": "rimraf out apps/stage-tamagotchi/release node_modules",
-    "turbo:typecheck": "tsc --noEmit -p tsconfig.json",
-    "turbo:test": "vitest run",
     "turbo:build": "npm run build"
   },
   "dependencies": {
@@ -42,21 +39,17 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/node": "^22.20.4",
     "@vitejs/plugin-vue": "^5.2.1",
+    "@vitejs/plugin-vue-jsx": "^5.1.6",
     "electron": "^44.5.1",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
-    "happy-dom": "^15.11.7",
+    "esbuild": "^0.25.12",
     "rimraf": "^6.0.1",
-    "tsx": "^4.23.15",
     "turbo": "^2.11.5",
-    "typescript": "^5.9.3",
     "unocss": "^0.65.4",
     "vite": "^6.0.7",
-    "vite-plugin-static-copy": "^3.1.2",
-    "vitest": "^2.1.9",
-    "vue-tsc": "^2.2.0"
+    "vite-plugin-static-copy": "^3.1.2"
   },
   "build": {
     "appId": "ai.silverwolf.companion",
@@ -74,12 +67,14 @@
         "to": "icon.png"
       },
       {
-        "from": "bin/silverwolf-sidecar.exe",
-        "to": "bin/silverwolf-sidecar.exe"
+        "from": "out/server",
+        "to": "server"
       }
     ],
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "apps/stage-tamagotchi/resources/icon.ico",
       "artifactName": "Silver-Wolf-Setup-${version}.${ext}"
     },

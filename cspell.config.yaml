@@ -46,7 +46,7 @@ words:
 ignorePaths:
   - var/**
   - bin/**
-  - aset/**
+  - assets/**
   - public/**
   - web/**
   - model/**

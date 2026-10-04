@@ -3,88 +3,101 @@
 Kompanion **desktop** AI — karakter Live2D yang hidup di layar, bicara dengan suara
 sendiri, dan mengingat percakapan.
 
-Aplikasi ini **desktop-only**: tidak ada lagi jalur peramban. UI (Vue 3 + Live2D)
-hanya dihidangkan di dalam jendela Electron, dan seluruh logika server — konfigurasi,
-persona, memori, inferensi, penyajian aset — berjalan di **sidecar Go** yang
-dikompilasi menjadi satu binary.
+Aplikasi ini **desktop-only**: tidak ada jalur peramban. UI (Vue 3 + Live2D, ditulis
+penuh dengan **JSX**) hanya dihidangkan di dalam jendela Electron, dan seluruh logika
+server — konfigurasi, persona, memori, inferensi, penyajian aset — berjalan di
+**server Node** (`apps/server-node`).
 
 ```
-Electron (jendela, tray, hotkey)  ──spawn──▶  silverwolf-sidecar.exe (Go)
-        ▲ renderer Vue + Live2D                    ├─ baca .env
-        └───────── HTTP 127.0.0.1 ─────────────────┤─ jalankan llama-server
-                                                   ├─ susun prompt + memori
-                                                   └─ sajikan /api/* dan aset
+Electron (jendela, tray, hotkey)  ──spawn──▶  node apps/server-node/src/main.js
+        ▲ renderer Vue JSX + Live2D              ├─ baca .env
+        └───────── HTTP 127.0.0.1 ───────────────┤─ jalankan llama-server
+                                                 ├─ susun prompt + memori
+                                                 └─ sajikan /api/* dan aset
 ```
 
-> **Status: sidecar Node sudah diganti Go.** Paket TypeScript `server-runtime`,
-> `server-shared`, dan `core-agent` dihapus; `apps/server` (sidecar Node) dihapus;
-> `apps/stage-web` dipindah menjadi `apps/stage-tamagotchi/renderer`.
+> **Status: backend Node + UI Vue JSX (100% JavaScript).** Seluruh logika server berjalan di
+> `apps/server-node/` (`node:http`) dan UI ditulis penuh dengan **Vue JSX**
+> (`renderer/src/App.jsx`). 100% JavaScript / JSX tanpa TypeScript dan tanpa berkas `.vue`.
+> Tidak ada runtime tambahan di luar Node — saat terkemas server dijalankan Node bawaan Electron.
 
 ## Struktur
 
 ```
 apps/
   stage-tamagotchi/       Electron desktop — jendela, tray, hotkey
-    src/main/             Proses utama: menjalankan sidecar Go, baca port-nya
+    src/main/             Proses utama: menjalankan server Node, baca port-nya
     src/preload/          Jembatan konteks-terisolasi
-    renderer/             Vue 3 + UnoCSS + Live2D (satu-satunya wujud UI)
-sidecar/                  Sidecar Go (modul github.com/daffa-789/ai-vtuber/sidecar)
-  internal/config/        Parser `.env` + koerser bertipe + penemuan akar
-  internal/character/     Persona, perakitan prompt, mood, tag wajah, vault memori
-  internal/agent/         Orkestrasi chat + penyimpanan memori
-  internal/inference/     Provider OpenAI-compatible (llama-server / Ollama) + stub
-  internal/llama/         Pemilihan model GGUF + pengelola proses llama-server
-  internal/server/        HTTP: /api/health, /api/chat (aliran), berkas statis
-packages/                 Paket TypeScript yang masih dipakai renderer/skrip
-  core-config/            Skema `.env` + koerser (dipakai skrip pipelines-audio)
+    renderer/             Vue 3 + JSX + UnoCSS + Live2D (satu-satunya wujud UI)
+      src/App.jsx         Orkestrator: keadaan bersama + merakit Panggung & Konsol
+      src/komponen/       Panggung, Konsol, DaftarPesan, Komposer (semuanya JSX)
+      src/ucapan.js       Fungsi murni pemotong tag emosi
+  server-node/            Server Node (`node:http`) — backend aplikasi
+    src/main.js           Titik masuk: parse argumen, bootstrap, cetak port=
+    src/server.js         Rute HTTP: /api/health, /api/chat (aliran), statis
+    src/agent.js          Orkestrasi chat + penyimpanan memori
+    src/inference.js      Provider OpenAI-compatible (llama-server / Ollama) + stub
+    src/llama.js          Pemilihan model GGUF + pengelola proses llama-server
+packages/                 Paket JavaScript yang dipakai renderer/server
+  core-config/            Skema `.env` + koerser (dipakai server Node)
   core-character/         Persona, prompt, mood, tag wajah, vault memori
   pipelines-audio/        Rantai suara: piper → rvc, cache, WAV
   provider-inference/     Antarmuka Brain / Ears / Mouth / Body
-  stage-ui/               Komponen Vue + store Pinia
+  stage-ui/               Store Pinia
   stage-ui-live2d/        Renderer Live2D + mesin wajah
   audio/                  Tangkap mic + VAD + pemutar
 ```
 
-Scope paket: `@silverwolf/*`. Paket internal dikonsumsi **sebagai sumber TS** (tanpa
-langkah build) — Vite/tsx men-transpile langsung.
+Scope paket: `@silverwolf/*`. Paket internal dikonsumsi langsung sebagai modul ES murni
+JavaScript — Vite memproses JSX untuk renderer, Node menjalankan modul ES untuk server,
+dan esbuild membundelnya untuk versi terkemas.
+
+### Catatan bundel renderer
+
+`App.jsx` mengimpor `bacaPanggung` dari **submodul murni**
+(`@silverwolf/stage-ui-live2d/panggung.js`), bukan dari indeks paketnya. Indeks paket
+itu menarik PIXI + Cubism, jadi mengimpornya di jalur awal akan menyeret ~1,24 MB ke
+bundel pertama. Dengan submodul murni + `import()` dinamis untuk `Live2DRenderer`,
+bundel awal terukur turun dari **2.001 kB menjadi 765 kB**, dan PIXI baru diunduh saat
+model Live2D benar-benar dimuat.
 
 ## Menjalankan
 
-Butuh **Go 1.24+** dan **Node 20+**.
+Butuh **Node 20.6+**. Tidak ada runtime lain yang perlu dipasang.
 
 ```bash
 npm install
 
-npm run sidecar:build   # -> bin/silverwolf-sidecar.exe
-npm run dev             # Electron + renderer (dev server Vite)
+npm run dev             # Electron + renderer (dev server Vite) + server Node
+npm run server:dev      # hanya server Node (tanpa Electron)
 npm run build:win       # installer NSIS
-
-npm run typecheck
-npm test                # vitest (TypeScript) + go test (Go)
 ```
 
 Skrip yang tersedia:
 
 | Skrip | Isi |
 |---|---|
-| `sidecar:build` | `go build` sidecar menjadi `bin/silverwolf-sidecar.exe` |
-| `sidecar:test` | `go test ./...` di dalam `sidecar/` |
+| `server:dev` | Jalankan server Node dari sumber (`node apps/server-node/src/main.js`) |
+| `server:bundle` | Bundel server Node dengan esbuild menjadi `out/server/main.js` untuk dipaketkan |
 | `dev` / `dev:tamagotchi` | Electron dalam mode pengembangan |
-| `build` | `sidecar:build` lalu bundel `out/` (main, preload, renderer) |
+| `build` | `server:bundle` lalu bundel `out/` (main, preload, renderer) |
 | `build:win` | `build` lalu installer NSIS |
-| `test:ts` | Hanya suite TypeScript |
 
-Proses utama Electron menjalankan sidecar dengan `-port 0`, lalu membaca baris
-`port=<angka>` yang dicetak sidecar ke stdout — jadi tidak ada port yang ditebak
-atau bentrok dengan sidecar yang sudah berjalan.
+Proses utama Electron menjalankan server Node dengan `-port 0`, lalu membaca baris
+`port=<angka>` yang dicetak server ke stdout — jadi tidak ada port yang ditebak
+atau bentrok dengan server yang sudah berjalan.
+
+Saat pengembangan, Electron menjalankan server Node langsung dari sumber JavaScript
+`apps/server-node/src/main.js`. Saat terkemas, **tidak ada runtime tambahan yang ikut
+installer**: `process.execPath` dipanggil dengan `ELECTRON_RUN_AS_NODE=1`, sehingga
+Node bawaan Electron yang menjalankan bundel `resources/server/main.js`.
 
 Untuk menguji tanpa model besar, isi `VTUBER_STUB=ya` (atau biarkan aplikasi
 terkemas tanpa model GGUF: ia otomatis masuk mode tiruan).
 
-> **Catatan lingkungan (Windows terkunci):** install dependency memakai `ignore-scripts=true`
-> karena sebagian postinstall memanggil `wmic.exe` yang diblokir kebijakan keamanan mesin.
-> Binary esbuild/turbo tetap tersedia lewat paket platform. **Electron** butuh unduhan
-> binary-nya secara eksplisit saat instalasi.
+> **Catatan lingkungan (Windows terkunci):** `npm install` di mesin ini pernah
+> melewati dependensi opsional platform (dulu dari paket `bun`), sehingga postinstall
+> paket itu gagal. Bun sudah tidak dipakai lagi, jadi masalah itu tidak berlaku.
 >
 > Skrip root memakai npm, bukan `turbo run`, karena turbo tidak bisa spawn proses anak
 > di lingkungan ini (`ERROR_PIPE_BUSY`). `turbo.json` tetap ada dan varian `npm run turbo:*`
@@ -99,10 +112,8 @@ Semua model berukuran besar **tidak ikut git**. Tata letak:
 | `assets/` | Rumah baru aset: `voices/`, `encoders/`, `piper/`, `whisper/`, `llm/` | gitignored |
 | `public/models/silverwolf/` | Model Live2D (`.moc3`, tekstur, ekspresi, gerakan) | gitignored — lisensi Live2D |
 | `public/live2dcubismcore.min.js` | Cubism Core | gitignored — lisensi Live2D |
-| `aset/suara/` | Piper ONNX, checkpoint RVC, hubert/rmvpe, whisper | gitignored |
 | `model/` | LLM GGUF (MiniCPM5-2B Q4_K_M, 1 Okt 2026) | gitignored |
 | `bin/llama/` | llama.cpp build Vulkan (`llama-server.exe`) | gitignored |
-| `bin/` | Hasil `go build` sidecar (`silverwolf-sidecar.exe`) | gitignored |
 | `silver_wolf_memory/` | Persona + memori karakter | gitignored — **berisi fakta pribadi** |
 
 ### Ganti model GGUF
@@ -115,9 +126,9 @@ untuk MiniCPM5 (dan untuk varian *thinking* Qwen3):
 | `--min-p 0` | `VTUBER_LOCAL_MIN_P=0` | bawaan llama.cpp `0,05` membuat MiniCPM5 mengulang kalimat |
 | `-rea off` | `VTUBER_LOCAL_REASONING=off` | mode berpikir mengawali balasan dengan `<think>`, merusak pembacaan tag emosi |
 
-Keduanya sudah di-default-kan di `sidecar/internal/config` dan di `.env`. Bila ingin
+Keduanya sudah di-default-kan di `packages/core-config` dan di `.env`. Bila ingin
 mengaktifkan mode berpikir untuk tugas penalaran, setel `VTUBER_LOCAL_REASONING=on`
-**dan** naikkan `max_tokens` di `sidecar/internal/server/server.go` — batas 512 saat ini
+**dan** naikkan `max_tokens` di `apps/server-node/src/server.ts` — batas 512 saat ini
 akan habis di dalam blok `<think>`.
 
 > MiniCPM5 tercatat hanya untuk EN + ZH. Persona dan prompt proyek ini berbahasa
@@ -126,7 +137,7 @@ akan habis di dalam blok `<think>`.
 
 ### Konversi model RVC
 
-`rvc-onnx-web` mengubah checkpoint PyTorch `.pth` menjadi ONNX, murni TypeScript:
+`rvc-onnx-web` mengubah checkpoint PyTorch `.pth` menjadi ONNX, murni JavaScript:
 
 ```bash
 npm run voice:convert  # .pth → assets/voices/silverwolf/model.onnx
@@ -151,19 +162,19 @@ ContentVec 768-dim layer-12 — **bukan** `hubert-base-ls960`.
 
 | Fase | Isi | Status |
 |---|---|---|
-| 0 | Scaffold TypeScript (npm, turbo, tsconfig, uno, vitest) | **selesai** |
-| 1 | Inti sidecar — sekarang Go (`sidecar/`) | **selesai** |
+| 0 | Scaffold (npm, turbo, uno, JSX) | **selesai** |
+| 1 | Inti backend (server Node) | **selesai** |
 | 2 | Stage MVP (Vue 3 + Live2D, chat + TTS + mic) | **selesai** |
 | 3 | Rantai TTS (piper ONNX + espeak-ng WASM + cache) | **selesai** |
 | 4 | Pipeline RVC (ContentVec → F0 → generator, onnxruntime-web) | **selesai** — aset model diperlukan |
 | 5 | Aplikasi Electron Windows (tray, hotkey, installer NSIS) | **selesai** |
-| 6 | Fokus desktop-only: jalur peramban dibuang, sidecar pindah ke Go | **selesai** |
-| 7 | Verifikasi paritas + penutupan | |
+| 6 | Fokus desktop-only: jalur peramban dibuang | **selesai** |
+| 7 | Backend **Node** + UI **Vue JSX** (100% JavaScript) | **selesai** |
+| 8 | Verifikasi paritas + penutupan | |
 
-## Cadangan
-
-`_cadangan/` menyimpan arsip runtime Python lama (riwayat git lengkap, berkas sumber, dan
-skrip `var/`) dari saat migrasi. Boleh dihapus.
+Seluruh kode di repositori ini adalah 100% JavaScript / JSX (0 TypeScript) — tidak ada Python maupun
+Go di working tree. Sisa non-JS hanya binary pihak ketiga (`bin/llama/`, llama.cpp) dan
+berkas model/data (`.onnx`, `.gguf`, `.pt`, `.bin`, `.moc3`).
 
 ## Lisensi & penggunaan
 
@@ -199,9 +210,10 @@ silver_wolf_memory/persona.md
 - **RVC:** ContentVec 768 + ekstraksi F0 lokal + generator RVC v2 melalui
   `onnxruntime-web`. Bila model RVC tidak ada/gagal, audio Piper tetap diputar.
 
-Sidecar Go ikut terpasang di `resources/bin/silverwolf-sidecar.exe`; bila binary itu
-hilang, proses utama menolak mulai dengan pesan yang menyuruh menjalankan
-`npm run sidecar:build`.
+Saat dipaketkan, installer hanya perlu membawa **bundel server** di
+`resources/server/main.js` — tidak ada runtime tambahan, karena server dijalankan
+Node bawaan Electron. Bila bundel itu hilang, proses utama menolak mulai dengan pesan
+yang menyuruh menjalankan `npm run server:bundle`.
 
 ```bash
 npm run assets:verify
@@ -210,5 +222,5 @@ npm run build:win
 ```
 
 Perintah terakhir menghasilkan `apps/stage-tamagotchi/release/Silver-Wolf-Setup-0.1.0.exe`.
-Workflow `.github/workflows/build-windows.yml` memasang Go, mengompilasi sidecar, lalu
+Workflow `.github/workflows/build-windows.yml` menjalankan `npm ci`, lalu
 membangun installer pada runner Windows dan mengunggahnya sebagai artifact.
