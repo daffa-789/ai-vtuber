@@ -1,17 +1,37 @@
-import { defineComponent, nextTick, ref, watch } from "vue";
+import { defineComponent, ref, watch } from "vue";
+
+function bersihkanTeksTampil(teks) {
+  if (!teks) return "";
+  return teks.replace(/^[\s`'"]*\[{1,2}[a-zA-Z][^\n[\]{}]{0,25}\]\]*[\s`'"]*/, "");
+}
+
 const DaftarPesan = defineComponent({
   name: "DaftarPesan",
   props: { pesan: { type: Array, required: true } },
   setup(props) {
     const wadah = ref();
+    let scrollScheduled = false;
+
+    const gulirBawah = () => {
+      if (scrollScheduled) return;
+      scrollScheduled = true;
+      requestAnimationFrame(() => {
+        if (wadah.value) {
+          wadah.value.scrollTop = wadah.value.scrollHeight;
+        }
+        scrollScheduled = false;
+      });
+    };
+
     watch(
-      () => props.pesan.map((m) => `${m.id}:${m.content.length}:${m.pending}`).join("|"),
-      async () => {
-        await nextTick();
-        wadah.value?.scrollTo({ top: wadah.value.scrollHeight, behavior: "smooth" });
+      () => {
+        const daftar = props.pesan;
+        const terakhir = daftar[daftar.length - 1];
+        return terakhir ? `${terakhir.id}:${terakhir.content.length}:${terakhir.pending}` : "";
       },
-      { deep: true }
+      gulirBawah
     );
+
     return () => <div ref={wadah} class="messages" aria-live="polite">
         {!props.pesan.length && <div class="empty">
             <div class="empty-badge">⚡ STELLARON LINK // ENCRYPTED SESSION</div>
@@ -34,7 +54,7 @@ const DaftarPesan = defineComponent({
                 </div>
               ) : (
                 <p>
-                  {message.content}
+                  {bersihkanTeksTampil(message.content)}
                   {message.pending && <span class="typing-cursor">▌</span>}
                 </p>
               )}
