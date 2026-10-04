@@ -64,8 +64,12 @@ class AntreanSuara {
   }
 
   sintesisAman(teks) {
-    return Promise.resolve(this.opsi.synthesize(teks)).catch((err) => {
-      console.warn("[antrean-suara] Galat sintesis:", err);
+    console.log("[antrean-suara] Meminta sintesis kalimat:", JSON.stringify(teks));
+    return Promise.resolve(this.opsi.synthesize(teks)).then((blob) => {
+      console.log("[antrean-suara] Sintesis BERHASIL untuk:", JSON.stringify(teks), "blob size:", blob?.size);
+      return blob;
+    }).catch((err) => {
+      console.error("[antrean-suara] Galat sintesis:", JSON.stringify(teks), err);
       this.opsi.onGalat?.(err);
       return null;
     });
@@ -122,9 +126,14 @@ class AntreanSuara {
           const blob = await item.promiseBlob;
           if (this.berhentiTotal) break;
           if (blob) {
+            console.log("[antrean-suara] Memulai putar audio untuk:", JSON.stringify(item.teks));
             await this.putar(blob);
+            console.log("[antrean-suara] Selesai putar audio untuk:", JSON.stringify(item.teks));
+          } else {
+            console.warn("[antrean-suara] Blob kosong/gagal untuk:", JSON.stringify(item.teks));
           }
         } catch (error) {
+          console.error("[antrean-suara] Error saat memutar audio:", error);
           this.opsi.onGalat?.(error);
         }
         this.opsi.onKalimatSelesai?.(item.teks);
@@ -141,12 +150,16 @@ class AntreanSuara {
     const konteks = dapatkanAudioContext();
     if (konteks) {
       try {
+        console.log("[antrean-suara] AudioContext state saat ini:", konteks.state);
         if (konteks.state === "suspended") {
-          await konteks.resume().catch(() => {});
+          await konteks.resume().catch((e) => console.warn("[antrean-suara] Gagal resume AudioContext:", e));
+          console.log("[antrean-suara] AudioContext state setelah resume:", konteks.state);
         }
 
         const arrayBuffer = await blob.arrayBuffer();
+        console.log("[antrean-suara] Men-decode audio data (byteLength:", arrayBuffer.byteLength, ")...");
         const audioBuffer = await konteks.decodeAudioData(arrayBuffer);
+        console.log("[antrean-suara] Audio decoded: durasi =", audioBuffer.duration, "s, sampleRate =", audioBuffer.sampleRate);
 
         if (this.berhentiTotal) return;
 
@@ -169,8 +182,12 @@ class AntreanSuara {
         this.gerakkanMulut(analyser);
 
         await new Promise((resolve) => {
-          sumber.onended = () => resolve();
+          sumber.onended = () => {
+            console.log("[antrean-suara] AudioBufferSource selesai berbunyi.");
+            resolve();
+          };
           sumber.start(0);
+          console.log("[antrean-suara] AudioBufferSource.start(0) dipanggil!");
         });
         return;
       } catch (err) {
@@ -182,12 +199,14 @@ class AntreanSuara {
     }
 
     // Fallback darurat jika AudioContext gagal
+    console.log("[antrean-suara] Menggunakan fallback HTMLAudioElement...");
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
     audio.volume = 1.0;
     this.audio = audio;
     try {
       await audio.play();
+      console.log("[antrean-suara] Fallback audio.play() berhasil dipanggil.");
       await new Promise((resolve) => {
         audio.onended = () => resolve();
         audio.onerror = (e) => {

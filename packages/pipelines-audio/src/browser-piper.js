@@ -53,16 +53,18 @@ class BrowserPiper {
       globalThis.fetch = ((input, init) => {
         const url = String(input);
         if (url.includes("piper-voices") && (url.endsWith(".onnx.json") || url.endsWith(".json"))) {
+          console.log("[piper] Fetch redirect (config):", url, "->", this.configUrl);
           return original(this.configUrl, init);
         }
         if (url.includes("piper-voices") && url.endsWith(".onnx")) {
+          console.log("[piper] Fetch redirect (model):", url, "->", this.modelUrl);
           return original(this.modelUrl, init);
         }
         return original(input, init);
       });
 
       try {
-        console.log("[piper] Menginisialisasi Piper TTS Session...");
+        console.log("[piper] Menginisialisasi Piper TTS Session dengan voiceId:", this.voice);
         const session = await TtsSession.create({
           voiceId: this.voice,
           wasmPaths: {
@@ -85,8 +87,16 @@ class BrowserPiper {
 
   async synthesize(text) {
     if (!text || !text.trim()) return null;
-    const s = await this.create();
-    return await s.predict(text);
+    try {
+      console.log("[piper] Memulai sintesis teks:", JSON.stringify(text));
+      const s = await this.create();
+      const blob = await s.predict(text);
+      console.log("[piper] Sintesis sukses! Blob size:", blob?.size, "tipe:", blob?.type);
+      return blob;
+    } catch (err) {
+      console.error("[piper] Gagal sintesis teks:", JSON.stringify(text), "Error:", err);
+      throw err;
+    }
   }
 
   destroy() {

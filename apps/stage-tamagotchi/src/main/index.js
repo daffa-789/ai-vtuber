@@ -142,6 +142,9 @@ async function createWindow(url) {
     const levelStr = level === 3 ? "ERROR" : level === 2 ? "WARN" : "LOG";
     console.log(`[renderer:${levelStr}] ${message}`);
   });
+  if (!app.isPackaged) {
+    window.webContents.openDevTools({ mode: "detach" });
+  }
   try {
     await window.loadURL(url);
   } catch (error) {
@@ -192,6 +195,7 @@ async function boot() {
   await createWindow(alamatRenderer?.toString() ?? `http://127.0.0.1:${port}/`);
   installTray();
   globalShortcut.register("CommandOrControl+Shift+S", () => window?.isVisible() ? window.hide() : window?.show());
+  globalShortcut.register("F12", () => window?.webContents.toggleDevTools());
 }
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
