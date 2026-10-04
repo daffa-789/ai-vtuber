@@ -163,10 +163,10 @@ export function bacaKonfig(env, akar) {
 
     // Otak
     llmProvider,
-    localModelPath: nilai(env, 'VTUBER_LOCAL_MODEL_PATH', 'model/MiniCPM5-2B-Q4_K_M.gguf'),
+    localModelPath: nilai(env, 'VTUBER_LOCAL_MODEL_PATH', 'model/gemma-4-E4B-it-UD-Q4_K_XL.gguf'),
     localModelThreads: angka(env, 'VTUBER_LOCAL_MODEL_THREADS', 4),
     localModelCtx: angka(env, 'VTUBER_LOCAL_MODEL_CTX', 8192),
-    localModelAlias: nilai(env, 'VTUBER_LOCAL_MODEL_ALIAS', 'MiniCPM5-2B'),
+    localModelAlias: nilai(env, 'VTUBER_LOCAL_MODEL_ALIAS', 'gemma-4b'),
     localMinP: angkaFloat(env, 'VTUBER_LOCAL_MIN_P', 0),
     localTopP: angkaFloat(env, 'VTUBER_LOCAL_TOP_P', 0.95),
     localReasoning,
