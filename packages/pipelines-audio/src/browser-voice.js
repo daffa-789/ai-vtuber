@@ -24,6 +24,10 @@ class BrowserVoicePipeline {
     return source;
   }
 
+  create() {
+    return this.piper.create();
+  }
+
   destroy() {
     this.piper.destroy();
   }

@@ -151,8 +151,14 @@ export class Process {
       '-c', String(ctx),
       '-t', String(this.config.localModelThreads),
       '-ngl', String(ngl),
+      '-np', '1',
+      '-b', '2048',
+      '-ub', '512',
     ]
-    if (vulkan && this.config.vulkanFa) args.push('--flash-attn', 'on')
+    if (vulkan) {
+      args.push('-ctk', 'q8_0', '-ctv', 'q8_0')
+      if (this.config.vulkanFa) args.push('--flash-attn', 'on')
+    }
     args.push(
       '--jinja',
       '--min-p', String(this.config.localMinP),

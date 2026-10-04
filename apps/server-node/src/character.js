@@ -67,7 +67,29 @@ export function bersihkanTagAwal(teks) {
   return asing ? { teks: teks.replace(TAG_ASING, '') } : { teks }
 }
 
-export function ringkasPersona(teks, batas = 18000) {
+export function ringkasPersona(teks, batas = 4500, lokal = false) {
+  if (lokal && teks.includes('## Aturan keras')) {
+    const aturanMatch = teks.match(/## Aturan keras[\s\S]*?(?=## Siapa dia|$)/)
+    const aturan = aturanMatch ? aturanMatch[0].trim() : ''
+
+    const bicaraMatch = teks.match(/## Cara dia bicara[\s\S]*?(?=## Yang dia suka|$)/)
+    const bicara = bicaraMatch ? bicaraMatch[0].trim() : ''
+
+    const contohMatch = teks.match(/## Contoh nada[\s\S]*?$/)
+    let contoh = contohMatch ? contohMatch[0].trim() : ''
+    const contohLines = contoh.split('\n').slice(0, 15).join('\n')
+
+    const intisari = [
+      '# Silver Wolf — AI Companion & Hacker Jenius',
+      aturan,
+      '## Siapa kamu\nKamu adalah Silver Wolf, hacker jenius Stellaron Hunters dari Honkai: Star Rail. Sekarang bertindak sebagai AI companion di komputer Master. Santai, sinis cerdas, gemar gaming, percaya diri tinggi.',
+      bicara,
+      contohLines
+    ].filter(Boolean).join('\n\n')
+
+    return { teks: intisari, terpotong: true, bagianHilang: [] }
+  }
+
   if (teks.length <= batas) return { teks, terpotong: false, bagianHilang: [] }
   let hasil = teks.slice(0, batas)
   const paragraf = hasil.lastIndexOf('\n\n')
@@ -77,7 +99,7 @@ export function ringkasPersona(teks, batas = 18000) {
 }
 
 export function gabungSystem(persona, fakta, mood, lokal = true) {
-  const bagian = [ringkasPersona(persona).teks]
+  const bagian = [ringkasPersona(persona, 4500, lokal).teks]
   if (lokal) {
     bagian.push(
       `WAJIB: Awali setiap balasanmu dengan satu tag emosi di paling depan, persis satu dari ${EMOTION_TAGS.map(t => `[${t}]`).join(', ')}. Contoh: [senyum] Beres, Master. Tinggal bilang bagian mana yang macet.`

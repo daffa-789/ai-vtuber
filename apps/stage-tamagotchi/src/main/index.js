@@ -16,6 +16,9 @@ function gagalKarenaGpu(error) {
   const pesan = error instanceof Error ? error.message : String(error);
   return /ERR_FAILED|ERR_NETWORK_CHANGED|ERR_CONNECTION/.test(pesan) || /\(-2\)/.test(pesan);
 }
+app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
+app.commandLine.appendSwitch("enable-features", "SharedArrayBuffer");
+
 if (modeSoftware()) {
   app.commandLine.appendSwitch("disable-gpu");
   app.commandLine.appendSwitch("enable-unsafe-swiftshader");
@@ -134,6 +137,10 @@ async function createWindow(url) {
   window.webContents.setWindowOpenHandler(({ url: target }) => {
     if (/^https?:/.test(target)) void shell.openExternal(target);
     return { action: "deny" };
+  });
+  window.webContents.on("console-message", (_event, level, message) => {
+    const levelStr = level === 3 ? "ERROR" : level === 2 ? "WARN" : "LOG";
+    console.log(`[renderer:${levelStr}] ${message}`);
   });
   try {
     await window.loadURL(url);

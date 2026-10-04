@@ -1,6 +1,6 @@
 import { defineComponent, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useCompanionStore } from "@silverwolf/stage-ui";
-import { AntreanSuara, BrowserVoicePipeline } from "@silverwolf/pipelines-audio";
+import { AntreanSuara, BrowserVoicePipeline, dapatkanAudioContext } from "@silverwolf/pipelines-audio";
 import { bacaTagAwal } from "@silverwolf/core-character/tags.js";
 import { bacaPanggung } from "@silverwolf/stage-ui-live2d/panggung.js";
 import { Panggung } from "./komponen/Panggung.jsx";
@@ -21,6 +21,8 @@ var stdin_default = defineComponent({
     let voice;
     let antrean;
     let renderer;
+    let lepasKunciAudio;
+
     function suara() {
       voice ??= new BrowserVoicePipeline({
         piper: {
@@ -32,6 +34,27 @@ var stdin_default = defineComponent({
     }
     onMounted(async () => {
       store.startPolling();
+
+      const bukaKunciAudio = () => {
+        const ctx = dapatkanAudioContext();
+        if (ctx && ctx.state === "suspended") {
+          void ctx.resume().catch(() => {});
+        }
+      };
+      window.addEventListener("pointerdown", bukaKunciAudio, { passive: true });
+      window.addEventListener("keydown", bukaKunciAudio, { passive: true });
+      lepasKunciAudio = () => {
+        window.removeEventListener("pointerdown", bukaKunciAudio);
+        window.removeEventListener("keydown", bukaKunciAudio);
+      };
+
+      // Pre-warm Piper TTS model & phonemizer di latar belakang
+      void suara().create?.().then(() => {
+        console.log("[App] Piper TTS siap digunakan.");
+      }).catch((err) => {
+        console.warn("[App] Pre-warm Piper TTS gagal:", err);
+      });
+
       if (!kanvas.value) return;
       try {
         const { Live2DRenderer } = await import("@silverwolf/stage-ui-live2d");
@@ -47,6 +70,7 @@ var stdin_default = defineComponent({
       }
     });
     onBeforeUnmount(() => {
+      lepasKunciAudio?.();
       store.stopPolling();
       antrean?.berhenti();
       renderer?.destroy();

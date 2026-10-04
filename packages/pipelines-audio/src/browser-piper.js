@@ -62,7 +62,8 @@ class BrowserPiper {
       });
 
       try {
-        return await TtsSession.create({
+        console.log("[piper] Menginisialisasi Piper TTS Session...");
+        const session = await TtsSession.create({
           voiceId: this.voice,
           wasmPaths: {
             onnxWasm: "/onnx/",
@@ -70,6 +71,11 @@ class BrowserPiper {
             piperWasm: "/piper/piper_phonemize.wasm"
           }
         });
+        console.log("[piper] Piper TTS Session berhasil dibuat dan siap!");
+        return session;
+      } catch (err) {
+        console.error("[piper] Gagal membuat sesi Piper TTS:", err);
+        throw err;
       } finally {
         globalThis.fetch = original;
       }
