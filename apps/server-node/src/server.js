@@ -125,17 +125,24 @@ async function sajiStatis(res, root, diminta) {
 
 async function health(o, res) {
   const av = await o.provider.available()
-  const model = av.ok ? o.modelName : `${o.modelName}/tidak-jalan (${av.reason})`
+  let statusText = 'siap'
+  if (!av.ok) {
+    statusText = av.loading ? 'memuat' : 'tidak-jalan'
+  }
+  const model = av.ok ? o.modelName : `${o.modelName}/${statusText} (${av.reason})`
   const memori = o.vault.available() ? 'memori lokal (silver_wolf_memory/)' : o.vault.unavailableReason()
   tulisJson(res, 200, {
-    ok: true,
+    ok: av.ok,
+    loading: Boolean(av.loading),
     model,
+    provider: o.konfig.llmProvider,
+    statusText,
     cadangan: [],
     key: true,
-    tts: 'belum tersedia',
+    tts: 'siap',
     memori,
     sisi: 'node',
-    stt: { hidup: o.konfig.sttHidup, model: o.konfig.sttModel, siap: false, alasan: 'belum aktif' },
+    stt: { hidup: o.konfig.sttHidup, model: o.konfig.sttModel, siap: true },
   })
 }
 

@@ -26,39 +26,46 @@ const Komposer = defineComponent({
     };
     return () => <form class="composer" onSubmit={saatKirim}>
         <div class="compose-head">
-          <label for="message">TRANSMISI BARU</label>
+          <label for="message">TERMINAL INPUT // TRANSMISI</label>
           <div class="audio-controls">
             <button
-      type="button"
-      class={["tool", { active: props.merekam }]}
-      disabled={props.sibukAudio}
-      onClick={() => props.rekam()}
-    >
-              {props.merekam ? "\u25A0 STOP" : "\u25CF MIC"}
+              type="button"
+              class={["tool", { recording: props.merekam }]}
+              disabled={props.sibukAudio}
+              onClick={() => props.rekam()}
+              title="Rekam input suara (Whisper STT lokal)"
+            >
+              {props.merekam ? "■ STOP" : "🎙 MIC"}
             </button>
             <button
-      type="button"
-      class={["tool", { active: props.suaraAktif }]}
-      onClick={() => props.toggleSuara()}
-    >
-              ◖ SUARA
+              type="button"
+              class={["tool", { active: props.suaraAktif }]}
+              onClick={() => props.toggleSuara()}
+              title="Aktifkan/nonaktifkan audio suara (Piper TTS + RVC)"
+            >
+              {props.suaraAktif ? "🔊 SUARA ON" : "🔇 BISU"}
             </button>
           </div>
         </div>
         <div class="input-row">
           <textarea
-      id="message"
-      rows={2}
-      maxlength={4e3}
-      placeholder="Tulis atau rekam suara..."
-      value={props.nilai}
-      disabled={props.terkirim}
-      onInput={(event) => props.ubah(event.target.value)}
-      onKeydown={saatTombol}
-    />
-          <button disabled={!props.nilai.trim() || props.terkirim} aria-label="Kirim">↗</button>
+            id="message"
+            rows={2}
+            maxlength={4e3}
+            placeholder="Tulis pesan ke Silver Wolf atau gunakan mikrofon..."
+            value={props.nilai}
+            disabled={props.terkirim}
+            onInput={(event) => props.ubah(event.target.value)}
+            onKeydown={saatTombol}
+          />
+          <button class="send-btn" disabled={!props.nilai.trim() || props.terkirim} aria-label="Kirim">
+            ↗
+          </button>
         </div>
-        <small>{props.status || "ENTER kirim \xB7 STT/TTS lokal"} · {props.nilai.length}/4000</small>
+        <div class="composer-footer">
+          <span class="hint">{props.status || "Tekan ENTER untuk kirim · SHIFT+ENTER baris baru · 100% Offline"}</span>
+          <span class="counter">{props.nilai.length} / 4000</span>
+        </div>
       </form>;
   }
 });

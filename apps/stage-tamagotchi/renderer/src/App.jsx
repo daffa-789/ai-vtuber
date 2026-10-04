@@ -38,7 +38,7 @@ var stdin_default = defineComponent({
       return voice;
     }
     onMounted(async () => {
-      void store.checkHealth();
+      store.startPolling();
       if (!kanvas.value) return;
       try {
         const { Live2DRenderer } = await import("@silverwolf/stage-ui-live2d");
@@ -54,6 +54,7 @@ var stdin_default = defineComponent({
       }
     });
     onBeforeUnmount(() => {
+      store.stopPolling();
       antrean?.berhenti();
       renderer?.destroy();
       voice?.destroy();

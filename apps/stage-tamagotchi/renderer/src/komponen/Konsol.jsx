@@ -19,17 +19,34 @@ const Konsol = defineComponent({
     const store = useCompanionStore();
     return () => <section class="console">
         <header class="console-head">
-          <div><span class="eyebrow">PRIVATE CHANNEL</span><h1>Catatan lapangan</h1></div>
+          <div>
+            <span class="eyebrow">STELLARON TERMINAL // PRIVATE CHANNEL</span>
+            <h1>Catatan Lapangan</h1>
+          </div>
           <button
-      class={["status", { online: store.ready }]}
-      onClick={() => void store.checkHealth()}
-      title={store.healthError || store.health?.model}
-    >
-            <i /> {store.ready ? "TERHUBUNG" : "PUTUS"}
+            class={["status", { online: store.ready, loading: store.loading }]}
+            onClick={() => void store.checkHealth()}
+            title={store.healthError || store.health?.model}
+          >
+            <i /> {store.ready ? "VULKAN ONLINE" : store.loading ? "MEMUAT VULKAN..." : "OFFLINE"}
           </button>
         </header>
 
-        {store.health ? <div class="telemetry"><span>{store.health.model}</span><span>{store.health.memori}</span></div> : store.healthError ? <div class="banner">Server tidak menjawab — jalankan <code>npm run dev</code></div> : null}
+        {store.health ? (
+          <div class="telemetry">
+            <div class={["telemetry-chip", { loading: store.loading }]}>
+              <strong>GPU:</strong> {store.health.model}
+            </div>
+            <div class="telemetry-chip">
+              <strong>MEM:</strong> {store.health.memori}
+            </div>
+            <div class="telemetry-chip">
+              <strong>AUDIO:</strong> Piper TTS + RVC v2
+            </div>
+          </div>
+        ) : store.healthError ? (
+          <div class="banner">Server tidak menjawab — jalankan <code>npm run dev</code></div>
+        ) : null}
 
         <DaftarPesan pesan={store.messages} />
 

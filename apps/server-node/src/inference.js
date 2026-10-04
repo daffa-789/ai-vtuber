@@ -25,8 +25,14 @@ export class OpenAiCompatibleProvider {
   async available() {
     const path = this.id === 'ollama' ? '/api/tags' : '/health'
     try {
-      const res = await fetch(this.baseUrl + path, { signal: AbortSignal.timeout(1500) })
+      const res = await fetch(this.baseUrl + path, { signal: AbortSignal.timeout(2000) })
       if (res.ok) return { ok: true, reason: 'siap' }
+      if (res.status === 503) {
+        const body = await res.json().catch(() => null)
+        if (body?.status === 'loading model') {
+          return { ok: false, loading: true, reason: 'memuat model ke VRAM...' }
+        }
+      }
       return { ok: false, reason: `HTTP ${res.status}` }
     } catch (error) {
       return { ok: false, reason: error instanceof Error ? error.message : String(error) }
@@ -45,16 +51,27 @@ export class OpenAiCompatibleProvider {
       : { model: this.model, messages, stream: true, max_tokens: opts.maxTokens, temperature: opts.temperature }
 
     let res
-    try {
-      res = await fetch(this.baseUrl + path, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-        signal,
-      })
-    } catch (error) {
-      yield { err: error instanceof Error ? error : new Error(String(error)) }
-      return
+    const batasWaktu = Date.now() + 45000
+    while (true) {
+      try {
+        res = await fetch(this.baseUrl + path, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+          signal,
+        })
+      } catch (error) {
+        yield { err: error instanceof Error ? error : new Error(String(error)) }
+        return
+      }
+
+      if (res.status === 503 && !ollama && Date.now() < batasWaktu) {
+        // Model GGUF sedang dimuat ke Vulkan VRAM oleh llama-server, tunggu dan coba lagi
+        await new Promise(r => setTimeout(r, 1200))
+        if (signal?.aborted) return
+        continue
+      }
+      break
     }
 
     if (!res.ok) {

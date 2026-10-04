@@ -14,12 +14,15 @@ const DaftarPesan = defineComponent({
     );
     return () => <div ref={wadah} class="messages" aria-live="polite">
         {!props.pesan.length && <div class="empty">
-            <span>01</span>
-            <h2>Link terenkripsi siap.</h2>
-            <p>Ketik pesan. Semua inferensi tetap berjalan di mesin lokal.</p>
+            <div class="empty-badge">⚡ STELLARON LINK // ENCRYPTED SESSION</div>
+            <h2>Halo Master, ada misi apa hari ini?</h2>
+            <p>Ketik pesan atau rekam suara. Seluruh inferensi AI berjalan 100% lokal di GPU Anda melalui Vulkan.</p>
           </div>}
         {props.pesan.map((message) => <article key={message.id} class={["message", message.role, { error: message.error }]}>
-            <div class="meta">{message.role === "user" ? "MASTER" : "SILVER WOLF"} <time>#{String(message.id).padStart(3, "0")}</time></div>
+            <div class="meta">
+              <span>{message.role === "user" ? "👤 MASTER" : "👾 SILVER WOLF"}</span>
+              <time>#{String(message.id).padStart(3, "0")}</time>
+            </div>
             <p>{message.content}{message.pending && <i class="cursor" />}</p>
           </article>)}
       </div>;

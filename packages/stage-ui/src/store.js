@@ -10,6 +10,9 @@ const useCompanionStore = defineStore("companion", () => {
   const sending = ref(false);
   const expression = ref("netral");
   const ready = computed(() => Boolean(health.value?.ok));
+  const loading = computed(() => Boolean(health.value?.loading));
+  let timer = null;
+
   async function checkHealth() {
     try {
       const response = await fetch(`${apiBase}/api/health`, { cache: "no-store" });
@@ -20,6 +23,24 @@ const useCompanionStore = defineStore("companion", () => {
       healthError.value = error instanceof Error ? error.message : String(error);
     }
   }
+
+  function startPolling() {
+    if (timer) return;
+    const tick = async () => {
+      await checkHealth();
+      const jeda = health.value?.ok ? 8000 : 2000;
+      timer = setTimeout(tick, jeda);
+    };
+    void tick();
+  }
+
+  function stopPolling() {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  }
+
   async function send(text, options = {}) {
     const clean = text.trim();
     if (!clean || sending.value) return "";
@@ -54,7 +75,7 @@ const useCompanionStore = defineStore("companion", () => {
     }
     return reply.error ? "" : reply.content;
   }
-  return { messages, health, healthError, sending, expression, ready, checkHealth, send };
+  return { messages, health, healthError, sending, expression, ready, loading, checkHealth, startPolling, stopPolling, send };
 });
 export {
   useCompanionStore

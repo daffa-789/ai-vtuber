@@ -12,14 +12,14 @@ const Panggung = defineComponent({
           <span class="sigil">SW</span>
           <div><b>SILVER WOLF</b><small>STELLARON // LOCAL LINK</small></div>
         </header>
+        <div class="stage-hud" />
         <canvas ref={props.kanvas} class={{ hidden: props.modelHilang }} />
         {props.modelHilang && <div class="avatar-fallback" aria-label="Model Live2D belum dipasang">
             <div class="glitch" data-text="404">404</div>
             <strong>MODEL OFFLINE</strong>
             <span>Pasang aset Live2D di public/models/silverwolf</span>
           </div>}
-        <div class="expression"><span>RAUT</span><b>{props.ekspresi}</b></div>
-        <div class="scanline" />
+        <div class="expression"><span>EMOSI // RAUT</span><b>{props.ekspresi}</b></div>
       </section>;
   }
 });
