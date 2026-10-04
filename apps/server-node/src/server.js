@@ -33,6 +33,9 @@ const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-headers': 'content-type',
   'access-control-allow-methods': 'GET, POST, OPTIONS',
+  'cross-origin-opener-policy': 'same-origin',
+  'cross-origin-embedder-policy': 'require-corp',
+  'cross-origin-resource-policy': 'cross-origin',
 }
 
 function tulisJson(res, status, isi) {

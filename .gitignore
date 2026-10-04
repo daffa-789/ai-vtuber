@@ -25,6 +25,8 @@ __pycache__/
 public/live2dcubismcore.min.js
 public/vad/
 public/ort/
+public/onnx/
+public/piper/
 
 # Model karakter sendiri: berkas sumber + hasil pasang, tetap di mesin ini.
 # SELURUH public/models/ dikecualikan, bukan cuma penyihir: lisensi Live2D
