@@ -6,13 +6,11 @@ const Konsol = defineComponent({
   name: "Konsol",
   props: {
     nilai: { type: String, required: true },
-    merekam: { type: Boolean, required: true },
     sibukAudio: { type: Boolean, required: true },
     status: { type: String, required: true },
     suaraAktif: { type: Boolean, required: true },
     ubah: { type: Function, required: true },
     kirim: { type: Function, required: true },
-    rekam: { type: Function, required: true },
     toggleSuara: { type: Function, required: true }
   },
   setup(props) {
@@ -41,7 +39,7 @@ const Konsol = defineComponent({
               <strong>MEM:</strong> {store.health.memori}
             </div>
             <div class="telemetry-chip">
-              <strong>AUDIO:</strong> Piper TTS + RVC v2
+              <strong>AUDIO:</strong> Piper TTS (id_ID)
             </div>
           </div>
         ) : store.healthError ? (
@@ -53,13 +51,11 @@ const Konsol = defineComponent({
         <Komposer
       nilai={props.nilai}
       terkirim={store.sending}
-      merekam={props.merekam}
       sibukAudio={props.sibukAudio}
       status={props.status}
       suaraAktif={props.suaraAktif}
       ubah={props.ubah}
       kirim={props.kirim}
-      rekam={props.rekam}
       toggleSuara={props.toggleSuara}
     />
       </section>;

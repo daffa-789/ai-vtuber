@@ -16,7 +16,7 @@ const DaftarPesan = defineComponent({
         {!props.pesan.length && <div class="empty">
             <div class="empty-badge">⚡ STELLARON LINK // ENCRYPTED SESSION</div>
             <h2>Halo Master, ada misi apa hari ini?</h2>
-            <p>Ketik pesan atau gunakan transmisi suara. Semua inferensi AI berjalan 100% offline dan lokal di sistem ini.</p>
+            <p>Ketik pesan ke terminal. Seluruh inferensi AI berjalan 100% offline dan lokal di sistem ini.</p>
           </div>}
         {props.pesan.map((message) => <article key={message.id} class={["message", message.role, { error: message.error }]}>
             <div class="meta">

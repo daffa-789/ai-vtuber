@@ -4,13 +4,11 @@ const Komposer = defineComponent({
   props: {
     nilai: { type: String, required: true },
     terkirim: { type: Boolean, required: true },
-    merekam: { type: Boolean, required: true },
     sibukAudio: { type: Boolean, required: true },
     status: { type: String, required: true },
     suaraAktif: { type: Boolean, required: true },
     ubah: { type: Function, required: true },
     kirim: { type: Function, required: true },
-    rekam: { type: Function, required: true },
     toggleSuara: { type: Function, required: true }
   },
   setup(props) {
@@ -30,18 +28,9 @@ const Komposer = defineComponent({
           <div class="audio-controls">
             <button
               type="button"
-              class={["tool", { recording: props.merekam }]}
-              disabled={props.sibukAudio}
-              onClick={() => props.rekam()}
-              title="Rekam input suara (Whisper STT lokal)"
-            >
-              {props.merekam ? "■ STOP" : "🎙 MIC"}
-            </button>
-            <button
-              type="button"
               class={["tool", { active: props.suaraAktif }]}
               onClick={() => props.toggleSuara()}
-              title="Aktifkan/nonaktifkan audio suara (Piper TTS + RVC)"
+              title="Aktifkan/nonaktifkan audio suara (Piper TTS)"
             >
               {props.suaraAktif ? "🔊 SUARA ON" : "🔇 BISU"}
             </button>
@@ -52,7 +41,7 @@ const Komposer = defineComponent({
             id="message"
             rows={2}
             maxlength={4e3}
-            placeholder="Tulis pesan ke Silver Wolf atau gunakan mikrofon..."
+            placeholder="Tulis pesan ke Silver Wolf..."
             value={props.nilai}
             disabled={props.terkirim}
             onInput={(event) => props.ubah(event.target.value)}

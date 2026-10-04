@@ -1,6 +1,5 @@
 import { defineComponent, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useCompanionStore } from "@silverwolf/stage-ui";
-import { MicrophoneRecorder, WhisperTranscriber } from "@silverwolf/audio";
 import { AntreanSuara, BrowserVoicePipeline } from "@silverwolf/pipelines-audio";
 import { bacaTagAwal } from "@silverwolf/core-character/tags.js";
 import { bacaPanggung } from "@silverwolf/stage-ui-live2d/panggung.js";
@@ -8,7 +7,6 @@ import { Panggung } from "./komponen/Panggung.jsx";
 import { Konsol } from "./komponen/Konsol.jsx";
 import { lewatiTag } from "./ucapan.js";
 const MODEL_URL = import.meta.env.VITE_MODEL_URL || "/models/silverwolf/silverwolf.model3.json";
-const RVC_TRANSPOSE = Number(import.meta.env.VITE_RVC_TRANSPOSE ?? 9);
 var stdin_default = defineComponent({
   name: "SilverWolfApp",
   setup() {
@@ -17,17 +15,9 @@ var stdin_default = defineComponent({
     const input = ref("");
     const kanvas = ref();
     const modelState = ref("loading");
-    const recording = ref(false);
     const audioBusy = ref(false);
     const audioStatus = ref("");
     const voiceEnabled = ref(true);
-    const recorder = new MicrophoneRecorder();
-    const whisper = new WhisperTranscriber({
-      language: "indonesian",
-      onProgress: (p) => {
-        if (p.progress) audioStatus.value = `Whisper ${Math.round(p.progress)}%`;
-      }
-    });
     let voice;
     let antrean;
     let renderer;
@@ -122,35 +112,10 @@ var stdin_default = defineComponent({
         audioStatus.value = "";
       }
     }
-    async function toggleMic() {
-      if (audioBusy.value) return;
-      if (!recording.value) {
-        try {
-          await recorder.start();
-          recording.value = true;
-          audioStatus.value = "Merekam...";
-        } catch (e) {
-          audioStatus.value = e instanceof Error ? e.message : String(e);
-        }
-        return;
-      }
-      recording.value = false;
-      audioBusy.value = true;
-      audioStatus.value = "Mengenali suara...";
-      try {
-        input.value = await whisper.transcribe(await recorder.stop());
-        audioStatus.value = "Transkripsi siap";
-      } catch (e) {
-        audioStatus.value = e instanceof Error ? e.message : String(e);
-      } finally {
-        audioBusy.value = false;
-      }
-    }
     return () => <main class="shell">
         <Panggung kanvas={kanvas} modelHilang={modelState.value === "missing"} ekspresi={store.expression} />
         <Konsol
       nilai={input.value}
-      merekam={recording.value}
       sibukAudio={audioBusy.value}
       status={audioStatus.value}
       suaraAktif={voiceEnabled.value}
@@ -158,7 +123,6 @@ var stdin_default = defineComponent({
         input.value = nilai;
       }}
       kirim={() => void submit()}
-      rekam={() => void toggleMic()}
       toggleSuara={() => {
         voiceEnabled.value = !voiceEnabled.value;
       }}
