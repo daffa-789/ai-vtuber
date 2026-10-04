@@ -80,10 +80,12 @@ class AntreanSuara {
     }
   }
   async putar(blob) {
+    if (!blob) return;
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
+    audio.volume = 1.0;
     this.audio = audio;
-    const konteks = this.konteksAudio();
+    const konteks = await this.konteksAudio();
     let sumber;
     let analyser;
     if (konteks) {
@@ -94,32 +96,45 @@ class AntreanSuara {
         analyser.smoothingTimeConstant = 0.2;
         sumber.connect(analyser);
         analyser.connect(konteks.destination);
-      } catch {
+      } catch (err) {
+        console.warn("Koneksi Web Audio gagal, audio tetap diputar langsung:", err);
         sumber = void 0;
         analyser = void 0;
       }
     }
     try {
-      await audio.play();
       if (analyser) this.gerakkanMulut(analyser);
+      await audio.play();
       await new Promise((resolve) => {
         audio.onended = () => resolve();
-        audio.onerror = () => resolve();
+        audio.onerror = (e) => {
+          console.warn("Audio playback error:", e);
+          resolve();
+        };
       });
+    } catch (err) {
+      console.warn("Gagal memulai pemutaran audio:", err);
     } finally {
       if (this.bingkai !== void 0) cancelAnimationFrame(this.bingkai);
       this.bingkai = void 0;
       this.opsi.onMulut?.(0);
-      sumber?.disconnect();
-      analyser?.disconnect();
+      try {
+        sumber?.disconnect();
+        analyser?.disconnect();
+      } catch {}
       URL.revokeObjectURL(url);
       if (this.audio === audio) this.audio = void 0;
     }
   }
-  konteksAudio() {
+  async konteksAudio() {
     try {
-      this.konteks ??= new AudioContext();
-      if (this.konteks.state === "suspended") void this.konteks.resume();
+      if (!this.konteks) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) this.konteks = new AudioCtx();
+      }
+      if (this.konteks && this.konteks.state === "suspended") {
+        await this.konteks.resume();
+      }
       return this.konteks;
     } catch {
       return void 0;

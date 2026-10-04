@@ -1,4 +1,4 @@
-import { computed, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import { defineStore } from "pinia";
 import { bersihkanTagAwal } from "@silverwolf/core-character/tags.js";
 let nextId = 1;
@@ -44,8 +44,8 @@ const useCompanionStore = defineStore("companion", () => {
   async function send(text, options = {}) {
     const clean = text.trim();
     if (!clean || sending.value) return "";
-    messages.value.push({ id: nextId++, role: "user", content: clean });
-    const reply = { id: nextId++, role: "assistant", content: "", pending: true };
+    messages.value.push(reactive({ id: nextId++, role: "user", content: clean }));
+    const reply = reactive({ id: nextId++, role: "assistant", content: "", pending: true });
     messages.value.push(reply);
     sending.value = true;
     try {

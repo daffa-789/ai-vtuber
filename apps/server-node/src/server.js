@@ -19,6 +19,7 @@ const MIME = {
   '.json': 'application/json',
   '.wasm': 'application/wasm',
   '.onnx': 'application/octet-stream',
+  '.data': 'application/octet-stream',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
@@ -232,6 +233,12 @@ export function buatPenangan(o) {
         if (metode === 'GET' && p === '/live2dcubismcore.min.js') {
           if (o.assetRoot && (await sajiStatis(res, join(o.assetRoot, 'live2d'), '/live2dcubismcore.min.js'))) return
           if (await sajiStatis(res, join(o.konfig.akar, 'public'), '/live2dcubismcore.min.js')) return
+        }
+        if (metode === 'GET' && p.startsWith('/onnx/')) {
+          if (await sajiStatis(res, join(o.konfig.akar, 'public', 'onnx'), p.slice('/onnx'.length))) return
+        }
+        if (metode === 'GET' && p.startsWith('/piper/')) {
+          if (await sajiStatis(res, join(o.konfig.akar, 'public', 'piper'), p.slice('/piper'.length))) return
         }
         if (metode === 'GET' && o.staticRoot && !p.startsWith('/api/')) {
           if (await sajiStatis(res, o.staticRoot, p)) return

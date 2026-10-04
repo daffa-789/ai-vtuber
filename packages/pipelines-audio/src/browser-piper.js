@@ -1,6 +1,20 @@
 import * as ort from "onnxruntime-web";
 import { TtsSession } from "@mintplex-labs/piper-tts-web";
 
+function lockWasmThreads(env) {
+  if (!env?.wasm) return;
+  try {
+    Object.defineProperty(env.wasm, "numThreads", {
+      get: () => 1,
+      set: () => {},
+      configurable: true,
+      enumerable: true
+    });
+  } catch {}
+}
+
+lockWasmThreads(ort.env);
+
 class BrowserPiper {
   session;
   modelUrl;
@@ -14,20 +28,26 @@ class BrowserPiper {
 
     if (ort.env?.wasm) {
       ort.env.wasm.wasmPaths = "/onnx/";
-      if (typeof crossOriginIsolated !== "undefined" && !crossOriginIsolated) {
-        ort.env.wasm.numThreads = 1;
-      }
+      lockWasmThreads(ort.env);
     }
   }
 
   create() {
     this.session ??= (async () => {
+      lockWasmThreads(ort.env);
       if (ort.env?.wasm) {
         ort.env.wasm.wasmPaths = "/onnx/";
-        if (typeof crossOriginIsolated !== "undefined" && !crossOriginIsolated) {
-          ort.env.wasm.numThreads = 1;
-        }
       }
+
+      // Pastikan onnxruntime-web/wasm juga terkunci single-thread
+      try {
+        const ortWasm = await import("onnxruntime-web/wasm");
+        const instance = ortWasm.default || ortWasm;
+        lockWasmThreads(instance.env);
+        if (instance.env?.wasm) {
+          instance.env.wasm.wasmPaths = "/onnx/";
+        }
+      } catch {}
 
       const original = globalThis.fetch;
       globalThis.fetch = ((input, init) => {
@@ -58,6 +78,7 @@ class BrowserPiper {
   }
 
   async synthesize(text) {
+    if (!text || !text.trim()) return null;
     const s = await this.create();
     return await s.predict(text);
   }
@@ -68,3 +89,4 @@ class BrowserPiper {
 }
 
 export { BrowserPiper };
+

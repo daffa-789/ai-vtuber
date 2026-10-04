@@ -9,16 +9,40 @@ import { viteStaticCopy } from "vite-plugin-static-copy";
 
 function serveRepoAssets() {
   const assetsDir = resolve(__dirname, "../../assets");
+  const publicDir = resolve(__dirname, "../../public");
+  const mimeTypes = {
+    ".onnx": "application/octet-stream",
+    ".data": "application/octet-stream",
+    ".wasm": "application/wasm",
+    ".json": "application/json",
+    ".js": "text/javascript",
+    ".mjs": "text/javascript",
+    ".png": "image/png",
+    ".wav": "audio/wav"
+  };
+
   return {
     name: "serve-repo-assets",
     configureServer(server) {
-      server.middlewares.use("/assets", (req, res, next) => {
-        const clean = req.url.replace(/^\/+/, "").split("?")[0];
-        const filePath = resolve(assetsDir, clean);
-        if (filePath.startsWith(assetsDir) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-          const stream = fs.createReadStream(filePath);
+      server.middlewares.use((req, res, next) => {
+        const url = req.url.split("?")[0];
+        let filePath = null;
+        if (url.startsWith("/assets/")) {
+          filePath = resolve(assetsDir, url.slice("/assets/".length));
+        } else if (url.startsWith("/onnx/")) {
+          filePath = resolve(publicDir, "onnx", url.slice("/onnx/".length));
+        } else if (url.startsWith("/piper/")) {
+          filePath = resolve(publicDir, "piper", url.slice("/piper/".length));
+        }
+
+        if (filePath && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+          const stat = fs.statSync(filePath);
+          const ext = filePath.slice(filePath.lastIndexOf(".")).toLowerCase();
+          res.setHeader("Content-Type", mimeTypes[ext] || "application/octet-stream");
+          res.setHeader("Content-Length", stat.size);
           res.setHeader("Access-Control-Allow-Origin", "*");
           res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+          const stream = fs.createReadStream(filePath);
           return stream.pipe(res);
         }
         next();

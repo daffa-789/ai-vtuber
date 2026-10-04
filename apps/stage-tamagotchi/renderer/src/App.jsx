@@ -33,7 +33,10 @@ var stdin_default = defineComponent({
     let renderer;
     function suara() {
       voice ??= new BrowserVoicePipeline({
-        rvc: { contentVecUrl: "/assets/encoders/vec-768-layer-12.onnx", modelUrl: "/assets/voices/silverwolf/model.onnx", transpose: RVC_TRANSPOSE }
+        piper: {
+          modelUrl: "/assets/piper/id_ID-news_tts-medium.onnx",
+          configUrl: "/assets/piper/id_ID-news_tts-medium.onnx.json"
+        }
       });
       return voice;
     }
@@ -75,6 +78,7 @@ var stdin_default = defineComponent({
           audioStatus.value = "Suara aktif";
         },
         onGalat: (error) => {
+          console.warn("Kesalahan sintesis suara:", error);
           audioStatus.value = error instanceof Error ? error.message : String(error);
         }
       });
@@ -82,13 +86,17 @@ var stdin_default = defineComponent({
       let mentah = "";
       let tagSelesai = false;
       let diproses = 0;
-      const proses = () => {
-        const pos = lewatiTag(mentah);
+      const proses = (selesai = false) => {
+        let pos = lewatiTag(mentah);
         if (!tagSelesai) {
-          if (pos < 0) return;
+          if (pos < 0 && !selesai) return;
           tagSelesai = true;
-          const tag = bacaTagAwal(mentah);
-          if (tag) store.expression = tag;
+          if (pos >= 0) {
+            const tag = bacaTagAwal(mentah);
+            if (tag) store.expression = tag;
+          } else {
+            pos = 0;
+          }
         }
         const bisaUcap = mentah.slice(Math.max(pos, 0));
         const baru = bisaUcap.slice(diproses);
@@ -97,17 +105,21 @@ var stdin_default = defineComponent({
         antrian.tambah(baru);
       };
       audioBusy.value = true;
+      audioStatus.value = "Menghubungkan transmisi...";
       try {
-        await store.send(value, { onDelta: (potongan) => {
-          mentah += potongan;
-          proses();
-        } });
-        proses();
+        await store.send(value, {
+          onDelta: (potongan) => {
+            mentah += potongan;
+            proses(false);
+          }
+        });
+        proses(true);
         antrian.tutup();
         await antrian.tungguSelesai();
       } finally {
         audioBusy.value = false;
         antrean = void 0;
+        audioStatus.value = "";
       }
     }
     async function toggleMic() {
