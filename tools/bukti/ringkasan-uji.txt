@@ -1,0 +1,5 @@
+waktu: 2026-10-09T22:28:47
+konfigurasi: 10 jalan x 70 dtk
+jalan 1/10: SELAMAT 70dtk        | kode=           - | RAM min=3274MiB | ws puncak=1243MiB | llama=tidak | log=41032B | masih-hidup
+------------------------------------------------------------------------------
+HASIL: selamat=1 mati=0 dari 10 jalan

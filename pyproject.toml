@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "silverwolf-ai-vtuber"
+version = "1.0.0"
+description = "Silver Wolf AI Vtuber Desktop Companion in pure Python"
+authors = [{ name = "Daffa & Software Workshop" }]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.28.0",
+    "python-dotenv>=1.0.0",
+    "sounddevice>=0.5.0",
+    "numpy>=1.24.0",
+    "pywebview>=5.0.0",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+silverwolf = "main:main"

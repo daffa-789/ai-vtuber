@@ -1,0 +1,154 @@
+VTUBER_PORT=8787
+# Wujud: 'pet' = jendela melayang tanpa bingkai, tembus pandang, tanpa entri
+# taskbar (bawaan -- wujud Vtuber 2D di desktop), 'browser' = buka sendiri di tab.
+# Per jalan: python main.py --browser / --pet
+VTUBER_TAMPAK=pet
+
+# ---- perilaku jendela pet (hanya dipakai kalau VTUBER_TAMPAK=pet) ----
+# tidak | layar-penuh | maksimal. Lihat .env.example untuk penjelasannya.
+# layar-penuh = dia minggir saat ada video/game menutupi seluruh monitor; tanpa
+# ini, jendela kerja yang dimaksimalkan tertutupi karakternya.
+VTUBER_PET_SEMBUNYI=layar-penuh
+VTUBER_PET_TRAY=ya
+VTUBER_PET_HOTKEY=ctrl+shift+s
+
+VTUBER_LLM_PROVIDER=vulkan
+# Gemma 4B Instruct UD Q4_K_XL (5,12 GB)
+VTUBER_LOCAL_MODEL_PATH=model/gemma-4-E4B-it-UD-Q4_K_XL.gguf
+# Nama yang dilaporkan ke /v1/chat/completions; kosong = turun dari nama berkas.
+VTUBER_LOCAL_MODEL_ALIAS=gemma-4b
+VTUBER_LOCAL_MODEL_THREADS=4
+VTUBER_LOCAL_MODEL_CTX=4096
+VTUBER_LOCAL_MIN_P=0.05
+VTUBER_LOCAL_TOP_P=0.95
+# Mode berpikir dimatikan: kalau hidup, balasan diawali blok <think> sehingga
+# pembaca tag emosi gagal (raut wajah tidak pernah berubah) dan <think> tampil
+# di chat. Matikan juga sebelum menyalakan Qwen3 bila Qwen3-nya varian thinking.
+VTUBER_LOCAL_REASONING=off
+VTUBER_VULKAN_NGL=99
+VTUBER_VULKAN_CTX=16384
+VTUBER_VULKAN_CACHE_TYPE=f16
+VTUBER_VULKAN_FA=ya
+VTUBER_VULKAN_SLOT_DIAM=ya
+VTUBER_VULKAN_MUAT_BOOT=ya
+
+VTUBER_TTS_RANTAI=piper+rvc,piper
+VTUBER_TTS_PER_KALIMAT=true
+VTUBER_TTS_BATAS_DETIK=40
+VTUBER_TTS_CACHE=ya
+VTUBER_TTS_PIPER_PANJANG=0.9
+# Prosodi (lihat .env.example): diuji 29 Sep, IQR nada cuma bergeser 1,8-2,4
+# semitone di semua kombinasi -> tidak menyembuhkan kekakuan. Dibiarkan di bawaan.
+VTUBER_TTS_PIPER_NOISE=0.667
+VTUBER_TTS_PIPER_NOISE_W=0.8
+
+VTUBER_RVC=ya
+VTUBER_RVC_MODEL=SilverWolfJP
+VTUBER_RVC_VERSI=v2
+VTUBER_RVC_F0=rmvpe
+# ── PROFIL SUARA YANG DIKUNCI (2026-10-08) ──────────────────────────────────
+# Seluruh nilai di blok RVC ini adalah profil suara yang dipilih Master dan
+# TIDAK BOLEH diubah tanpa persetujuan. Hasil acuannya:
+#     tools/tts/contoh/04-transpose-3.wav
+# Kalau salah satu angka diubah, suaranya ikut berubah.
+#
+# Riwayat kalibrasi transpose:
+#   29 Sep (pipeline LAMA, sumber bersuara lebih rendah) -- diukur var/ukur_f0.py:
+#     +9  -> 223,8 Hz     +11 -> 246,9 Hz
+#     +10 -> 233,7 Hz     +12 -> 260,1 Hz
+#   Mula-mula +10, lalu Master minta diturunkan sedikit -> +9. +12 terdengar
+#   seperti gadis anime ceria; Silver Wolf itu santai dan datar.
+#
+#   8 Okt (pipeline BARU, Piper id_ID-news_tts-medium sebagai sumber):
+#   Piper itu bersuara TINGGI -- F0 median 264,8 Hz. Dengan +9 hasilnya 442,7 Hz,
+#   terlalu tinggi. Diukur ulang (librosa.pyin, kalimat uji yang sama):
+#     +9 -> 442,7 Hz   (terlalu tinggi)
+#      0 -> 261,7 Hz   (belum turun)
+#     -3 -> 218,8 Hz   <-- DIPILIH, paling dekat dengan 223,8 Hz di atas
+#   Jadi -3 adalah penerus +9 dari pipeline lama, bukan perubahan selera.
+VTUBER_RVC_TRANSPOSE=-3
+# Duplikat berawalan VITE_ karena yang dipakai browser: Vite hanya mengekspos
+# kunci VITE_ ke bundel klien. Samakan angkanya dengan VTUBER_RVC_TRANSPOSE.
+# CATATAN: aplikasi web sudah dihapus, jadi kunci VITE_ ini warisan mati.
+# Dibuat sama hanya supaya tidak ada dua angka yang saling bertentangan.
+VITE_RVC_TRANSPOSE=-3
+VTUBER_RVC_PROTEKSI=0.33
+VTUBER_RVC_PENCUCIAN=3
+VTUBER_RVC_CAMPUR_RMS=0.8
+# Dulu 0 -- dan itu mematikan index 169 MB milik checkpoint ini, satu-satunya tuas
+# yang membuat hasilnya terdengar seperti Silver Wolf dan bukan RVC generik.
+# Biaya terukur: read_index 1,1 dtk + big_npy 165 MB, sekali per kalimat, dan
+# konversinya tidak melambat (adu_suara 29 Sep: i0 dan i0.6 sama-sama 8-20 dtk).
+# Diverifikasi 8 Okt: index benar-benar berpengaruh -- A/B index_rate 0 vs 0,6
+# pada masukan sama menghasilkan beda maksimum 0,905 (korelasi 0,925).
+# Lihat tools/tts/README.md bagian "Verifikasi index".
+VTUBER_RVC_INDEKS_LAJU=0.6
+VTUBER_RVC_MUAT_BOOT=tidak
+
+VITE_MODEL_URL="/models/silverwolf/silverwolf.model3.json"
+VITE_RENDER_SKALA="auto"
+VITE_RENDER_SKALA_MAKS="2"
+VITE_RENDER_HALUS="true"
+VITE_PANGGUNG_UKURAN="min(90vh, 100%)"
+VITE_PANGGUNG_LEBAR=
+VITE_PANGGUNG_TINGGI=
+VITE_AVATAR_ZOOM="1.85"
+VITE_AVATAR_X="0.5"
+VITE_AVATAR_JANGKAR="0.92"
+
+VITE_KEDIP="true"
+VITE_NAPAS="true"
+VITE_IKUTI_KURSOR="true"
+VITE_TEKSTUR="8192"
+
+VITE_IRAMA_JEDA_SAAT_SEMBUNYI="true"
+VITE_IRAMA_FPS_SAAT_TAK_FOKUS="30"
+
+# ---- mesin keadaan gerak (diam / bicara / tidur) ----
+# tanpa ini dia diam total sampai ada tombol atau tag chat
+VITE_KEADAAN="true"
+VITE_KEADAAN_GERAK_DIAM="siklus"
+VITE_KEADAAN_GERAK_BICARA="kosong"
+VITE_KEADAAN_GERAK_TIDUR="tidur"
+VITE_KEADAAN_JEDA_DETIK="45"
+VITE_KEADAAN_DETIK_TIDUR="180"
+
+VITE_EKSPRESI_DASAR="netral"
+VITE_PUDAR_WAJAH_MS="1000"
+
+VITE_WAJAH_NETRAL="kosong"
+VITE_WAJAH_SENYUM="key5=1 key3=0 key6=0"
+VITE_WAJAH_SEMANGAT="key7=1 key2=0 key4=0 key8=0"
+VITE_WAJAH_KAGET="key6=1 key3=0 key5=0"
+VITE_WAJAH_BINGUNG="key4=1 key2=0 key3=0 key7=0 key8=0"
+VITE_WAJAH_LELAH="key10=1"
+VITE_WAJAH_GODA="key2=1 key3=0 key4=0 key7=0 key8=0"
+VITE_WAJAH_SEBAL="key3=1 key5=0 key6=0"
+VITE_WAJAH_SEDIH="key8=1 key2=0 key4=0 key7=0"
+
+
+
+# ---- pose & aksesoris Silver Wolf (kanal [prop:nama], ditumpuk di atas wajah) ----
+# [prop:kosong] melepas semuanya sekaligus; nama berpungkang angka = satu keluarga
+# tangan, hanya satu yang boleh nyala.
+VITE_POSE_KACAMATA="key9=1:Overwrite:mati=0"
+VITE_POSE_JAKET="key13=1"
+VITE_POSE_UBAH_WUJUD="key11=1"
+# Satu keluarga tangan: hanya satu yang nyala bersamaan (main.js).
+VITE_POSE_TANGAN_1="key14=1 key15=0 key16=0 key17=0"
+VITE_POSE_TANGAN_2="key16=1 key15=0 key17=0"
+VITE_POSE_TANGAN_3="key17=1 key14=0 key15=0 key16=0"
+VITE_POSE_TANGAN_4="key15=1 key14=0 key16=0 key17=0"
+# Tanda air pembuat model: token `#` = nama artmesh, dipadamkan selama pose mati.
+# ArtMesh35 coretan pink di kepala, ArtMesh425 cap merah di badan.
+# Tombol / [prop:tanda-air] menyalakannya lagi, [prop:tanda-air=mati] menutupnya.
+VITE_POSE_TANDA_AIR="#ArtMesh35 #ArtMesh425"
+
+# ---- gerakan Silver Wolf ----
+# grup "isyarat" adalah satu-satunya grup motion model ini; ulang=true hanya untuk
+# yang memang harus berputar (tidur) -- sisanya sekali-jalan dan parameternya
+# dibersihkan ke bawaan setelah selesai.
+VITE_GERAK_BERUBAH_1="grup=isyarat berkas=gerakan/berubah-1.motion3.json ulang=false"
+VITE_GERAK_BERUBAH_2="grup=isyarat berkas=gerakan/berubah-2.motion3.json ulang=false"
+VITE_GERAK_SIKLUS="grup=isyarat berkas=gerakan/siklus.motion3.json ulang=false"
+VITE_GERAK_TIDUR="grup=isyarat berkas=gerakan/tidur.motion3.json ulang=true"

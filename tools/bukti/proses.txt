@@ -1,0 +1,13 @@
+=== Get-Process ===
+tidak ada proses
+=== autostart process lain ===
+9336 node
+9712 node
+12188 node
+13380 node
+18980 node
+20392 node
+20892 node
+420 python
+5932 python
+14172 python

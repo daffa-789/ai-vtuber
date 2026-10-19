@@ -1,0 +1,3 @@
+=== crash aplikasi 30 menit terakhir ===
+=== kernel-pnp / display 30 menit terakhir ===
+=== LocalDumps aktif? ===

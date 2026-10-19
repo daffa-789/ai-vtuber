@@ -1,0 +1,70 @@
+=== SEMUA event System+Application 60 menit terakhir (yang relevan) ===
+--- Application : 29 entri ---
+23:52:06 | Application | Microsoft-Windows-Security-SPP | id=16384 | Successfully scheduled Software Protection service for re-start at 2126-09-14T16:52:06Z. Reason: RulesEngine.
+23:51:36 | Application | Microsoft-Windows-Security-SPP | id=16394 | Offline downlevel migration succeeded.
+23:51:32 | Application | Microsoft-Windows-RestartManager | id=10001 | Ending session 0 started ‎2026‎-‎10‎-‎08T16:51:31.727096400Z.
+23:51:32 | Application | MsiInstaller | id=1042 | Ending a Windows Installer transaction: C:\Users\Daffa\AppData\Local\Temp\efqmysvu.yyc\data\169bdb8cc32a1a0c8f6a7fe5e63baac5-x64.msi. Client Process I
+23:51:32 | Application | MsiInstaller | id=1033 | Windows Installer installed the product. Product Name: Microsoft.NET.Workloads.11.0.100-rc.1 (x64). Product Version: 89.144.59873. Product Language: 1
+23:51:32 | Application | MsiInstaller | id=11707 | Product: Microsoft.NET.Workloads.11.0.100-rc.1 (x64) -- Installation completed successfully.
+23:51:31 | Application | Microsoft-Windows-RestartManager | id=10000 | Starting session 0 - ‎2026‎-‎10‎-‎08T16:51:31.727096400Z.
+23:51:31 | Application | MsiInstaller | id=1040 | Beginning a Windows Installer transaction: C:\Users\Daffa\AppData\Local\Temp\efqmysvu.yyc\data\169bdb8cc32a1a0c8f6a7fe5e63baac5-x64.msi. Client Proces
+23:43:26 | Application | edgeupdate | id=0 | Service stopped.
+23:40:51 | Application | Microsoft-Windows-Security-SPP | id=16384 | Successfully scheduled Software Protection service for re-start at 2126-09-14T16:40:51Z. Reason: RulesEngine.
+23:40:01 | Application | Microsoft-Windows-Security-SPP | id=16394 | Offline downlevel migration succeeded.
+23:38:17 | Application | Microsoft-Windows-Security-SPP | id=16384 | Successfully scheduled Software Protection service for re-start at 2126-09-14T16:38:17Z. Reason: RulesEngine.
+23:37:47 | Application | Microsoft-Windows-Security-SPP | id=16394 | Offline downlevel migration succeeded.
+23:35:49 | Application | Microsoft-Windows-Security-SPP | id=16384 | Successfully scheduled Software Protection service for re-start at 2126-09-14T16:35:49Z. Reason: RulesEngine.
+23:35:19 | Application | Microsoft-Windows-Security-SPP | id=16394 | Offline downlevel migration succeeded.
+23:31:24 | Application | Microsoft-Windows-Security-SPP | id=16384 | Successfully scheduled Software Protection service for re-start at 2126-09-14T16:31:24Z. Reason: RulesEngine.
+23:30:51 | Application | Microsoft-Windows-RestartManager | id=10001 | Ending session 1 started ‎2026‎-‎10‎-‎08T16:30:41.067988700Z.
+23:30:41 | Application | Microsoft-Windows-RestartManager | id=10000 | Starting session 1 - ‎2026‎-‎10‎-‎08T16:30:41.067988700Z.
+23:30:40 | Application | Microsoft-Windows-Security-SPP | id=16394 | Offline downlevel migration succeeded.
+23:27:41 | Application | VSS | id=8224 | The VSS service is shutting down due to idle timeout. 
+23:25:34 | Application | Microsoft-Windows-Security-SPP | id=16384 | Successfully scheduled Software Protection service for re-start at 2126-09-14T16:25:34Z. Reason: RulesEngine.
+23:25:03 | Application | Microsoft-Windows-Security-SPP | id=16394 | Offline downlevel migration succeeded.
+23:24:40 | Application | VSS | id=8231 | Volume Shadow Copy Service information: Snapshot creation initiated for Snapshot Set {29bb23f9-41c4-4ccc-bee6-65b2dd6480e6}. Process command line: tas
+23:24:39 | Application | IntelCollectorService | id=257 | system power changed
+23:24:39 | Application | IntelTelemetryAgent | id=257 | system power changed
+23:24:37 | Application | IntelCollectorService | id=257 | system resuming
+23:24:37 | Application | IntelTelemetryAgent | id=257 | system resuming
+23:24:36 | Application | IntelCollectorService | id=257 | system resuming
+23:24:36 | Application | IntelTelemetryAgent | id=257 | system resuming
+--- System : 36 entri ---
+23:38:51 | System | Microsoft-Windows-DistributedCOM | id=10016 | The application-specific permission settings do not grant Local Activation permission for the COM Server application with CLSID {2593F8B9-4EAF-457C-B6
+23:32:56 | System | Microsoft-Windows-IsolatedUserMode | id=2 | Secure Trustlet Id 6 and Pid 15464 stopped with status STATUS_SUCCESS.
+23:28:32 | System | Volsnap | id=33 | The oldest shadow copy of volume C: was deleted to keep disk space usage for shadow copies of volume C: below the user defined limit.
+23:25:38 | System | Microsoft-Windows-DistributedCOM | id=10016 | The application-specific permission settings do not grant Local Activation permission for the COM Server application with CLSID {2593F8B9-4EAF-457C-B6
+23:25:26 | System | Microsoft-Windows-IsolatedUserMode | id=1 | Secure Trustlet \??\C:\WINDOWS\System32\NgcIso.exe Id 6 and Pid 15464 started with status STATUS_SUCCESS.
+23:25:26 | System | Microsoft-Windows-IsolatedUserMode | id=5 | Secure Trustlet NULL Id 0 and Pid 0 started with status STATUS_SUCCESS.
+23:25:18 | System | Microsoft-Windows-Kernel-General | id=16 | The access history in hive \??\C:\ProgramData\Packages\5319275A.WhatsAppDesktop_cv1g1gvanyjgm\S-1-5-21-2095958888-3589704419-3645665250-1001\SystemApp
+23:25:18 | System | Microsoft-Windows-Kernel-General | id=16 | The access history in hive \??\C:\Users\Daffa\AppData\Local\Packages\5319275A.WhatsAppDesktop_cv1g1gvanyjgm\SystemAppData\Helium\UserClasses.dat was c
+23:25:18 | System | Microsoft-Windows-Kernel-General | id=16 | The access history in hive \??\C:\Users\Daffa\AppData\Local\Packages\5319275A.WhatsAppDesktop_cv1g1gvanyjgm\SystemAppData\Helium\User.dat was cleared 
+23:25:02 | System | Microsoft-Windows-Kernel-General | id=16 | The access history in hive \??\C:\Users\Daffa\AppData\Local\Packages\E046963F.LenovoCompanion_k1h2ywk1493x8\SystemAppData\Helium\UserClasses.dat was c
+23:25:02 | System | Microsoft-Windows-Kernel-General | id=16 | The access history in hive \??\C:\Users\Daffa\AppData\Local\Packages\E046963F.LenovoCompanion_k1h2ywk1493x8\SystemAppData\Helium\User.dat was cleared 
+23:24:40 | System | Netwtw10 | id=6062 | 6062 - Wi-Fi Driver Info
+23:24:40 | System | Microsoft-Windows-TPM-WMI | id=1038 | Pre-attestation health checks confirm that the device is expected to pass attestation. Please see C:\WINDOWS\Logs\MeasuredBoot\0000000384-0000000001.j
+23:24:40 | System | Microsoft-Windows-TPM-WMI | id=1041 | Pre-attestation health check detailed information: {"Version":2,"HealthStatus":"Attestable","Required":[{"Field":"TpmPresent","Value":true,"DesiredVal
+23:24:37 | System | Netwtw10 | id=7021 | 7021 - Wi-Fi Driver Info
+23:24:37 | System | Microsoft-Windows-Power-Troubleshooter | id=1 | The system has returned from a low power state. Sleep Time: ‎2026‎-‎10‎-‎08T09:10:10.284151000Z Wake Time: ‎2026‎-‎10‎-‎08T16:24:35.970958200Z Wake So
+23:24:36 | System | Microsoft-Windows-Kernel-General | id=16 | The access history in hive \Device\HarddiskVolume1\EFI\Microsoft\Boot\BCD was cleared updating 85 keys and creating 10 modified pages.
+23:24:36 | System | Microsoft-Windows-Kernel-Power | id=105 | Power source change.
+23:24:36 | System | Intel-SST-OED | id=28 | Loaded DSP FW library: \??\C:\WINDOWS\System32\DriverStore\FileRepository\intcoed_oemlibpath.inf_amd64_46e7ca20e218a609\tgl_vlldp100_lib.bin, status =
+23:24:36 | System | Microsoft-Windows-Kernel-Power | id=566 | The system session has transitioned from 10 to 12. Reason PolicyChange BootId: 384
+23:24:36 | System | Microsoft-Windows-Kernel-Power | id=507 | The system is exiting Modern Standby Reason: Lid.
+23:24:36 | System | Netwtw10 | id=7023 | 7023 - Wi-Fi Driver Info
+23:24:36 | System | Intel-SST-OED | id=28 | Loaded DSP FW library: Libs\dsp_lib_whm_tgl_release.bin, status = STATUS_SUCCESS.
+23:24:35 | System | Microsoft-Windows-Kernel-Power | id=506 | The system is entering Modern Standby Reason: Sleep, Hibernate, or Shutdown.
+23:24:35 | System | Microsoft-Windows-Kernel-Power | id=566 | The system session has transitioned from 9 to 10. Reason SxTransition BootId: 384
+23:24:35 | System | Intel-SST-OED | id=28 | Loaded DSP FW library: Libs\dsp_lib_intel_wov_tgl_release.bin, status = STATUS_SUCCESS.
+23:24:35 | System | Microsoft-Windows-Kernel-Boot | id=27 | The boot type was 0x2.
+23:24:35 | System | Microsoft-Windows-Kernel-Boot | id=25 | The boot menu policy was 0x0.
+23:24:35 | System | Microsoft-Windows-Kernel-Boot | id=32 | The bootmgr spent 0 ms waiting for user input.
+23:24:35 | System | Microsoft-Windows-Kernel-Boot | id=18 | There are 0x5 boot options on this system.
+23:24:35 | System | Microsoft-Windows-Kernel-Boot | id=30 | The firmware reported boot metrics.
+23:24:35 | System | Intel-SST-OED | id=28 | Loaded DSP FW library: Libs\dsp_lib_asrc_tgl_release.bin, status = STATUS_SUCCESS.
+23:24:35 | System | Netwtw10 | id=7025 | 7025 - Wi-Fi Driver Info
+23:24:35 | System | Win32k | id=701 | Power Manager has not requested suppression of all input (INPUT_SUPPRESS_REQUEST=0)
+23:24:35 | System | Win32k | id=701 | Power Manager has not requested suppression of all input (INPUT_SUPPRESS_REQUEST=0)
+23:24:35 | System | Microsoft-Windows-Kernel-General | id=1 | The system time has changed to ‎2026‎-‎10‎-‎08T16:24:35.500000000Z from ‎2026‎-‎10‎-‎08T09:10:13.286802600Z. Time Delta: 26062213 ms Change Reason: Sy
+=== nilai LocalDumps ===
+

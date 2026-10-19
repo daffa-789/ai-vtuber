@@ -1,0 +1,20 @@
+[
+  {
+    "jalan": 1,
+    "status": "SELAMAT 70dtk",
+    "kode_keluar": null,
+    "lama_detik": 71.0,
+    "ram_bebas_terendah_mib": 3274,
+    "working_set_puncak_mib": 1243,
+    "llama_pernah_hidup": false,
+    "ukuran_crash_log": 41032,
+    "ditutup_bersih": false,
+    "proses_keluar_clr": false,
+    "kelas": "masih-hidup",
+    "baris_terakhir": [
+      "──────────────────────────────────────────────",
+      "waktu   : 2026-10-09 22:28:36.363 +07:00",
+      "sumber  : TAHAP: tts: [tts] putar #1: 6AF6E082862EAD6C.wav 40000 Hz, 1 kanal, 2,18 dtk, perangkat=0/1 'Headphones (2- Realtek(R) Audio')"
+    ]
+  }
+]

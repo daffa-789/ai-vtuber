@@ -1,0 +1,4 @@
+=== GPU ===
+Intel(R) Iris(R) Xe Graphics | RAM=2147479552 | drv=32.0.101.7092
+=== OS ===
+TotalRAM_MB=16555320 FreeRAM_MB=3858060
