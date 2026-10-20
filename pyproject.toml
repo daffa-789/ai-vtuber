@@ -25,3 +25,12 @@ dev = [
 
 [project.scripts]
 silverwolf = "main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["silverwolf*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
