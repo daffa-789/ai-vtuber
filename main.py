@@ -1,9 +1,9 @@
-"""Silver Wolf // AI Vtuber Desktop Companion — Main Entry Point.
+"""HuoHuo // AI Vtuber Desktop Companion — Main Entry Point.
 
 Pemakaian:
     python main.py             # Jalankan antarmuka desktop Live2D companion
     python main.py --cli       # Mode interaktif di terminal (tanpa GUI)
-    python main.py --test-voice # Uji coba sintesis suara Silver Wolf
+    python main.py --test-voice # Uji coba sintesis suara HuoHuo
     python main.py --voice-in   # Voice-to-Voice: jawab ujaran dari mikrofon
     python main.py --voice-in --voice-loop  # Terus mendengarkan ujaran
 """
@@ -15,16 +15,16 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from silverwolf.application.dtos.interaction_dto import UserInteractionRequest
-from silverwolf.config import config
-from silverwolf.infrastructure.container import Container, create_container
-from silverwolf.ui.app import start_companion
+from huohuo.application.dtos.interaction_dto import UserInteractionRequest
+from huohuo.config import config
+from huohuo.infrastructure.container import Container, create_container
+from huohuo.ui.app import start_companion
 
 
 def run_cli_mode(container: Optional[Container] = None):
     """Mode percakapan langsung di terminal via Clean Architecture."""
     print("=" * 60)
-    print(" Silver Wolf // Terminal Companion (Mode CLI)")
+    print(" HuoHuo // Terminal Companion (Mode CLI)")
     print("=" * 60)
     print("Memuat memori dan sistem ikatan...")
 
@@ -42,11 +42,11 @@ def run_cli_mode(container: Optional[Container] = None):
                 print("Sampai jumpa lagi, Master!")
                 break
 
-            print("Silver Wolf sedang berpikir...", end="\r")
+            print("HuoHuo sedang berpikir...", end="\r")
             req = UserInteractionRequest(text=pesan, play_audio=True, blocking_audio=True)
             res = c.process_interaction_use_case.execute(req)
 
-            print(f"Silver Wolf [{res.emotion}] > {res.cleaned_reply}\n")
+            print(f"HuoHuo [{res.emotion}] > {res.cleaned_reply}\n")
 
         except (KeyboardInterrupt, EOFError):
             print("\nSampai jumpa Master!")
@@ -54,10 +54,10 @@ def run_cli_mode(container: Optional[Container] = None):
 
 
 def run_test_voice(container: Optional[Container] = None):
-    """Uji coba sintesis suara Silver Wolf via SynthesizeVoiceUseCase."""
+    """Uji coba sintesis suara HuoHuo via SynthesizeVoiceUseCase."""
     print("Menguji sintesis suara Piper TTS + RVC...")
     c = container or create_container()
-    sample_text = "Halo Master! Aku Silver Wolf, pacar gamer kamu. Suaraku sudah tersambung langsung ke Python!"
+    sample_text = "Halo Master! Aku HuoHuo, pacar gamer kamu. Suaraku sudah tersambung langsung ke Python!"
     print(f"Teks: {sample_text}")
     audio = c.synthesize_voice_use_case.speak(sample_text, blocking=True)
     if audio:
@@ -79,7 +79,7 @@ def run_voice_mode(
     stt = c.stt_port
 
     print("=" * 60)
-    print(" Silver Wolf // Voice-to-Voice (mode mikrofon)")
+    print(" HuoHuo // Voice-to-Voice (mode mikrofon)")
     print("=" * 60)
 
     if hasattr(stt, "is_available") and not stt.is_available():
@@ -108,7 +108,7 @@ def run_voice_mode(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Silver Wolf AI Vtuber Companion")
+    parser = argparse.ArgumentParser(description="HuoHuo AI Vtuber Companion")
     parser.add_argument("--cli", action="store_true", help="Jalankan di mode terminal CLI tanpa GUI")
     parser.add_argument("--test-voice", action="store_true", help="Uji sintesis dan pemutaran suara")
     parser.add_argument("--port", type=int, default=8990, help="Port server statis Live2D (default: 8990)")

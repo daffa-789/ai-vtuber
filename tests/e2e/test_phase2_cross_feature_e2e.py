@@ -29,7 +29,7 @@ def test_t3_mic_toggle_during_chat_typing(page: Page):
     speech_bubble = page.locator("#speech-bubble")
 
     # 1. Type partial message
-    partial_text = "Silver Wolf, coba dengarkan ini..."
+    partial_text = "HuoHuo, coba dengarkan ini..."
     chat_input.fill(partial_text)
     expect(chat_input).to_have_value(partial_text)
 
@@ -156,7 +156,7 @@ def test_t4_full_conversation_session(page: Page):
     status_badge = page.locator("#status-badge")
 
     # 1. User enters text prompt
-    user_prompt = "Selamat pagi Silver Wolf, siap main game bareng?"
+    user_prompt = "Selamat pagi HuoHuo, siap main game bareng?"
     chat_input.fill(user_prompt)
     send_btn.click()
 
@@ -232,14 +232,14 @@ def test_t4_proactive_idle_and_interruption_session(page: Page):
     bubble_text = page.locator("#bubble-text")
 
     # 1. Simulate proactive idle trigger (>10 minutes idle)
-    page.evaluate("window.setKizunaStatus('⚡ Kizuna: Idle • Silver Wolf Mengantuk');")
+    page.evaluate("window.setKizunaStatus('⚡ Kizuna: Idle • HuoHuo Mengantuk');")
     page.evaluate("window.showBubble('Hoammm... Master sibuk banget ya, aku ngantuk nih...', 'LELAH');")
     page.evaluate("window.setExpression('lelah');")
     has_set_motion = page.evaluate("typeof window.setMotion === 'function'")
     if has_set_motion:
         page.evaluate("window.setMotion('isyarat', 3);")  # tidur motion
 
-    expect(status_badge).to_have_text("⚡ Kizuna: Idle • Silver Wolf Mengantuk")
+    expect(status_badge).to_have_text("⚡ Kizuna: Idle • HuoHuo Mengantuk")
     expect(emotion_tag).to_have_text("LELAH")
     expect(bubble_text).to_have_text("Hoammm... Master sibuk banget ya, aku ngantuk nih...")
 
@@ -270,5 +270,5 @@ def test_t4_full_cli_conversation_session():
     stdout, stderr = proc.communicate(input=session_input, timeout=30)
 
     assert proc.returncode == 0, f"CLI session failed with exit code {proc.returncode}. Stderr: {stderr}"
-    assert "Silver Wolf // Terminal Companion" in stdout or "Status Ikatan" in stdout
+    assert "HuoHuo // Terminal Companion" in stdout or "Status Ikatan" in stdout
     assert "Sampai jumpa" in stdout

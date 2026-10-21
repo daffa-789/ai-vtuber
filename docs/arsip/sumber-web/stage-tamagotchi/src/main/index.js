@@ -130,7 +130,7 @@ async function createWindow(url) {
     minHeight: 560,
     show: false,
     backgroundColor: "#080b12",
-    title: "Silver Wolf",
+    title: "HuoHuo",
     icon: iconPath(),
     autoHideMenuBar: true,
     webPreferences: { preload: preloadPath, contextIsolation: true, sandbox: true, nodeIntegration: false }
@@ -169,9 +169,9 @@ async function createWindow(url) {
 function installTray() {
   const image = nativeImage.createFromPath(iconPath()).resize({ width: 20, height: 20 });
   tray = new Tray(image);
-  tray.setToolTip("Silver Wolf");
+  tray.setToolTip("HuoHuo");
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: "Tampilkan Silver Wolf", click: () => {
+    { label: "Tampilkan HuoHuo", click: () => {
       window?.show();
       window?.focus();
     } },

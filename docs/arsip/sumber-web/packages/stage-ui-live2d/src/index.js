@@ -80,7 +80,7 @@ class Live2DRenderer {
     const rect = canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
 
-    // Titik pusat wajah & mata Silver Wolf di koordinat viewport
+    // Titik pusat wajah & mata HuoHuo di koordinat viewport
     // Karakter berpusat horizontal di panggung (opsi.x = 0.5)
     // dan mata chibi berada di sekitar 46% tinggi panggung (opsi.headY = 0.46)
     const faceX = rect.left + rect.width * (this.opsi.x ?? 0.5);

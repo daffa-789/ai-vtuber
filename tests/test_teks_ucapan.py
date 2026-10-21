@@ -1,7 +1,7 @@
 """Unit test untuk teks_ucapan dan sentence_splitter."""
 
-from silverwolf.core.sentence_splitter import potong_kalimat
-from silverwolf.core.teks_ucapan import (
+from huohuo.core.sentence_splitter import potong_kalimat
+from huohuo.core.teks_ucapan import (
     bersihkan,
     bersihkan_per_kalimat,
     buang_narasi,
@@ -20,8 +20,8 @@ def test_bersihkan_kode_dan_backtick():
 
 
 def test_bersihkan_dash_panjang_ke_koma():
-    teks = "Silver Wolf—waifu kamu—selalu ada."
-    assert bersihkan(teks) == "Silver Wolf, waifu kamu, selalu ada."
+    teks = "HuoHuo—waifu kamu—selalu ada."
+    assert bersihkan(teks) == "HuoHuo, waifu kamu, selalu ada."
 
 
 def test_buang_narasi():

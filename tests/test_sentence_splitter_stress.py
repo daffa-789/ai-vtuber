@@ -10,7 +10,7 @@ Written by Challenger 1 (Milestone M1) to empirically test:
 """
 
 import sys
-from silverwolf.domain.services.sentence_splitter_service import SentenceSplitterService
+from huohuo.domain.services.sentence_splitter_service import SentenceSplitterService
 
 
 def test_pathological_single_char_tokens():

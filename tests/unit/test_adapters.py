@@ -1,15 +1,15 @@
-"""Unit tests for concrete adapters in silverwolf/adapters/."""
+"""Unit tests for concrete adapters in huohuo/adapters/."""
 
 import json
 from pathlib import Path
 
-from silverwolf.adapters.json_kizuna_repository import JsonKizunaRepository
-from silverwolf.adapters.llama_server_adapter import LlamaServerAdapter
-from silverwolf.adapters.markdown_vault_repository import MarkdownVaultRepository
-from silverwolf.adapters.sounddevice_player_adapter import SounddevicePlayerAdapter
-from silverwolf.adapters.webview_ui_adapter import WebviewUIAdapter
-from silverwolf.domain.entities.kizuna import KizunaState
-from silverwolf.domain.entities.mood import MoodState
+from huohuo.adapters.json_kizuna_repository import JsonKizunaRepository
+from huohuo.adapters.llama_server_adapter import LlamaServerAdapter
+from huohuo.adapters.markdown_vault_repository import MarkdownVaultRepository
+from huohuo.adapters.sounddevice_player_adapter import SounddevicePlayerAdapter
+from huohuo.adapters.webview_ui_adapter import WebviewUIAdapter
+from huohuo.domain.entities.kizuna import KizunaState
+from huohuo.domain.entities.mood import MoodState
 
 
 def test_json_kizuna_repository(tmp_path: Path):
@@ -37,7 +37,7 @@ def test_markdown_vault_repository(tmp_path: Path):
 
     # 1. Default persona if absent
     persona = repo.load_persona()
-    assert "Silver Wolf" in persona
+    assert "HuoHuo" in persona
 
     # 2. Write and load Fakta.md
     fakta_path = tmp_path / "Fakta.md"
@@ -60,7 +60,7 @@ def test_markdown_vault_repository(tmp_path: Path):
     assert len(riwayat_files) == 1
     history_text = riwayat_files[0].read_text(encoding="utf-8")
     assert "Master: Halo!" in history_text
-    assert "Silver Wolf: [senyum] Halo juga Master!" in history_text
+    assert "HuoHuo: [senyum] Halo juga Master!" in history_text
 
 
 def test_webview_ui_adapter():

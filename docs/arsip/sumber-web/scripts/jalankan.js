@@ -1,5 +1,5 @@
 /**
- * Peluncur aplikasi desktop Silver Wolf.
+ * Peluncur aplikasi desktop HuoHuo.
  *
  * Menjalankan Electron langsung ke bundel yang sudah dibangun (`out/main/index.js`),
  * tanpa membangun ulang. Dua hal yang dirawat di sini:
@@ -34,7 +34,7 @@ const electron = require('electron')
 delete process.env.ELECTRON_RUN_AS_NODE
 
 const argumen = [masuk, ...process.argv.slice(2)]
-console.log(`Menjalankan Silver Wolf: ${electron} ${argumen.join(' ')}`)
+console.log(`Menjalankan HuoHuo: ${electron} ${argumen.join(' ')}`)
 
 const anak = spawn(electron, argumen, { cwd: root, stdio: 'inherit', env: process.env })
 anak.on('exit', (kode, sinyal) => {

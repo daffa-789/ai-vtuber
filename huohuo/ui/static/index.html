@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HuoHuo Desktop Companion</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="libs/live2dcubismcore.min.js"></script>
+  <script src="libs/pixi.min.js"></script>
+  <script src="libs/cubism4.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Header Bar -->
+    <div class="header-bar">
+      <div id="status-badge" class="status-badge">⚡ Kizuna: Siap • Mood: Ceria</div>
+      <div class="window-controls">
+        <button class="btn-ctrl" onclick="window.pywebview?.api?.close_window()" title="Tutup">✕</button>
+      </div>
+    </div>
+
+    <!-- Speech Subtitle Balloon -->
+    <div class="dialog-overlay">
+      <div id="speech-bubble" class="speech-bubble hidden">
+        <span id="emotion-tag" class="emotion-tag">SENYUM</span>
+        <span id="bubble-text">Halo Master!</span>
+      </div>
+    </div>
+
+    <!-- Live2D Canvas -->
+    <div id="canvas-container">
+      <canvas id="live2d-canvas"></canvas>
+    </div>
+
+    <!-- Bottom Chat Input Panel -->
+    <div class="chat-panel">
+      <div class="quick-actions">
+        <button class="quick-btn" onclick="sendQuickAction('headpat')">💆 Elus Kepala</button>
+        <button class="quick-btn" onclick="sendQuickAction('puji')">💖 Puji Manis</button>
+        <button class="quick-btn" onclick="sendQuickAction('mabar')">🎮 Ajak Mabar</button>
+      </div>
+      <div class="input-container">
+        <button id="mic-btn" class="mic-btn" onclick="toggleMicrophone()" title="Aktifkan input suara (Voice-to-Voice)" aria-label="Toggle mikrofon" aria-pressed="false">🎙️</button>
+        <input type="text" id="chat-input" class="input-box" placeholder="Ketik pesan untuk HuoHuo..." autocomplete="off">
+        <button id="send-btn" class="send-btn" onclick="handleSend()">➔</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

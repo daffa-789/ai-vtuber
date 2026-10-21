@@ -171,7 +171,7 @@ export class Agent {
         const padat = s.replace(spasiGanda, ' ').trim()
         return padat.length > 240 ? padat.slice(0, 240) : padat
       }
-      await this.vault.catatHari(`Master: ${ringkas(ucapan)} | Silver Wolf: ${ringkas(jawaban)}`)
+      await this.vault.catatHari(`Master: ${ringkas(ucapan)} | HuoHuo: ${ringkas(jawaban)}`)
     }
   }
 }

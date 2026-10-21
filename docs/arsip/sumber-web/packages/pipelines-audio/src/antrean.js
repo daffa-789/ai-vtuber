@@ -169,7 +169,7 @@ class AntreanSuara {
         sumber.buffer = audioBuffer;
         this.sumberBuffer = sumber;
 
-        // Karakter vokal Silver Wolf:
+        // Karakter vokal HuoHuo:
         // 1. Playback rate 1.15x mentransposisi nada vokal naik ~2.3 semitone,
         // mengubah vokal dewasa berita menjadi vokal anime girl / gamer yang ceria, lincah, dan imut.
         const rate = this.opsi.playbackRate ?? 1.15;

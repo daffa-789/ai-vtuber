@@ -44,9 +44,9 @@ from datetime import datetime
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TARGET = os.path.join(
-    ROOT, "src", "SilverWolf.App", "bin", "x64", "Debug",
+    ROOT, "src", "HuoHuo.App", "bin", "x64", "Debug",
     "net8.0-windows10.0.19041.0", "win-x64")
-EXE = os.path.join(TARGET, "SilverWolf.App.exe")
+EXE = os.path.join(TARGET, "HuoHuo.App.exe")
 LOGDIR = os.path.join(ROOT, "tools", "bukti")
 
 # Ukuran crash.log tempat Mode A membeku (docs/PROYEK.md §8.1).
@@ -163,7 +163,7 @@ def main():
     rincian = []
 
     for jalan in range(1, n + 1):
-        bunuh("SilverWolf.App.exe")
+        bunuh("HuoHuo.App.exe")
         bunuh("llama-server.exe")
         time.sleep(5)
 
@@ -290,7 +290,7 @@ def main():
                   encoding="utf-8") as f:
             json.dump(rincian, f, indent=2, ensure_ascii=False)
 
-    bunuh("SilverWolf.App.exe")
+    bunuh("HuoHuo.App.exe")
     bunuh("llama-server.exe")
 
     print("-" * 78)

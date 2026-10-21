@@ -1,10 +1,10 @@
 """Unit tests for pure domain entities and value objects."""
 
-from silverwolf.domain.entities.character import Character, CharacterFacts, MemoryEntry, Persona
-from silverwolf.domain.entities.chat_message import ChatMessage, ChatRole
-from silverwolf.domain.entities.kizuna import KizunaMilestone, KizunaSnapshot, KizunaState
-from silverwolf.domain.entities.mood import MoodState
-from silverwolf.domain.value_objects.emotion import EmotionTag
+from huohuo.domain.entities.character import Character, CharacterFacts, MemoryEntry, Persona
+from huohuo.domain.entities.chat_message import ChatMessage, ChatRole
+from huohuo.domain.entities.kizuna import KizunaMilestone, KizunaSnapshot, KizunaState
+from huohuo.domain.entities.mood import MoodState
+from huohuo.domain.value_objects.emotion import EmotionTag
 
 
 def test_emotion_tag_value_object():
@@ -57,15 +57,15 @@ def test_kizuna_state_logic():
 
 
 def test_chat_message_entity():
-    msg = ChatMessage(role=ChatRole.USER, content="Halo Silver Wolf!")
+    msg = ChatMessage(role=ChatRole.USER, content="Halo HuoHuo!")
     assert msg.role == ChatRole.USER
-    assert msg.content == "Halo Silver Wolf!"
+    assert msg.content == "Halo HuoHuo!"
     assert msg.created_at != ""
-    assert msg.to_dict() == {"role": "user", "content": "Halo Silver Wolf!"}
+    assert msg.to_dict() == {"role": "user", "content": "Halo HuoHuo!"}
 
 
 def test_character_entity():
     char = Character()
-    assert char.name == "Silver Wolf"
+    assert char.name == "HuoHuo"
     persona = Persona(content="Gamer hacker")
     assert persona.version == "1.0"

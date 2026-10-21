@@ -10,7 +10,7 @@ jadi hasilnya tidak bergantung pada apa yang sedang di depan.
 Jendela WinUI 3 memakai DirectComposition, jadi perlu PW_RENDERFULLCONTENT (2).
 
 Pakai:
-    python tools/potret-jendela.py keluaran.png ["Silver Wolf"]
+    python tools/potret-jendela.py keluaran.png ["HuoHuo"]
 """
 import ctypes
 import ctypes.wintypes as w
@@ -54,7 +54,7 @@ class BITMAPINFO(ctypes.Structure):
 
 def main():
     keluaran = sys.argv[1] if len(sys.argv) > 1 else "tools/potret.png"
-    judul = sys.argv[2] if len(sys.argv) > 2 else "Silver Wolf"
+    judul = sys.argv[2] if len(sys.argv) > 2 else "HuoHuo"
 
     hwnd = user32.FindWindowW(None, judul)
     if not hwnd:

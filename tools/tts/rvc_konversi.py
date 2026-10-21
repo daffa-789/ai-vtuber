@@ -1,10 +1,10 @@
-"""Konversi suara ke Silver Wolf memakai RVC (Retrieval-based Voice Conversion).
+"""Konversi suara ke HuoHuo memakai RVC (Retrieval-based Voice Conversion).
 
 Skrip ini mengubah WAV apa pun (mis. hasil Piper Indonesia) menjadi suara
-Silver Wolf memakai checkpoint RVC v2 milik proyek ini:
+HuoHuo memakai checkpoint RVC v2 milik proyek ini:
 
-    assets/rvc/SilverWolfJP/SilverWolfJP.pth
-    assets/rvc/SilverWolfJP/added_IVF1442_Flat_nprobe_1_SilverWolfJP_v2.index
+    assets/rvc/HuoHuoJP/HuoHuoJP.pth
+    assets/rvc/HuoHuoJP/added_IVF1442_Flat_nprobe_1_HuoHuoJP_v2.index
 
 PROFIL SUARA DIKUNCI
 Semua nilai bawaan dibaca dari `.env` di akar repo, bukan ditulis ulang di sini.
@@ -65,7 +65,7 @@ def _angka(env: dict[str, str], kunci: str, bawaan, tipe):
 def profil(env: dict[str, str] | None = None) -> dict:
     """Profil suara terkunci, dibaca dari .env dengan cadangan yang aman."""
     env = env if env is not None else baca_env()
-    model = env.get("VTUBER_RVC_MODEL", "SilverWolfJP")
+    model = env.get("VTUBER_RVC_MODEL", "HuoHuoJP")
     versi = env.get("VTUBER_RVC_VERSI", "v2")
     folder = AKAR / "assets" / "rvc" / model
 
@@ -173,7 +173,7 @@ def konversi(
 def utama() -> None:
     p = profil()
     d = argparse.ArgumentParser(
-        description="Konversi WAV ke suara Silver Wolf (RVC v2). "
+        description="Konversi WAV ke suara HuoHuo (RVC v2). "
                     "Nilai bawaan dibaca dari .env."
     )
     d.add_argument("masuk", type=Path, help="WAV masukan")

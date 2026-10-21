@@ -2,7 +2,7 @@
  * Kizuna Engine — Sistem Ikatan Hubungan (@aituber-onair/kizuna)
  *
  * Mengelola level kedekatan (bond), afeksi, warmth, dan interaksi sentuhan (headpat)
- * antara Silver Wolf dan Master/Pacar.
+ * antara HuoHuo dan Master/Pacar.
  */
 import { existsSync } from 'node:fs'
 import fs from 'node:fs/promises'
@@ -89,7 +89,7 @@ function buatAdapterPenyimpanan() {
   }
 }
 
-export class SilverWolfKizuna {
+export class HuoHuoKizuna {
   constructor(dataDir, userId = 'master') {
     this.dataDir = path.resolve(dataDir)
     this.userId = userId

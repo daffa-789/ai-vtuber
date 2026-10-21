@@ -9,7 +9,7 @@ import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { bacaKonfig, buatEnvSource, cariAkarRepo } from './config.js'
 import { CharacterVault, bacaPersona } from './character.js'
-import { SilverWolfKizuna } from './kizuna.js'
+import { HuoHuoKizuna } from './kizuna.js'
 import { TieredMemoryEngine } from './tiered-memory.js'
 import { Agent } from './agent.js'
 import { OpenAiCompatibleProvider, StubProvider } from './inference.js'
@@ -17,7 +17,7 @@ import { Process, aliasModel, cariModel } from './llama.js'
 import { buatServer } from './server.js'
 
 const PERSONA_CADANGAN =
-  'Kamu adalah Silver Wolf, hacker Punklorde dari Stellaron Hunters. ' +
+  'Kamu adalah HuoHuo, hacker Punklorde dari Stellaron Hunters. ' +
   'Kamu memanggil pengguna Master atau Sayang, bicara santai, manis, dan akrab.'
 
 function ambilArgumen(argv) {
@@ -77,7 +77,7 @@ async function jalankan(konfig, host, staticRoot, assetRoot, vaultRoot) {
   const lumbung = new CharacterVault(vaultRoot)
   const memoryEngine = new TieredMemoryEngine(lumbung)
   const kizunaDir = join(vaultRoot, 'kizuna')
-  const kizuna = new SilverWolfKizuna(kizunaDir, 'master')
+  const kizuna = new HuoHuoKizuna(kizunaDir, 'master')
   await kizuna.initialize().catch(err => console.error('! gagal inisialisasi kizuna:', err))
 
   const { provider, namaModel, llama } = pilihProvider(konfig)
@@ -110,7 +110,7 @@ async function jalankan(konfig, host, staticRoot, assetRoot, vaultRoot) {
 
   const memori = lumbung.available() ? 'siap' : lumbung.unavailableReason()
   const snapKizuna = kizuna.getSnapshot()
-  console.log(`Silver Wolf server Node siap di http://${host}:${port}`)
+  console.log(`HuoHuo server Node siap di http://${host}:${port}`)
   console.log(`  model: ${namaModel} · memori: ${memori} · kizuna: Lv.${snapKizuna.level} ${snapKizuna.stageName} (${snapKizuna.points} XP)`)
   for (const w of konfig.warnings) console.error(`  ! ${w}`)
   console.log(`port=${port}`)

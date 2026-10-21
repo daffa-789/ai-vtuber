@@ -1,4 +1,4 @@
-"""Automated Playwright E2E UI Testing for Silver Wolf Companion Web Interface.
+"""Automated Playwright E2E UI Testing for HuoHuo Companion Web Interface.
 
 Strictly runs using system Microsoft Edge (channel="msedge") in headless mode.
 Does NOT download or install Playwright Chromium.

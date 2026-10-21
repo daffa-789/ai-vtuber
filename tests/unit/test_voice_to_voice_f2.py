@@ -8,18 +8,18 @@ from __future__ import annotations
 
 import struct
 
-from silverwolf.adapters.energy_vad_adapter import EnergyVADAdapter
-from silverwolf.adapters.faster_whisper_adapter import FasterWhisperAdapter
-from silverwolf.adapters.mock_audio_input_adapter import MockAudioInputAdapter
-from silverwolf.adapters.mock_stt_adapter import MockSTTAdapter
-from silverwolf.adapters.mock_vad_adapter import MockVADAdapter
-from silverwolf.application.dtos.interaction_dto import UserInteractionRequest
-from silverwolf.application.use_cases.voice_interaction_use_case import (
+from huohuo.adapters.energy_vad_adapter import EnergyVADAdapter
+from huohuo.adapters.faster_whisper_adapter import FasterWhisperAdapter
+from huohuo.adapters.mock_audio_input_adapter import MockAudioInputAdapter
+from huohuo.adapters.mock_stt_adapter import MockSTTAdapter
+from huohuo.adapters.mock_vad_adapter import MockVADAdapter
+from huohuo.application.dtos.interaction_dto import UserInteractionRequest
+from huohuo.application.use_cases.voice_interaction_use_case import (
     VoiceInteractionUseCase,
 )
-from silverwolf.domain.ports.audio_input_port import AudioInputPort
-from silverwolf.domain.ports.speech_to_text_port import SpeechToTextPort
-from silverwolf.domain.ports.voice_activity_detection_port import (
+from huohuo.domain.ports.audio_input_port import AudioInputPort
+from huohuo.domain.ports.speech_to_text_port import SpeechToTextPort
+from huohuo.domain.ports.voice_activity_detection_port import (
     VoiceActivityDetectionPort,
 )
 
@@ -72,7 +72,7 @@ def test_mock_vad_and_audio_input_iteration():
 
 # ── Voice use case end-to-end dengan mock ─────────────────────────────────────
 def test_voice_use_case_transcribes_and_responds():
-    stt = MockSTTAdapter(transcripts=["Halo Silver Wolf, kamu cantik."])
+    stt = MockSTTAdapter(transcripts=["Halo HuoHuo, kamu cantik."])
     vad = MockVADAdapter(speech_frames=-1)
     audio = MockAudioInputAdapter([_pcm(9000), _pcm(9000), _pcm(9000)])
 
@@ -85,7 +85,7 @@ def test_voice_use_case_transcribes_and_responds():
     )
 
     text = uc.execute_once(timeout_seconds=1.0, play_audio=True)
-    assert text == "Halo Silver Wolf, kamu cantik."
+    assert text == "Halo HuoHuo, kamu cantik."
     assert len(captured) == 1
     assert captured[0].text == text
     assert captured[0].play_audio is True
@@ -121,7 +121,7 @@ def test_faster_whisper_degrades_without_package():
 
 # ── Wiring container: port baru terdaftar rapi ────────────────────────────────
 def test_container_wires_voice_ports_and_use_case():
-    from silverwolf.infrastructure.container import create_container
+    from huohuo.infrastructure.container import create_container
 
     stt = MockSTTAdapter(transcripts=["tes wiring"])
     vad = MockVADAdapter(speech_frames=-1)

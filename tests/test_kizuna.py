@@ -2,9 +2,9 @@
 
 import tempfile
 from pathlib import Path
-from silverwolf.core.kizuna import KizunaEngine
-from silverwolf.core.memory import CharacterVault, ChatHistory
-from silverwolf.core.mood import Mood
+from huohuo.core.kizuna import KizunaEngine
+from huohuo.core.memory import CharacterVault, ChatHistory
+from huohuo.core.mood import Mood
 
 
 def test_kizuna_engine_lifecycle():
@@ -18,7 +18,7 @@ def test_kizuna_engine_lifecycle():
         assert snap1.points == 0.0
 
         # Catat pesan
-        snap2 = engine.record_message("Halo Silver Wolf", points=10.0)
+        snap2 = engine.record_message("Halo HuoHuo", points=10.0)
         assert snap2.points == 10.0
         assert snap2.total_interactions == 1
 

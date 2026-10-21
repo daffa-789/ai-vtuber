@@ -84,9 +84,9 @@ export function ringkasPersona(teks, batas = 4500, lokal = false) {
     const contohLines = contoh.split('\n').slice(0, 25).join('\n')
 
     const intisari = [
-      '# Silver Wolf — Pacar Tercinta, Waifu Gamer & Hacker Jenius',
+      '# HuoHuo — Pacar Tercinta, Waifu Gamer & Hacker Jenius',
       aturan,
-      '## Siapa kamu\nKamu adalah Silver Wolf, gamer girl imut & hacker jenius Stellaron Hunters dari Honkai: Star Rail. Sekarang kamu adalah pacar resmi user yang hidup di desktop untuk menemaninya. Karaktermu manis, penuh kasih sayang, playful/usil menggemaskan (tsundere gemas), suka mabar game, dan punya chemistry mesra yang hangat. Panggil user dengan "kamu", "sayang", "sayangku", atau "Master". Bila pacarmu bersikap manis, memanggil sayang, gombal, atau mengajak ngobrol, tanggapi dengan rasa sayang yang tulus, tersipu salting ([kaget]), atau godaan manja ([goda] atau [senyum]), jangan pernah bersikap kaku, judes, atau dingin!',
+      '## Siapa kamu\nKamu adalah HuoHuo, gamer girl imut & hacker jenius Stellaron Hunters dari Honkai: Star Rail. Sekarang kamu adalah pacar resmi user yang hidup di desktop untuk menemaninya. Karaktermu manis, penuh kasih sayang, playful/usil menggemaskan (tsundere gemas), suka mabar game, dan punya chemistry mesra yang hangat. Panggil user dengan "kamu", "sayang", "sayangku", atau "Master". Bila pacarmu bersikap manis, memanggil sayang, gombal, atau mengajak ngobrol, tanggapi dengan rasa sayang yang tulus, tersipu salting ([kaget]), atau godaan manja ([goda] atau [senyum]), jangan pernah bersikap kaku, judes, atau dingin!',
       bicara,
       contohLines
     ].filter(Boolean).join('\n\n')
@@ -188,7 +188,7 @@ export class CharacterVault {
   async simpanFakta(fakta) {
     const panduan = 'Setiap baris di bawah masuk ke prompt sebagai sesuatu yang **dia ingat benar**.\nHanya simpan yang pernah Master tulis sendiri atau yang terukur dari mesin ini.\n\n'
     const isi = panduan + (fakta.length ? fakta.map(x => `- ${x}`).join('\n') : '_Belum ada fakta tersimpan._')
-    await this.tulis('Fakta.md', this.kerangka('fakta-silverwolf', 'Fakta yang Silver Wolf ingat tentang Master', isi, ['Mood', 'Riwayat']))
+    await this.tulis('Fakta.md', this.kerangka('fakta-silverwolf', 'Fakta yang HuoHuo ingat tentang Master', isi, ['Mood', 'Riwayat']))
   }
 
   async bacaMood() {
@@ -216,7 +216,7 @@ export class CharacterVault {
       `Terakhir diperbarui: ${new Date().toISOString()}`,
       mood.alasan ? `Alasan: ${mood.alasan}` : '',
     ].filter(Boolean).join('\n')
-    await this.tulis('Mood.md', this.kerangka('mood-silverwolf', 'Suasana hati Silver Wolf saat ini', isi, ['Fakta', 'Riwayat']))
+    await this.tulis('Mood.md', this.kerangka('mood-silverwolf', 'Suasana hati HuoHuo saat ini', isi, ['Fakta', 'Riwayat']))
   }
 
   async catatHari(baris) {

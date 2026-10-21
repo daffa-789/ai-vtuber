@@ -1,6 +1,6 @@
 # TEST_READY — Automated Opaque-Box E2E Testing Suite for Phase 2
 
-> **Project**: Silver Wolf AI Vtuber — Phase 2: Realtime Streaming Voice-to-Voice, Proactive Companion & Production CI/CD  
+> **Project**: HuoHuo AI Vtuber — Phase 2: Realtime Streaming Voice-to-Voice, Proactive Companion & Production CI/CD  
 > **Status**: **READY** (Test Suite Implemented & Verified)  
 > **Date**: 2026-10-21  
 > **Author**: E2E Test Writer (`teamwork_preview_test_writer`)  

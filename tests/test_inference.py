@@ -1,6 +1,6 @@
 """Unit test untuk inferensi LLM."""
 
-from silverwolf.inference.llama_client import LlamaClient
+from huohuo.inference.llama_client import LlamaClient
 
 
 def test_llama_client_generate_fallback():
@@ -10,7 +10,7 @@ def test_llama_client_generate_fallback():
     emotion, text = client.generate(messages)
 
     assert emotion in ("senyum", "goda", "kaget", "netral", "sebal")
-    assert "Silver Wolf" in text or "Master" in text or "pacar" in text
+    assert "HuoHuo" in text or "Master" in text or "pacar" in text
     assert len(text) > 10
 
 

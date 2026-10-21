@@ -1,7 +1,7 @@
 /**
  * Neuro-sama Style Autonomous Proactive Director
  *
- * Mengatur dialog spontan Silver Wolf ketika pengguna sedang hening/idle,
+ * Mengatur dialog spontan HuoHuo ketika pengguna sedang hening/idle,
  * mengamati jam kerja, waktu istirahat, serta tingkat kedekatan (Kizuna).
  */
 

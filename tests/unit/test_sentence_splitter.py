@@ -4,7 +4,7 @@ Tests clause splitting, threshold rules, abbreviation/decimal/emoticon preservat
 initial/inline emotion tag extraction, roleplay asterisks, and end-of-stream flush.
 """
 
-from silverwolf.domain.services.sentence_splitter_service import SentenceSplitterService
+from huohuo.domain.services.sentence_splitter_service import SentenceSplitterService
 
 
 def test_basic_punctuation_splitting():

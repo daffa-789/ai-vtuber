@@ -24,9 +24,9 @@ from datetime import datetime
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TARGET = os.path.join(
-    ROOT, "src", "SilverWolf.App", "bin", "x64", "Debug",
+    ROOT, "src", "HuoHuo.App", "bin", "x64", "Debug",
     "net8.0-windows10.0.19041.0", "win-x64")
-EXE = os.path.join(TARGET, "SilverWolf.App.exe")
+EXE = os.path.join(TARGET, "HuoHuo.App.exe")
 CRASH = os.path.join(TARGET, "crash.log")
 
 
@@ -37,9 +37,9 @@ def jalankan(cmd):
 
 def status_proses():
     """Baris tasklist /V untuk aplikasi, atau None kalau sudah hilang."""
-    out = jalankan(["tasklist", "/V", "/FI", "IMAGENAME eq SilverWolf.App.exe"])
+    out = jalankan(["tasklist", "/V", "/FI", "IMAGENAME eq HuoHuo.App.exe"])
     for baris in out.splitlines():
-        if "SilverWolf.App.exe" in baris:
+        if "HuoHuo.App.exe" in baris:
             return " ".join(baris.split())
     return None
 
@@ -47,7 +47,7 @@ def status_proses():
 def main():
     maks = int(sys.argv[1]) if len(sys.argv) > 1 else 60
 
-    subprocess.run(["taskkill", "/F", "/IM", "SilverWolf.App.exe"],
+    subprocess.run(["taskkill", "/F", "/IM", "HuoHuo.App.exe"],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     subprocess.run(["taskkill", "/F", "/IM", "llama-server.exe"],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

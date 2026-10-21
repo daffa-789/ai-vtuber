@@ -1,7 +1,7 @@
 """Unit test untuk pipeline suara dan player."""
 
-from silverwolf.voice.pipeline import VoicePipeline
-from silverwolf.voice.player import AudioPlayer
+from huohuo.voice.pipeline import VoicePipeline
+from huohuo.voice.player import AudioPlayer
 
 
 def test_voice_pipeline_sintesis_piper():

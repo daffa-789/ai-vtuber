@@ -1,25 +1,25 @@
-# Silver Wolf // AI Vtuber Desktop Companion (Pure Python)
+# HuoHuo // AI Vtuber Desktop Companion (Pure Python)
 
 Proyek ini telah dimigrasikan sepenuhnya menjadi ekosistem **Python murni** yang menggabungkan:
-1. **Logika Inti Karakter & Memori (`silverwolf.core`)**:
+1. **Logika Inti Karakter & Memori (`huohuo.core`)**:
    - `EmotionParser`: Mendeteksi tag emosi (`[senyum]`, `[goda]`, `[kaget]`, dll.) dan membersihkan teks.
    - `TeksUcapan`: Menghilangkan format Markdown agar mesin TTS tidak mengucapkan tanda baca seperti "bintang".
    - `PersonaComposer`: Membangun system prompt dengan injeksi aturan cemburu, fakta Master, dan suasana hati.
-   - `KizunaEngine`: Menghitung poin ikatan, level keintiman, streak interaksi, dan riwayat obrolan (`silver_wolf_memory/kizuna/silverwolf_kizuna_v1.json`).
+   - `KizunaEngine`: Menghitung poin ikatan, level keintiman, streak interaksi, dan riwayat obrolan (`silver_wolf_memory/kizuna/huohuo_kizuna_v1.json`).
    - `CharacterVault`: Membaca dan menyimpan fakta Master, suasana hati (`Mood.md`), serta riwayat percakapan harian.
-2. **Pipeline Suara In-Memory (`silverwolf.voice`)**:
+2. **Pipeline Suara In-Memory (`huohuo.voice`)**:
    - Piper TTS Bahasa Indonesia (`assets/piper/id_ID-news_tts-medium.onnx`) menghasilkan suara jernih.
-   - RVC v2 (`SilverWolfJP`) mengubah timbre suara menjadi Silver Wolf.
+   - RVC v2 (`HuoHuoJP`) mengubah timbre suara menjadi HuoHuo.
    - Pemutaran audio langsung dari memori RAM (in-memory) tanpa penumpukan berkas sampah di disk.
-3. **Supervisor Inferensi LLM (`silverwolf.inference`)**:
+3. **Supervisor Inferensi LLM (`huohuo.inference`)**:
    - Terhubung ke `llama-server` lokal (model Gemma 4 E4B GGUF 5.3 GB) via API kompatibel OpenAI.
-   - Mode fallback in-character Silver Wolf otomatis bila model lokal sedang offline.
-4. **Desktop Live2D Companion UI (`silverwolf.ui`)**:
+   - Mode fallback in-character HuoHuo otomatis bila model lokal sedang offline.
+4. **Desktop Live2D Companion UI (`huohuo.ui`)**:
    - Jendela transparan frameless berbasis Microsoft Edge WebView2 (`pywebview`).
-   - Model Live2D Cubism Web (`assets/live2d/silverwolf/silverwolf.model3.json`) dengan:
+   - Model Live2D Cubism Web (`assets/live2d/huohuo/huohuo.model3.json`) dengan:
      - Pelacakan tatapan mata & kepala mengikuti kursor mouse.
      - 9 ekspresi wajah (`senyum`, `goda`, `sebal`, `kaget`, `bingung`, `lelah`, `semangat`, `sedih`, `netral`).
-     - Sinkronisasi gerak bibir (lip-sync) secara realtime saat Silver Wolf berbicara.
+     - Sinkronisasi gerak bibir (lip-sync) secara realtime saat HuoHuo berbicara.
      - Balon dialog dan panel chat input interaktif di bagian bawah.
 
 ---
@@ -61,7 +61,7 @@ E:\AI Vtuber Project\
   ├── assets/                # Aset Live2D, model Piper TTS, dan checkpoint RVC
   ├── model/                 # Model Gemma-4-E4B GGUF (5.3 GB)
   ├── silver_wolf_memory/    # Memori karakter (fakta, mood, persona, dan data kizuna)
-  ├── silverwolf/            # Modul Python Silver Wolf
+  ├── huohuo/            # Modul Python HuoHuo
   │     ├── core/            # Parser emosi, normalisasi teks, persona, dan kizuna
   │     ├── voice/           # Piper TTS, RVC, dan in-memory audio player
   │     ├── inference/       # Klien llama-server dan fallback mode

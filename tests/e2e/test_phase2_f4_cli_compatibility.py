@@ -28,7 +28,7 @@ def test_t1_f4_cli_help_flag_zero_exit():
         timeout=10,
     )
     assert result.returncode == 0, f"Expected returncode 0, got {result.returncode}. Stderr: {result.stderr}"
-    assert "Silver Wolf" in result.stdout or "usage:" in result.stdout.lower()
+    assert "HuoHuo" in result.stdout or "usage:" in result.stdout.lower()
 
 
 def test_t1_f4_cli_help_describes_core_options():

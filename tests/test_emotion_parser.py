@@ -1,12 +1,12 @@
 """Unit test untuk emotion_parser dan emotion_tags."""
 
-from silverwolf.core.emotion_parser import (
+from huohuo.core.emotion_parser import (
     add_emotion_tag,
     clean_emotion_tags,
     emotion_to_talk_style,
     extract_emotion,
 )
-from silverwolf.core.emotion_tags import dikenali, untuk_prompt
+from huohuo.core.emotion_tags import dikenali, untuk_prompt
 
 
 def test_extract_emotion_dengan_tag():

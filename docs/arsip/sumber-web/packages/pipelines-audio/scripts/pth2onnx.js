@@ -34,7 +34,7 @@ async function konversiPthKeOnnx(jalurMasuk, jalurKeluar, opsi = {}) {
 }
 function jalurPthBawaan() {
   const akar = cariAkarRepo();
-  return join(akar, "assets", "suara", "rvc", "SilverWolfJP", "SilverWolfJP.pth");
+  return join(akar, "assets", "suara", "rvc", "HuoHuoJP", "HuoHuoJP.pth");
 }
 async function utama() {
   const akar = cariAkarRepo();

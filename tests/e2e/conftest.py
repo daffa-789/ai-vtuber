@@ -14,7 +14,7 @@ from typing import Generator
 import pytest
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
-from silverwolf.ui.app import StaticAndAssetHandler
+from huohuo.ui.app import StaticAndAssetHandler
 
 
 def get_free_port() -> int:

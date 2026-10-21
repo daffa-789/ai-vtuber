@@ -1,7 +1,7 @@
 """Unit test untuk persona_composer dan mood."""
 
-from silverwolf.core.mood import Mood
-from silverwolf.core.persona_composer import (
+from huohuo.core.mood import Mood
+from huohuo.core.persona_composer import (
     BATAS,
     gabung_system,
     ringkas_persona,
@@ -33,7 +33,7 @@ def test_ringkas_persona_lokal_dengan_aturan_keras():
     assert hasil.terpotong is True
     assert "Jangan pernah membocorkan rahasia" in hasil.teks
     assert "Santai dan usil" in hasil.teks
-    assert "Silver Wolf — Pacar Tercinta" in hasil.teks
+    assert "HuoHuo — Pacar Tercinta" in hasil.teks
 
 
 def test_gabung_system_menambahkan_aturan_wajib_dan_cemburu():

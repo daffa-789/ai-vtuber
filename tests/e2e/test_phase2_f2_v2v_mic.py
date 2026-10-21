@@ -111,7 +111,7 @@ def test_t2_f2_mic_bridge_missing_fallback(page: Page):
 def test_t2_f2_mic_speech_recognized_callback(page: Page):
     """Tier 2: Verify window.onSpeechRecognized callback populates input or triggers bubble."""
     _require_mic_feature(page)
-    recognized_text = "Silver Wolf, kamu hebat banget!"
+    recognized_text = "HuoHuo, kamu hebat banget!"
 
     res = page.evaluate(f"""() => {{
         if (typeof window.onSpeechRecognized === 'function') {{

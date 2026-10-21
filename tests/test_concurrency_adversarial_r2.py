@@ -16,22 +16,22 @@ import threading
 import time
 from typing import Callable, Generator, Iterable, Optional
 
-from silverwolf.application.dtos.interaction_dto import (
+from huohuo.application.dtos.interaction_dto import (
     StreamChunkDTO,
     UserInteractionRequest,
 )
-from silverwolf.application.use_cases.stream_user_interaction_use_case import (
+from huohuo.application.use_cases.stream_user_interaction_use_case import (
     StreamUserInteractionUseCase,
 )
-from silverwolf.domain.entities.kizuna import KizunaState
-from silverwolf.domain.entities.mood import MoodState
-from silverwolf.domain.ports.audio_player_port import AudioPlayerPort
-from silverwolf.domain.ports.companion_ui_port import CompanionUIPort
-from silverwolf.domain.ports.kizuna_repository_port import KizunaRepositoryPort
-from silverwolf.domain.ports.llm_port import LLMInferencePort
-from silverwolf.domain.ports.memory_vault_port import MemoryVaultPort
-from silverwolf.domain.ports.tts_port import TTSPort
-from silverwolf.domain.ports.voice_conversion_port import VoiceConversionPort
+from huohuo.domain.entities.kizuna import KizunaState
+from huohuo.domain.entities.mood import MoodState
+from huohuo.domain.ports.audio_player_port import AudioPlayerPort
+from huohuo.domain.ports.companion_ui_port import CompanionUIPort
+from huohuo.domain.ports.kizuna_repository_port import KizunaRepositoryPort
+from huohuo.domain.ports.llm_port import LLMInferencePort
+from huohuo.domain.ports.memory_vault_port import MemoryVaultPort
+from huohuo.domain.ports.tts_port import TTSPort
+from huohuo.domain.ports.voice_conversion_port import VoiceConversionPort
 
 
 # --- Test Doubles ---
@@ -129,7 +129,7 @@ class DummyKizunaRepo(KizunaRepositoryPort):
 
 class DummyVault(MemoryVaultPort):
     def load_persona(self) -> str:
-        return "Silver Wolf persona"
+        return "HuoHuo persona"
     def load_facts(self) -> list[str]:
         return []
     def load_mood(self) -> Optional[MoodState]:

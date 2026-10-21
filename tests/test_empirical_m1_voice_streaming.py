@@ -25,24 +25,24 @@ import time
 from typing import Callable, Generator, Iterable, Optional
 import wave
 
-from silverwolf.adapters.sounddevice_player_adapter import SounddevicePlayerAdapter
-from silverwolf.application.dtos.interaction_dto import (
+from huohuo.adapters.sounddevice_player_adapter import SounddevicePlayerAdapter
+from huohuo.application.dtos.interaction_dto import (
     StreamChunkDTO,
     UserInteractionRequest,
 )
-from silverwolf.application.use_cases.stream_user_interaction_use_case import (
+from huohuo.application.use_cases.stream_user_interaction_use_case import (
     StreamUserInteractionUseCase,
 )
-from silverwolf.domain.entities.kizuna import KizunaState
-from silverwolf.domain.entities.mood import MoodState
-from silverwolf.domain.ports.audio_player_port import AudioPlayerPort
-from silverwolf.domain.ports.companion_ui_port import CompanionUIPort
-from silverwolf.domain.ports.kizuna_repository_port import KizunaRepositoryPort
-from silverwolf.domain.ports.llm_port import LLMInferencePort
-from silverwolf.domain.ports.memory_vault_port import MemoryVaultPort
-from silverwolf.domain.ports.tts_port import TTSPort
-from silverwolf.domain.ports.voice_conversion_port import VoiceConversionPort
-from silverwolf.domain.services.sentence_splitter_service import SentenceSplitterService
+from huohuo.domain.entities.kizuna import KizunaState
+from huohuo.domain.entities.mood import MoodState
+from huohuo.domain.ports.audio_player_port import AudioPlayerPort
+from huohuo.domain.ports.companion_ui_port import CompanionUIPort
+from huohuo.domain.ports.kizuna_repository_port import KizunaRepositoryPort
+from huohuo.domain.ports.llm_port import LLMInferencePort
+from huohuo.domain.ports.memory_vault_port import MemoryVaultPort
+from huohuo.domain.ports.tts_port import TTSPort
+from huohuo.domain.ports.voice_conversion_port import VoiceConversionPort
+from huohuo.domain.services.sentence_splitter_service import SentenceSplitterService
 
 
 # =============================================================================
@@ -226,7 +226,7 @@ class InMemoryKizunaRepo(KizunaRepositoryPort):
 
 class InMemoryVault(MemoryVaultPort):
     def __init__(self):
-        self.persona = "Silver Wolf persona"
+        self.persona = "HuoHuo persona"
         self.facts = ["Master likes games"]
         self.mood = MoodState.awal()
         self.history = []
@@ -302,7 +302,7 @@ def test_slow_token_generation_ttfa() -> None:
     ready_chunks: list[StreamChunkDTO] = []
     t_0 = time.perf_counter()
     response = use_case.execute_stream(
-        UserInteractionRequest("Halo Silver Wolf", play_audio=True, blocking_audio=True),
+        UserInteractionRequest("Halo HuoHuo", play_audio=True, blocking_audio=True),
         on_chunk_ready=lambda c: ready_chunks.append(c),
     )
     t_end = time.perf_counter()

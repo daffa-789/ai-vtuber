@@ -1,11 +1,11 @@
-"""Teks Indonesia -> suara Silver Wolf.
+"""Teks Indonesia -> suara HuoHuo.
 
 Rantai dua tahap, persis seperti aplikasi web lama (piper -> rvc):
 
     1. Piper TTS  : teks Indonesia -> WAV 22.050 Hz
                     assets/piper/id_ID-news_tts-medium.onnx (espeak voice "id")
-    2. RVC v2     : WAV -> suara Silver Wolf, WAV 40.000 Hz
-                    assets/rvc/SilverWolfJP/SilverWolfJP.pth (+ indeks FAISS)
+    2. RVC v2     : WAV -> suara HuoHuo, WAV 40.000 Hz
+                    assets/rvc/HuoHuoJP/HuoHuoJP.pth (+ indeks FAISS)
 
 PROFIL SUARA DIKUNCI
 Semua parameter dibaca dari `.env` di akar repo. Hasil acuan:
@@ -13,7 +13,7 @@ Semua parameter dibaca dari `.env` di akar repo. Hasil acuan:
 Jangan mengubah angka-angka itu tanpa persetujuan Master.
 
 Pemakaian:
-    python buat_suara.py "Halo Master, aku Silver Wolf." keluar.wav
+    python buat_suara.py "Halo Master, aku HuoHuo." keluar.wav
     python buat_suara.py --transpose 0 "Kalimat lain." lain.wav   # menimpa .env
     python buat_suara.py --no-rvc "Teks" piper-saja.wav           # hanya Piper
 
@@ -77,7 +77,7 @@ def utama() -> None:
     panjang_bawaan = float(env.get("VTUBER_TTS_PIPER_PANJANG", 0.9))
 
     d = argparse.ArgumentParser(
-        description="Teks Indonesia -> suara Silver Wolf. Nilai bawaan dari .env."
+        description="Teks Indonesia -> suara HuoHuo. Nilai bawaan dari .env."
     )
     d.add_argument("teks", help="teks Indonesia yang akan diucapkan")
     d.add_argument("keluar", type=Path, help="berkas WAV keluaran")
@@ -123,7 +123,7 @@ def utama() -> None:
             device="cpu",
         )
 
-    print(f"[selesai] suara Silver Wolf -> {keluar}")
+    print(f"[selesai] suara HuoHuo -> {keluar}")
 
 
 if __name__ == "__main__":

@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "silverwolf-ai-vtuber"
+name = "huohuo-ai-vtuber"
 version = "1.0.0"
-description = "Silver Wolf AI Vtuber Desktop Companion in pure Python"
+description = "HuoHuo AI Vtuber Desktop Companion in pure Python"
 authors = [{ name = "Daffa & Software Workshop" }]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -24,11 +24,11 @@ dev = [
 ]
 
 [project.scripts]
-silverwolf = "main:main"
+huohuo = "main:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["silverwolf*"]
+include = ["huohuo*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

@@ -13,23 +13,23 @@ from __future__ import annotations
 import time
 from typing import Callable, Generator, Iterable, Optional
 
-from silverwolf.application.dtos.interaction_dto import (
+from huohuo.application.dtos.interaction_dto import (
     StreamChunkDTO,
     UserInteractionRequest,
 )
-from silverwolf.application.use_cases.stream_user_interaction_use_case import (
+from huohuo.application.use_cases.stream_user_interaction_use_case import (
     StreamUserInteractionUseCase,
 )
-from silverwolf.domain.entities.kizuna import KizunaState
-from silverwolf.domain.entities.mood import MoodState
-from silverwolf.domain.ports.audio_player_port import AudioPlayerPort
-from silverwolf.domain.ports.companion_ui_port import CompanionUIPort
-from silverwolf.domain.ports.kizuna_repository_port import KizunaRepositoryPort
-from silverwolf.domain.ports.llm_port import LLMInferencePort
-from silverwolf.domain.ports.memory_vault_port import MemoryVaultPort
-from silverwolf.domain.ports.tts_port import TTSPort
-from silverwolf.domain.ports.voice_conversion_port import VoiceConversionPort
-from silverwolf.infrastructure.container import create_container
+from huohuo.domain.entities.kizuna import KizunaState
+from huohuo.domain.entities.mood import MoodState
+from huohuo.domain.ports.audio_player_port import AudioPlayerPort
+from huohuo.domain.ports.companion_ui_port import CompanionUIPort
+from huohuo.domain.ports.kizuna_repository_port import KizunaRepositoryPort
+from huohuo.domain.ports.llm_port import LLMInferencePort
+from huohuo.domain.ports.memory_vault_port import MemoryVaultPort
+from huohuo.domain.ports.tts_port import TTSPort
+from huohuo.domain.ports.voice_conversion_port import VoiceConversionPort
+from huohuo.infrastructure.container import create_container
 
 
 class MockLLM(LLMInferencePort):
@@ -152,7 +152,7 @@ class MockKizunaRepo(KizunaRepositoryPort):
 
 class MockVault(MemoryVaultPort):
     def __init__(self):
-        self.persona = "Aku Silver Wolf."
+        self.persona = "Aku HuoHuo."
         self.facts: list[str] = ["Master suka game."]
         self.mood: Optional[MoodState] = MoodState.awal()
         self.history: list[tuple[str, str]] = []
@@ -201,7 +201,7 @@ def test_streaming_pipeline_execution():
 
     ready_chunks: list[StreamChunkDTO] = []
     response = use_case.execute_stream(
-        UserInteractionRequest("Halo Silver Wolf", play_audio=True, blocking_audio=True),
+        UserInteractionRequest("Halo HuoHuo", play_audio=True, blocking_audio=True),
         on_chunk_ready=lambda c: ready_chunks.append(c),
     )
 
