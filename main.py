@@ -57,7 +57,7 @@ def run_test_voice(container: Optional[Container] = None):
     """Uji coba sintesis suara HuoHuo via SynthesizeVoiceUseCase."""
     print("Menguji sintesis suara Piper TTS + RVC...")
     c = container or create_container()
-    sample_text = "Halo Master! Aku HuoHuo, pacar gamer kamu. Suaraku sudah tersambung langsung ke Python!"
+    sample_text = "H-halo Master... aku HuoHuo. Suaraku sudah tersambung langsung ke Python!"
     print(f"Teks: {sample_text}")
     audio = c.synthesize_voice_use_case.speak(sample_text, blocking=True)
     if audio:
