@@ -219,6 +219,41 @@ html, body {
   transform: scale(0.95);
 }
 
+/* Microphone toggle (Voice-to-Voice) */
+.mic-btn {
+  background: rgba(30, 41, 59, 0.85);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.2s, color 0.2s;
+}
+
+.mic-btn:hover {
+  background: rgba(99, 102, 241, 0.5);
+  color: white;
+}
+
+.mic-btn.active {
+  background: linear-gradient(135deg, #ef4444, #8b5cf6);
+  color: white;
+  border-color: rgba(244, 114, 182, 0.6);
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.7);
+  animation: micPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.55); }
+  50% { box-shadow: 0 0 18px rgba(239, 68, 68, 0.9); }
+}
+
 @keyframes popIn {
   0% { opacity: 0; transform: scale(0.9) translateY(8px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }

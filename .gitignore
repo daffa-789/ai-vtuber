@@ -64,4 +64,5 @@ outputs/
 deliverables/
 .kiro/
 .workbuddy-ai/
+.agents/
 *.log

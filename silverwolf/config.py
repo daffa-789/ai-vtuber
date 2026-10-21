@@ -9,6 +9,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
+
 from dotenv import load_dotenv
 
 # Root path dari proyek
@@ -95,6 +97,23 @@ class AppConfig:
     rvc_filter_radius: int = int(os.getenv("VTUBER_RVC_PENCUCIAN", "3"))
     rvc_rms_mix: float = float(os.getenv("VTUBER_RVC_CAMPUR_RMS", "0.8"))
     rvc_protect: float = float(os.getenv("VTUBER_RVC_PROTEKSI", "0.33"))
+
+    # ── Masukan Suara (STT + VAD) untuk Voice-to-Voice ──
+    voice_in_aktif: bool = os.getenv("VTUBER_VOICE_IN", "tidak").lower() in (
+        "ya", "true", "1", "yes",
+    )
+    stt_backend: str = os.getenv("VTUBER_STT_BACKEND", "whisper").lower()
+    stt_model: str = os.getenv("VTUBER_STT_MODEL", "base")
+    stt_language: str = os.getenv("VTUBER_STT_LANG", "id")
+    stt_device: str = os.getenv("VTUBER_STT_DEVICE", "cpu")
+    audio_input_rate: int = int(os.getenv("VTUBER_AUDIO_RATE", "16000"))
+    audio_input_block: int = int(os.getenv("VTUBER_AUDIO_BLOCK", "320"))
+    audio_input_device: Optional[int] = (
+        int(os.environ["VTUBER_AUDIO_DEVICE"])
+        if os.getenv("VTUBER_AUDIO_DEVICE", "").strip().lstrip("-").isdigit()
+        else None
+    )
+    vad_rms_threshold: float = float(os.getenv("VTUBER_VAD_RMS", "500"))
 
     # ── Live2D Web UI ──
     live2d_model_path: Path = field(default_factory=lambda: resolve_path(

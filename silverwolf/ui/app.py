@@ -16,13 +16,9 @@ from typing import Optional
 
 import webview
 
-from silverwolf.config import AppConfig, config
-from silverwolf.core.kizuna import KizunaEngine
-from silverwolf.core.memory import CharacterVault, ChatHistory
-from silverwolf.core.mood import Mood
-from silverwolf.core.persona_composer import gabung_system
-from silverwolf.inference.llama_client import LlamaClient
-from silverwolf.voice.pipeline import VoicePipeline
+from silverwolf.application.dtos.interaction_dto import UserInteractionRequest
+from silverwolf.config import config
+from silverwolf.infrastructure.container import Container, create_container
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
@@ -60,123 +56,137 @@ class StaticAndAssetHandler(SimpleHTTPRequestHandler):
 
 
 class CompanionApi:
-    """Jembatan API dari JavaScript di jendela WebView ke Python."""
+    """Jembatan API dari JavaScript di jendela WebView ke Python Use Cases."""
 
     def __init__(
         self,
-        vault: CharacterVault,
-        kizuna: KizunaEngine,
-        llama: LlamaClient,
-        voice: VoicePipeline,
-        history: ChatHistory,
+        container: Optional[Container] = None,
+        vault=None,
+        kizuna=None,
+        llama=None,
+        voice=None,
+        history=None,
     ):
-        self.vault = vault
-        self.kizuna = kizuna
-        self.llama = llama
-        self.voice = voice
-        self.history = history
+        self.container = container or create_container()
         self._window: Optional[webview.Window] = None
+        # Voice-to-Voice (F2) state
+        self._voice_active = False
+        self._voice_thread: Optional[threading.Thread] = None
+        self._voice_stop = threading.Event()
+        self._voice_lock = threading.Lock()
+
+    @staticmethod
+    def _js_str(text: str) -> str:
+        """Sanitize text untuk literal JS single-quote."""
+        if not text:
+            return ""
+        return (
+            text.replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace('"', '\\"')
+            .replace("\r", " ")
+            .replace("\n", " ")
+        )
+
+    def _eval_js(self, code: str) -> None:
+        if not self._window:
+            return
+        try:
+            self._window.evaluate_js(code)
+        except Exception:
+            pass
 
     def set_window(self, win: webview.Window):
         self._window = win
+        if hasattr(self.container.ui_port, "set_window"):
+            self.container.ui_port.set_window(win)
 
     def close_window(self):
         if self._window:
             self._window.destroy()
 
     def send_message(self, text: str):
-        """Menerima input pesan pengguna, menghasilkan respons, dan memutar suara."""
+        """Menerima input pesan pengguna, menghasilkan respons via use case."""
         if not text or not text.strip():
             return
 
-        def _process():
-            # 1. Catat interaksi di Kizuna
-            snap = self.kizuna.record_message(text)
+        def _worker():
+            req = UserInteractionRequest(text=text, play_audio=True, blocking_audio=False)
+            self.container.process_interaction_use_case.execute(req)
 
-            # 2. Siapkan memori & prompt
-            persona = self.vault.baca_persona()
-            fakta = self.vault.baca_fakta()
-            mood = self.vault.baca_mood() or Mood.awal()
-            kizuna_ctx = self.kizuna.get_prompt_context()
-
-            sys_prompt = gabung_system(
-                persona=persona,
-                fakta=fakta,
-                mood=mood,
-                lokal=True,
-                kizuna_context=kizuna_ctx,
-            )
-
-            # Format percakapan
-            self.history.tambah("user", text)
-            messages = [{"role": "system", "content": sys_prompt}] + self.history.ke_format_llm()
-
-            # 3. Inferensi LLM
-            emotion, reply = self.llama.generate(messages)
-            self.history.tambah("assistant", f"[{emotion or 'senyum'}] {reply}")
-
-            # 4. Perbarui Mood & Simpan Memori
-            mood_baru = Mood.perbarui(mood, emotion)
-            self.vault.simpan_mood(mood_baru)
-            self.vault.catat_riwayat(text, f"[{emotion or 'senyum'}] {reply}")
-
-            # 5. Tampilkan ke UI
-            if self._window:
-                # Sanitasi string untuk JS eval
-                clean_reply_js = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
-                emotion_js = (emotion or "senyum").replace("'", "")
-                status_text = f"⚡ Kizuna: Level {snap.level} • {mood_baru.suasana()[:20]}..."
-
-                self._window.evaluate_js(f"window.showBubble('{clean_reply_js}', '{emotion_js}');")
-                self._window.evaluate_js(f"window.setExpression('{emotion_js}');")
-                self._window.evaluate_js(f"window.setKizunaStatus('{status_text}');")
-
-            # 6. Sintesis & pemutaran suara dengan lip-sync
-            def on_lip(level: float):
-                if self._window:
-                    self._window.evaluate_js(f"window.setMouthOpen({level:.3f});")
-
-            try:
-                self.voice.speak(reply, on_lip_sync=on_lip, blocking=False)
-            except Exception as err:
-                print(f"[Companion] Suara: {err}")
-
-        threading.Thread(target=_process, daemon=True).start()
+        threading.Thread(target=_worker, daemon=True).start()
 
     def touch_head(self):
-        """Interaksi sentuh kepala / headpat avatar."""
-        snap = self.kizuna.record_touch()
-        balasan = "Eh... Master tiba-tiba elus kepalaku?! Rambutku jadi berantakan tahu... Tapi rasanya hangat sih..."
-        if self._window:
-            self._window.evaluate_js(f"window.showBubble('{balasan}', 'kaget');")
-            self._window.evaluate_js("window.setExpression('kaget');")
-            self._window.evaluate_js(f"window.setKizunaStatus('⚡ Kizuna: Level {snap.level} • Tersipu');")
+        """Interaksi sentuh kepala / headpat avatar via use case."""
+        def _worker():
+            self.container.touch_headpat_use_case.execute(play_audio=True, blocking_audio=False)
 
-        def on_lip(level: float):
-            if self._window:
-                self._window.evaluate_js(f"window.setMouthOpen({level:.3f});")
+        threading.Thread(target=_worker, daemon=True).start()
 
-        threading.Thread(
-            target=lambda: self.voice.speak(balasan, on_lip_sync=on_lip, blocking=False),
-            daemon=True,
-        ).start()
+    # ── Voice-to-Voice (F2) ──────────────────────────────────────────────────
+
+    def toggle_voice_input(self):
+        """Nyalakan/matikan loop mikrofon dari tombol mic UI. Mengembalikan status baru."""
+        with self._voice_lock:
+            if self._voice_active:
+                self._voice_stop.set()
+                self._voice_active = False
+                worker = self._voice_thread
+                self._voice_thread = None
+            else:
+                self._voice_stop.clear()
+                self._voice_active = True
+                worker = threading.Thread(
+                    target=self._voice_worker, daemon=True, name="VoiceInputLoop"
+                )
+                self._voice_thread = worker
+                worker.start()
+            active = self._voice_active
+        if worker is not None and not active:
+            try:
+                worker.join(timeout=0.2)
+            except Exception:
+                pass
+        self._set_voice_listening(active)
+        return {"active": active}
+
+    def get_voice_state(self):
+        """Status mikrofon saat ini untuk sinkronisasi ulang UI."""
+        return {"active": self._voice_active}
+
+    def _set_voice_listening(self, active: bool) -> None:
+        status = "🎙️ Mendengarkan suara Master..." if active else "🔇 Input suara nonaktif"
+        self._eval_js(f"window.setVoiceListening({'true' if active else 'false'});")
+        self._eval_js(f"window.setVoiceStatus('{self._js_str(status)}');")
+
+    def _voice_worker(self) -> None:
+        """Loop: dengar satu ujaran -> transkripsi -> siarkan ke UI -> respons streaming."""
+        voice = self.container.voice_interaction_use_case
+        voice.reset()
+        while not self._voice_stop.is_set():
+            try:
+                text = voice.transcribe_utterance(timeout_seconds=8.0)
+            except Exception as exc:
+                self._eval_js(
+                    f"window.setVoiceStatus('❌ Mikrofon tidak terdeteksi ({self._js_str(str(exc))})');"
+                )
+                break
+            if self._voice_stop.is_set():
+                break
+            if text:
+                self._eval_js(f"window.onSpeechRecognized('{self._js_str(text)}');")
+                voice.process_utterance(text, play_audio=True)
 
 
-def start_companion(port: int = 8990):
+def start_companion(port: int = 8990, container: Optional[Container] = None):
     """Menjalankan aplikasi companion desktop Silver Wolf."""
     server = ThreadingHTTPServer(("127.0.0.1", port), StaticAndAssetHandler)
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
     print(f"[Companion] Server UI statis berjalan di http://127.0.0.1:{port}")
 
-    # Inisialisasi komponen inti
-    vault = CharacterVault(config.memory_dir)
-    kizuna = KizunaEngine(config.memory_dir / "kizuna" / "silverwolf_kizuna_v1.json")
-    llama = LlamaClient()
-    voice = VoicePipeline()
-    history = ChatHistory()
-
-    api = CompanionApi(vault, kizuna, llama, voice, history)
+    app_container = container or create_container()
+    api = CompanionApi(container=app_container)
 
     # Buat jendela pywebview transparan & frameless
     window = webview.create_window(

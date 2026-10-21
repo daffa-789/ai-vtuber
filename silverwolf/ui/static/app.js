@@ -132,6 +132,55 @@ window.setKizunaStatus = function(statusText) {
   if (badge) badge.textContent = statusText;
 };
 
+// ── Voice-to-Voice (F2): kontrol mikrofon ───────────────────────────────────
+
+window.setVoiceListening = function(active) {
+  const btn = document.getElementById("mic-btn");
+  if (!btn) return;
+  if (active) {
+    btn.classList.add("active");
+    btn.setAttribute("aria-pressed", "true");
+  } else {
+    btn.classList.remove("active");
+    btn.setAttribute("aria-pressed", "false");
+  }
+};
+
+window.setVoiceStatus = function(statusText) {
+  // textContent (bukan innerHTML) => bebas XSS, dirender sebagai teks literal.
+  const badge = document.getElementById("status-badge");
+  if (badge) badge.textContent = statusText;
+};
+
+window.onSpeechRecognized = function(text) {
+  if (!text) return;
+  const input = document.getElementById("chat-input");
+  if (input) input.value = text;
+  if (window.pywebview && window.pywebview.api && window.pywebview.api.send_message) {
+    try {
+      window.pywebview.api.send_message(text);
+    } catch (e) {}
+  }
+};
+
+function toggleMicrophone() {
+  try {
+    const api = window.pywebview && window.pywebview.api;
+    if (api && typeof api.toggle_voice_input === "function") {
+      const result = api.toggle_voice_input();
+      if (result && typeof result.then === "function") {
+        result.then(function (res) {
+          if (res && typeof res.active === "boolean") window.setVoiceListening(res.active);
+        }).catch(function () {});
+      } else if (result && typeof result.active === "boolean") {
+        window.setVoiceListening(result.active);
+      }
+    }
+  } catch (e) {
+    console.warn("[Voice] Gagal mengaktifkan mikrofon:", e);
+  }
+}
+
 // ── Interaksi UI ke Python ──────────────────────────────────────────────────
 
 function handleSend() {
