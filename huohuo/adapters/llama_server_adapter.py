@@ -102,8 +102,8 @@ class LlamaServerAdapter(LLMInferencePort):
 
         if any(w in last_msg for w in ("halo", "hai", "pagi", "siang", "malam")):
             balasan = (
-                "[senyum] Halo Master tersayang! Aku HuoHuo, pacar gamer kamu. "
-                "Kangen ya sama aku? Mau ngobrol atau mabar game apa hari ini? \"sambil tersenyum manis\""
+                "[senyum] H-halo Master tersayang... aku HuoHuo. "
+                "Kangen ya sama aku? Mau ngobrol apa hari ini? \"sambil tersenyum manis\""
             )
         elif any(w in last_msg for w in ("sayang", "cinta", "waifu")):
             balasan = (
