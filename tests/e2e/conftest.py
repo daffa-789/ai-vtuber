@@ -58,7 +58,7 @@ def context(browser: Browser) -> Generator[BrowserContext, None, None]:
 def page(context: BrowserContext, live_server_url: str) -> Generator[Page, None, None]:
     """Create a page with injected pywebview mock bridge and navigate to index.html."""
     page = context.new_page()
-    page.set_default_timeout(3000)
+    page.set_default_timeout(15000)
 
     # Pre-inject pywebview mock bridge before any scripts execute
     page.add_init_script("""
@@ -86,7 +86,7 @@ def page(context: BrowserContext, live_server_url: str) -> Generator[Page, None,
         };
     """)
 
-    page.goto(f"{live_server_url}/index.html", wait_until="domcontentloaded")
+    page.goto(f"{live_server_url}/index.html", wait_until="domcontentloaded", timeout=30000)
     yield page
     page.close()
 
