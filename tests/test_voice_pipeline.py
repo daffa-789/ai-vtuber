@@ -1,9 +1,16 @@
 """Unit test untuk pipeline suara dan player."""
 
+import pytest
+
+from huohuo.config import config
 from huohuo.voice.pipeline import VoicePipeline
 from huohuo.voice.player import AudioPlayer
 
 
+@pytest.mark.skipif(
+    not config.piper_exe.is_file(),
+    reason="Biner Piper TTS tidak tersedia di lingkungan ini",
+)
 def test_voice_pipeline_sintesis_piper():
     vp = VoicePipeline()
     # Sintesis kalimat singkat

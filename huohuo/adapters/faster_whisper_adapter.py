@@ -9,6 +9,7 @@ ringan dan mendukung Bahasa Indonesia. Impornya bersifat lazy: bila paket
 from __future__ import annotations
 
 import array
+import math
 from typing import Optional
 
 from huohuo.domain.ports.speech_to_text_port import SpeechToTextPort
@@ -53,8 +54,10 @@ class FasterWhisperAdapter(SpeechToTextPort):
         return self._ensure_model() is not None
 
     def transcribe(self, audio_bytes: bytes, sample_rate: int = 16000) -> str:
+        if not audio_bytes:
+            return ""
         model = self._ensure_model()
-        if model is None or not audio_bytes:
+        if model is None:
             return ""
         try:
             import numpy as np
@@ -64,8 +67,16 @@ class FasterWhisperAdapter(SpeechToTextPort):
             pcm.frombytes(audio_bytes[:usable])
             floats = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
 
+            # faster-whisper mengharapkan audio 16 kHz mono; resample bila perlu.
+            sr = int(sample_rate) or 16000
+            if sr != 16000 and floats.size > 0:
+                from scipy.signal import resample_poly
+
+                g = math.gcd(16000, sr)
+                floats = resample_poly(floats, 16000 // g, sr // g).astype(np.float32)
+
             segments, _info = model.transcribe(
-                floats, language=self._language, beam_size=1, vad_filter=True
+                floats, language=self._language, beam_size=5, vad_filter=True
             )
             text = " ".join(seg.text.strip() for seg in segments).strip()
             return text
