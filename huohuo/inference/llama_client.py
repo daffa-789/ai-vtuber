@@ -105,17 +105,17 @@ class LlamaClient:
         if any(w in last_msg for w in ("halo", "hai", "pagi", "siang", "malam")):
             balasan = (
                 "[senyum] H-halo Master tersayang... aku HuoHuo. "
-                "Kangen ya sama aku? Mau ngobrol apa hari ini? \"sambil tersenyum manis\""
+                "Kangen ya sama aku? Mau ngobrol apa hari ini?"
             )
         elif any(w in last_msg for w in ("sayang", "cinta", "waifu")):
             balasan = (
                 "[goda] Hehe, gombal terus deh pacarku ini. Tapi aku suka kok. "
-                "Sini peluk dulu biar tambah semangat. \"sambil menatap manja\""
+                "Sini peluk dulu biar tambah semangat."
             )
         elif any(w in last_msg for w in ("kafka", "firefly", "herta", "ruan mei")):
             balasan = (
                 "[sebal] Hmph! Kenapa malah nyebut cewek lain sih? Kan yang nemenin kamu tiap malam di sini itu aku, Master! "
-                "Jangan bikin pacarmu cemburu dong. \"sambil cemberut lucu\""
+                "Jangan bikin pacarmu cemburu dong."
             )
         else:
             balasan = (
