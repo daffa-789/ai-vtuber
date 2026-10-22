@@ -7,14 +7,23 @@ terkunci proyek (2026-10-08).
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
 
+
+def _app_root() -> Path:
+    """Akar path: folder bundle saat dibekukan (PyInstaller), selain itu root repo."""
+    if getattr(sys, "frozen", False):
+        return Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent))
+    return Path(__file__).resolve().parents[1]
+
+
 # Root path dari proyek
-ROOT_DIR = Path(__file__).resolve().parents[1]
+ROOT_DIR = _app_root()
 
 # Cek .env di root repo atau di AI Vtuber WINUI3 jika ada
 if (ROOT_DIR / ".env").is_file():

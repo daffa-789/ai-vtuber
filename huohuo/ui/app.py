@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import mimetypes
 import os
+import sys
 import threading
 import time
 from datetime import datetime
@@ -24,7 +25,10 @@ from huohuo.config import config
 from huohuo.domain.services.proactive_idle_service import ProactiveIdleService
 from huohuo.infrastructure.container import Container, create_container
 
-STATIC_DIR = Path(__file__).resolve().parent / "static"
+if getattr(sys, "frozen", False):
+    STATIC_DIR = Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent)) / "static"
+else:
+    STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
 def _load_window_position(path) -> Tuple[Optional[int], Optional[int]]:

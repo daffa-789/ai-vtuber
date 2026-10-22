@@ -8,9 +8,17 @@ from __future__ import annotations
 
 import re
 import time
+
+import pytest
 from playwright.sync_api import Page, expect
 
+from huohuo.config import config
 
+
+@pytest.mark.skipif(
+    not config.live2d_model_path.is_file(),
+    reason="Aset Live2D (proprietary/52MB) tidak disertakan di CI",
+)
 def test_asset_loading_and_canvas_initialization(page: Page, live_server_url: str):
     """Verify that all core web libraries, model configurations, and the canvas initialize."""
     # 1. Assert core JS libraries loaded into window
