@@ -7,20 +7,44 @@ reaksi ekspresi emosi, dan gelembung chat interaktif.
 
 from __future__ import annotations
 
+import json
 import mimetypes
 import os
 import threading
+import time
+from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import webview
 
 from huohuo.application.dtos.interaction_dto import UserInteractionRequest
 from huohuo.config import config
+from huohuo.domain.services.proactive_idle_service import ProactiveIdleService
 from huohuo.infrastructure.container import Container, create_container
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+
+def _load_window_position(path) -> Tuple[Optional[int], Optional[int]]:
+    """Baca koordinat jendela terakhir; kembalikan (None, None) bila tidak ada/invalid."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        x, y = int(data["x"]), int(data["y"])
+        return (x, y) if x >= 0 and y >= 0 else (None, None)
+    except Exception:
+        return (None, None)
+
+
+def _save_window_position(path, x, y) -> None:
+    """Simpan koordinat jendela terakhir ke berkas konfigurasi lokal."""
+    try:
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps({"x": int(x), "y": int(y)}), encoding="utf-8")
+    except Exception:
+        pass
 
 
 class StaticAndAssetHandler(SimpleHTTPRequestHandler):
@@ -74,6 +98,10 @@ class CompanionApi:
         self._voice_thread: Optional[threading.Thread] = None
         self._voice_stop = threading.Event()
         self._voice_lock = threading.Lock()
+        # Proactive idle (F3) state
+        self._last_interaction = time.monotonic()
+        self._idle_stop = threading.Event()
+        self._idle_thread: Optional[threading.Thread] = None
 
     @staticmethod
     def _js_str(text: str) -> str:
@@ -100,6 +128,7 @@ class CompanionApi:
         self._window = win
         if hasattr(self.container.ui_port, "set_window"):
             self.container.ui_port.set_window(win)
+        self._start_idle_timer()
 
     def close_window(self):
         if self._window:
@@ -107,6 +136,7 @@ class CompanionApi:
 
     def send_message(self, text: str):
         """Menerima input pesan pengguna, menghasilkan respons via use case."""
+        self._signal_interaction()
         if not text or not text.strip():
             return
 
@@ -118,6 +148,8 @@ class CompanionApi:
 
     def touch_head(self):
         """Interaksi sentuh kepala / headpat avatar via use case."""
+        self._signal_interaction()
+
         def _worker():
             self.container.touch_headpat_use_case.execute(play_audio=True, blocking_audio=False)
 
@@ -127,6 +159,7 @@ class CompanionApi:
 
     def toggle_voice_input(self):
         """Nyalakan/matikan loop mikrofon dari tombol mic UI. Mengembalikan status baru."""
+        self._signal_interaction()
         with self._voice_lock:
             if self._voice_active:
                 self._voice_stop.set()
@@ -177,6 +210,59 @@ class CompanionApi:
                 self._eval_js(f"window.onSpeechRecognized('{self._js_str(text)}');")
                 voice.process_utterance(text, play_audio=True)
 
+    # ── Proactive Companion (F3) ─────────────────────────────────────────────
+
+    def _signal_interaction(self) -> None:
+        """Catat aktivitas Master agar timer idle direset."""
+        self._last_interaction = time.monotonic()
+
+    def _start_idle_timer(self) -> None:
+        if not getattr(self.container.cfg, "proactive_aktif", True):
+            return
+        if self._idle_thread and self._idle_thread.is_alive():
+            return
+        self._idle_stop.clear()
+        self._idle_thread = threading.Thread(
+            target=self._idle_loop, daemon=True, name="ProactiveIdleTimer"
+        )
+        self._idle_thread.start()
+
+    def _idle_loop(self) -> None:
+        threshold = max(
+            ProactiveIdleService.MIN_IDLE_SECONDS,
+            int(getattr(self.container.cfg, "idle_threshold_detik", 300)),
+        )
+        while not self._idle_stop.wait(5.0):
+            if self._voice_active:
+                continue
+            idle = time.monotonic() - self._last_interaction
+            if idle < threshold:
+                continue
+            self._last_interaction = time.monotonic()
+            try:
+                level = self.container.kizuna_repo.load().level
+            except Exception:
+                level = 1
+            picked = ProactiveIdleService.pick_proactive(
+                idle_seconds=idle, kizuna_level=level, hour=datetime.now().hour
+            )
+            if not picked:
+                continue
+            emotion, text = picked
+            self._eval_js(
+                f"window.showBubble('{self._js_str(text)}', '{self._js_str(emotion)}');"
+            )
+            self._eval_js(f"window.setExpression('{self._js_str(emotion)}');")
+            threading.Thread(
+                target=self._speak, args=(text,), daemon=True, name="ProactiveSpeak"
+            ).start()
+
+    def _speak(self, text: str) -> None:
+        try:
+            self.container.synthesize_voice_use_case.speak(text, blocking=True)
+        except Exception:
+            pass
+
 
 def start_companion(port: int = 8990, container: Optional[Container] = None):
     """Menjalankan aplikasi companion desktop HuoHuo."""
@@ -188,18 +274,37 @@ def start_companion(port: int = 8990, container: Optional[Container] = None):
     app_container = container or create_container()
     api = CompanionApi(container=app_container)
 
+    # Pulihkan posisi jendela terakhir (Window Drag & Position Memory - F3)
+    saved_x, saved_y = _load_window_position(config.window_position_file)
+
     # Buat jendela pywebview transparan & frameless
     window = webview.create_window(
         title="HuoHuo // Desktop Companion",
         url=f"http://127.0.0.1:{port}/index.html",
         width=config.ui_width,
         height=config.ui_height,
+        x=saved_x,
+        y=saved_y,
         frameless=True,
         transparent=True,
         on_top=True,
         js_api=api,
     )
     api.set_window(window)
+
+    # Persistensi posisi: simpan saat jendela dipindah (drag) dan saat ditutup.
+    def _persist_position(*_args):
+        try:
+            if window.x is not None and window.y is not None:
+                _save_window_position(config.window_position_file, window.x, window.y)
+        except Exception:
+            pass
+
+    try:
+        window.events.moved += _persist_position
+        window.events.closing += _persist_position
+    except Exception:
+        pass
 
     print("[Companion] Membuka jendela desktop HuoHuo...")
     webview.start(debug=False)

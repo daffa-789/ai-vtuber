@@ -125,6 +125,13 @@ class AppConfig:
     ui_height: int = int(os.getenv("VTUBER_UI_HEIGHT", "780"))
     ui_fps: int = int(os.getenv("VTUBER_UI_FPS", "60"))
 
+    # ── Proactive Companion (F3) ──
+    proactive_aktif: bool = os.getenv("VTUBER_PROACTIVE", "ya").lower() in ("ya", "true", "1", "yes")
+    idle_threshold_detik: int = int(os.getenv("VTUBER_IDLE_SECONDS", "300"))
+    window_position_file: Path = field(
+        default_factory=lambda: resolve_path(ROOT_DIR / "data" / "window_position.json")
+    )
+
 
 # Singleton konfigurasi bawaan
 config = AppConfig()

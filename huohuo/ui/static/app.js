@@ -114,6 +114,18 @@ window.setExpression = function(name) {
   }
 };
 
+// Memutar group motion Live2D dengan aman (abaikan group/index tak valid).
+window.setMotion = function(group, index) {
+  if (!currentModel || !currentModel.motion) return;
+  try {
+    if (typeof group !== "string" || group.length === 0) return;
+    const opts = typeof index === "number" && index >= 0 ? { index: index } : undefined;
+    currentModel.motion(group, opts);
+  } catch (e) {
+    console.log("[Live2D] Motion:", group, index);
+  }
+};
+
 window.setMouthOpen = function(level) {
   if (!currentModel?.internalModel?.coreModel) return;
   try {
