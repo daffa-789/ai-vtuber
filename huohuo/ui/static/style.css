@@ -124,16 +124,10 @@ html, body {
   pointer-events: none;
 }
 
+/* Label emosi (SENYUM/GODA/SEBAL, dll.) sengaja disembunyikan:
+   gelembung hanya menampilkan teks jawaban HuoHuo. */
 .emotion-tag {
-  display: inline-block;
-  background: rgba(168, 85, 247, 0.3);
-  color: #d8b4fe;
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  margin-right: 6px;
-  font-weight: 600;
-  text-transform: uppercase;
+  display: none;
 }
 
 /* Bottom Chat Panel */

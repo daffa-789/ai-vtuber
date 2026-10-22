@@ -5,10 +5,10 @@ let bubbleTimeout = null;
 
 // Konfigurasi posisi avatar sesuai kalibrasi proyek
 const CONFIG = {
-  zoom: 1.85,
+  zoom: 0.95,
   x: 0.5,
-  jangkar: 0.92,
-  headY: 0.46,
+  jangkar: 0.5,
+  headY: 0.22,
 };
 
 async function initLive2D() {
@@ -91,22 +91,29 @@ function setupPointerTracking() {
 
 // ── Fungsi yang dipanggil dari Python / Bridge ──────────────────────────────
 
-// Pemetaan tag emosi -> ekspresi/motion HuoHuo (lihat huohuo.model3.json).
+// Pemetaan tag emosi -> ekspresi HuoHuo. Model hanya punya beberapa wajah/efek
+// (angry, cry, white_eyes, baozhen, qizi1=roh, qizi2=panji). Emosi tanpa wajah
+// khusus memakai wajah dasar (reset) supaya tidak salah tempel efek aneh.
 const HUOHUO_EXPR = {
-  senyum: "senyum", goda: "senyum", sebal: "sebal", kaget: "kaget",
-  bingung: "bingung", lelah: "qizi1", semangat: "semangat", sedih: "sedih",
-  netral: "qizi1",
+  sebal: "angry", sedih: "cry", kaget: "white_eyes", bingung: "baozhen",
+  semangat: "qizi2",
+  senyum: "wajah", goda: "wajah", lelah: "wajah", netral: "wajah",
 };
 const HUOHUO_MOTION = {
   kaget: "head", semangat: "greeting", senyum: "greeting",
-  goda: "curious", bingung: "curious", lelah: "sleepy",
+  goda: "curious", bingung: "curious", lelah: "sleepy", sedih: "spirit",
 };
 
 window.setExpression = function(name) {
   if (!currentModel) return;
   try {
-    const expr = HUOHUO_EXPR[name] || name;
-    if (expr) currentModel.expression(expr);
+    const expr = (name in HUOHUO_EXPR) ? HUOHUO_EXPR[name] : name;
+    if (expr) {
+      currentModel.expression(expr);
+    } else {
+      const em = currentModel.internalModel?.motionManager?.expressionManager;
+      if (em && typeof em.resetExpression === "function") em.resetExpression(0);
+    }
     const motion = HUOHUO_MOTION[name];
     if (motion && currentModel.motion) currentModel.motion(motion);
   } catch (e) {
