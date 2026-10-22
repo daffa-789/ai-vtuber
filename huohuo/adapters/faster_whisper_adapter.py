@@ -68,12 +68,7 @@ class FasterWhisperAdapter(SpeechToTextPort):
             floats = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
 
             # faster-whisper mengharapkan audio 16 kHz mono; resample bila perlu.
-            sr = int(sample_rate) or 16000
-            if sr != 16000 and floats.size > 0:
-                from scipy.signal import resample_poly
-
-                g = math.gcd(16000, sr)
-                floats = resample_poly(floats, 16000 // g, sr // g).astype(np.float32)
+            floats = self._resample_to_16k(floats, int(sample_rate) or 16000)
 
             segments, _info = model.transcribe(
                 floats, language=self._language, beam_size=5, vad_filter=True
@@ -82,3 +77,26 @@ class FasterWhisperAdapter(SpeechToTextPort):
             return text
         except Exception:
             return ""
+
+    @staticmethod
+    def _resample_to_16k(floats, sample_rate: int):
+        """Resample float32 mono ke 16 kHz. Pakai scipy bila tersedia, fallback numpy murni.
+
+        scipy bukan dependency wajib, jadi jalur numpy.interp menjamin fungsi ini
+        tetap jalan di lingkungan bersih (mis. CI) tanpa scipy.
+        """
+        target = 16000
+        if sample_rate == target or getattr(floats, "size", 0) == 0:
+            return floats
+        import numpy as np
+
+        try:
+            from scipy.signal import resample_poly
+
+            g = math.gcd(target, sample_rate)
+            return resample_poly(floats, target // g, sample_rate // g).astype(np.float32)
+        except Exception:
+            n_out = max(1, int(floats.size * target / sample_rate))
+            x_old = np.linspace(0.0, 1.0, floats.size, endpoint=False)
+            x_new = np.linspace(0.0, 1.0, n_out, endpoint=False)
+            return np.interp(x_new, x_old, floats).astype(np.float32)
