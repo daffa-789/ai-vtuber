@@ -25,6 +25,8 @@ import time
 from typing import Callable, Generator, Iterable, Optional
 import wave
 
+import pytest
+
 from huohuo.adapters.sounddevice_player_adapter import SounddevicePlayerAdapter
 from huohuo.application.dtos.interaction_dto import (
     StreamChunkDTO,
@@ -481,6 +483,20 @@ def test_instant_token_generator() -> None:
     }
 
 
+def _has_audio_output_device() -> bool:
+    """True bila ada perangkat keluar audio (diperlukan uji lip-sync nyata)."""
+    try:
+        import sounddevice as sd
+
+        return any(d.get("maxoutputchannels", 0) > 0 for d in sd.query_devices())
+    except Exception:
+        return False
+
+
+@pytest.mark.skipif(
+    not _has_audio_output_device(),
+    reason="Tidak ada perangkat keluar audio (headless CI) untuk uji lip-sync nyata",
+)
 def test_sounddevice_adapter_real_lipsync_continuity() -> None:
     """Test 4: Verify SounddevicePlayerAdapter.play_stream() directly with real WAV chunks.
 
