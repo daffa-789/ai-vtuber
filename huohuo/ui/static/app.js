@@ -89,6 +89,116 @@ function setupPointerTracking() {
   });
 }
 
+// ── Elus kepala pakai pointer (head-pat via kursor) ─────────────────────────
+const PAT = {
+  cooldownMs: 6000, // jeda antar-respons ke otak biar nggak spam TTS/LLM
+  strokePx: 44,     // jarak geser vertikal = satu "elus"
+  active: false,
+  lastY: 0,
+  accum: 0,
+  moved: 0,
+  downX: 0,
+  downY: 0,
+  lastFire: 0,
+};
+
+// Area kepala dihitung dari posisi model (tengah horizontal, CONFIG.headY vertikal).
+function headRegion() {
+  const canvas = document.getElementById("live2d-canvas");
+  if (!canvas) return null;
+  const rect = canvas.getBoundingClientRect();
+  return {
+    cx: rect.left + rect.width * CONFIG.x,
+    cy: rect.top + rect.height * CONFIG.headY,
+    rx: Math.max(70, rect.width * 0.16),
+    ry: Math.max(58, rect.height * 0.12),
+  };
+}
+
+function isOverHead(x, y) {
+  const h = headRegion();
+  if (!h) return false;
+  const dx = (x - h.cx) / h.rx;
+  const dy = (y - h.cy) / h.ry;
+  return dx * dx + dy * dy <= 1;
+}
+
+function spawnHeart(x, y) {
+  const host = document.getElementById("app");
+  if (!host) return;
+  const el = document.createElement("div");
+  el.className = "pat-heart";
+  el.textContent = "💗";
+  el.style.left = x + "px";
+  el.style.top = y + "px";
+  host.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+}
+
+// Picu satu reaksi elus kepala (dipakai tombol & pointer). Cooldown mencegah
+// banjir panggilan saat pointer digerak-gerakkan di atas kepala.
+function triggerHeadpat() {
+  const now = Date.now();
+  if (now - PAT.lastFire < PAT.cooldownMs) return;
+  PAT.lastFire = now;
+  window.showBubble("...", "KAGET", 60000);
+  window.setExpression("kaget");
+  if (window.pywebview?.api?.touch_head) {
+    window.pywebview.api.touch_head();
+  }
+}
+
+function setupHeadPat() {
+  const canvas = document.getElementById("live2d-canvas");
+  if (!canvas) return;
+
+  canvas.addEventListener("pointerdown", (e) => {
+    if (!isOverHead(e.clientX, e.clientY)) return;
+    PAT.active = true;
+    PAT.lastY = e.clientY;
+    PAT.accum = 0;
+    PAT.moved = 0;
+    PAT.downX = e.clientX;
+    PAT.downY = e.clientY;
+    canvas.style.cursor = "grabbing";
+    e.preventDefault();
+  });
+
+  window.addEventListener("pointermove", (e) => {
+    if (!PAT.active) {
+      canvas.style.cursor = isOverHead(e.clientX, e.clientY) ? "grab" : "default";
+      return;
+    }
+    PAT.moved = Math.max(
+      PAT.moved,
+      Math.hypot(e.clientX - PAT.downX, e.clientY - PAT.downY)
+    );
+    const step = Math.abs(e.clientY - PAT.lastY);
+    PAT.lastY = e.clientY;
+    if (isOverHead(e.clientX, e.clientY)) {
+      PAT.accum += step;
+      if (PAT.accum >= PAT.strokePx) {
+        PAT.accum = 0;
+        spawnHeart(e.clientX, e.clientY - 18);
+        triggerHeadpat();
+      }
+    }
+  });
+
+  const endPat = () => {
+    if (!PAT.active) return;
+    PAT.active = false;
+    canvas.style.cursor = "grab";
+    // Klik/tap singkat di kepala (tanpa banyak gerak) = satu elusan.
+    if (PAT.moved < 12 && isOverHead(PAT.downX, PAT.downY)) {
+      spawnHeart(PAT.downX, PAT.downY - 18);
+      triggerHeadpat();
+    }
+  };
+  window.addEventListener("pointerup", endPat);
+  window.addEventListener("pointercancel", endPat);
+}
+
 // ── Fungsi yang dipanggil dari Python / Bridge ──────────────────────────────
 
 // Pemetaan tag emosi -> ekspresi HuoHuo. Model hanya punya beberapa wajah/efek
@@ -143,7 +253,7 @@ window.setMouthOpen = function(level) {
   } catch (e) {}
 };
 
-window.showBubble = function(text, emotion = "SENYUM") {
+window.showBubble = function(text, emotion = "SENYUM", ms = null) {
   const bubble = document.getElementById("speech-bubble");
   const tag = document.getElementById("emotion-tag");
   const txt = document.getElementById("bubble-text");
@@ -155,9 +265,10 @@ window.showBubble = function(text, emotion = "SENYUM") {
   bubble.classList.remove("hidden");
 
   if (bubbleTimeout) clearTimeout(bubbleTimeout);
+  const hold = (ms != null) ? ms : Math.max(4000, text.length * 90);
   bubbleTimeout = setTimeout(() => {
     bubble.classList.add("hidden");
-  }, Math.max(4000, text.length * 90));
+  }, hold);
 };
 
 window.setKizunaStatus = function(statusText) {
@@ -223,35 +334,14 @@ function handleSend() {
   if (!text) return;
 
   input.value = "";
-  // Tampilkan gelembung sementara
-  window.showBubble("...", "SEBAL");
+  // Tampilkan gelembung "sedang mengetik" yang bertahan sampai balasan datang
+  // (balasan dari Python akan menimpanya + mengatur ulang timeout normal).
+  window.showBubble("...", "SEBAL", 60000);
 
   if (window.pywebview?.api?.send_message) {
     window.pywebview.api.send_message(text);
   } else {
     console.log("[Chat] Mengirim pesan ke Python:", text);
-  }
-}
-
-function sendQuickAction(action) {
-  if (action === "headpat") {
-    window.showBubble("*dielus kepalanya*", "KAGET");
-    window.setExpression("kaget");
-    if (window.pywebview?.api?.touch_head) {
-      window.pywebview.api.touch_head();
-    }
-  } else if (action === "puji") {
-    const input = document.getElementById("chat-input");
-    if (input) {
-      input.value = "Kamu manis banget hari ini, HuoHuo.";
-      handleSend();
-    }
-  } else if (action === "mabar") {
-    const input = document.getElementById("chat-input");
-    if (input) {
-      input.value = "Mabar game bareng yuk!";
-      handleSend();
-    }
   }
 }
 
@@ -262,5 +352,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (e.key === "Enter") handleSend();
     });
   }
+  setupHeadPat();
   initLive2D();
 });

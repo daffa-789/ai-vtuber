@@ -54,6 +54,10 @@ assets/live2d/
 assets/model-dasar/
 assets/whisper/
 bin/
+tools/
+
+# Otak LLM lokal (llama.cpp + GGUF) — jangan di-commit
+start_llm.bat
 
 # Memori Karakter Pribadi (data sensitif & riwayat Master)
 silver_wolf_memory/

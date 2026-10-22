@@ -81,41 +81,6 @@ def test_user_chat_interaction(page: Page):
     expect(bubble_text).to_have_text("Kangen ya sama aku? Mau mabar apa?")
 
 
-def test_quick_action_interactions(page: Page):
-    """Test clicking headpat, puji, and mabar quick action buttons."""
-    speech_bubble = page.locator("#speech-bubble")
-    emotion_tag = page.locator("#emotion-tag")
-    bubble_text = page.locator("#bubble-text")
-
-    # 1. Headpat quick action
-    headpat_btn = page.locator("button:has-text('💆 Elus Kepala')")
-    expect(headpat_btn).to_be_visible()
-    headpat_btn.click()
-
-    expect(speech_bubble).not_to_have_class(re.compile(r"hidden"))
-    expect(emotion_tag).to_have_text("KAGET")
-    expect(bubble_text).to_have_text("*dielus kepalanya*")
-
-    bridge_calls = page.evaluate("window.__bridge_calls")
-    assert any(c["action"] == "touch_head" for c in bridge_calls), "touch_head bridge call missing"
-
-    # 2. Puji quick action
-    puji_btn = page.locator("button:has-text('💖 Puji Manis')")
-    puji_btn.click()
-
-    bridge_calls = page.evaluate("window.__bridge_calls")
-    puji_calls = [c for c in bridge_calls if c["action"] == "send_message" and "manis" in c["text"]]
-    assert len(puji_calls) >= 1
-
-    # 3. Mabar quick action
-    mabar_btn = page.locator("button:has-text('🎮 Ajak Mabar')")
-    mabar_btn.click()
-
-    bridge_calls = page.evaluate("window.__bridge_calls")
-    mabar_calls = [c for c in bridge_calls if c["action"] == "send_message" and "Mabar" in c["text"]]
-    assert len(mabar_calls) >= 1
-
-
 def test_pointer_tracking_and_expression_apis(page: Page):
     """Test window API functions: setExpression, setMouthOpen, setKizunaStatus, and pointer tracking."""
     # 1. setExpression API
@@ -136,3 +101,49 @@ def test_pointer_tracking_and_expression_apis(page: Page):
     page.mouse.move(100, 200)
     page.mouse.move(240, 390)
     page.mouse.move(400, 600)
+
+
+def test_head_pat_via_pointer(page: Page):
+    """Mengelus kepala pakai pointer (tekan + geser di area kepala) memicu touch_head."""
+    canvas = page.locator("#live2d-canvas")
+    box = canvas.bounding_box()
+    assert box and box["width"] > 0 and box["height"] > 0
+
+    # Pusat kepala = tengah horizontal, CONFIG.headY (0.22) vertikal.
+    cx = box["x"] + box["width"] * 0.5
+    cy = box["y"] + box["height"] * 0.22
+
+    # Tekan lalu geser turun melewati ambang satu "elus" (strokePx = 44px).
+    page.mouse.move(cx, cy)
+    page.mouse.down()
+    page.mouse.move(cx, cy + 30)
+    page.mouse.move(cx, cy + 60)
+
+    # Feedback: satu hati melayang muncul + gelembung placeholder "...".
+    expect(page.locator(".pat-heart").first).to_be_visible()
+    expect(page.locator("#bubble-text")).to_have_text("...")
+
+    page.mouse.up()
+
+    bridge_calls = page.evaluate("window.__bridge_calls")
+    assert any(c["action"] == "touch_head" for c in bridge_calls), (
+        "elus kepala pakai pointer tidak memicu touch_head"
+    )
+
+
+def test_head_pat_ignores_non_head_area(page: Page):
+    """Klik/geser di area non-kepala (bawah) tidak memicu touch_head."""
+    canvas = page.locator("#live2d-canvas")
+    box = canvas.bounding_box()
+    cx = box["x"] + box["width"] * 0.5
+    low_y = box["y"] + box["height"] * 0.85  # jauh di bawah kepala
+
+    page.mouse.move(cx, low_y)
+    page.mouse.down()
+    page.mouse.move(cx, low_y + 40)
+    page.mouse.up()
+
+    bridge_calls = page.evaluate("window.__bridge_calls")
+    assert not any(c["action"] == "touch_head" for c in bridge_calls), (
+        "sentuh di luar area kepala tidak seharusnya memicu headpat"
+    )

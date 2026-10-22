@@ -51,6 +51,9 @@ class LlamaServerAdapter(LLMInferencePort):
             "temperature": temperature,
             "max_tokens": max_tokens,
             "stream": True,
+            # Pertahankan cache KV (prompt system HuoHuo) antar-permintaan supaya
+            # pesan berikutnya tidak perlu prefill ulang -> latensi jauh lebih rendah.
+            "keep_alive": -1,
         }
 
         try:

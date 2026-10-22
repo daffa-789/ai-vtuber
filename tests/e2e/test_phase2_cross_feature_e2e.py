@@ -7,6 +7,7 @@ Supports Progressive Testability during milestone rollouts.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -120,8 +121,8 @@ def test_t3_mic_listening_state_with_incoming_bubble(page: Page):
     expect(page.locator("#bubble-text")).to_have_text(incoming_text)
 
 
-def test_t3_quick_action_interruption_during_streaming(page: Page):
-    """Tier 3: User clicks quick action (headpat) while companion is in the middle of streaming speech."""
+def test_t3_headpat_interruption_during_streaming(page: Page):
+    """Tier 3: User pets the head (pointer) while companion is mid-streaming."""
     speech_bubble = page.locator("#speech-bubble")
     emotion_tag = page.locator("#emotion-tag")
     bubble_text = page.locator("#bubble-text")
@@ -130,15 +131,20 @@ def test_t3_quick_action_interruption_during_streaming(page: Page):
     page.evaluate("window.showBubble('Sedang menjelaskan strategi game yang rumit...', 'NETRAL');")
     expect(speech_bubble).not_to_have_class(re.compile(r"hidden"))
 
-    # 2. User interrupts with headpat quick action
-    headpat_btn = page.locator("button:has-text('💆 Elus Kepala')")
-    expect(headpat_btn).to_be_visible()
-    headpat_btn.click()
+    # 2. User interrupts by petting the head with the pointer (tekan + geser)
+    box = page.locator("#live2d-canvas").bounding_box()
+    cx = box["x"] + box["width"] * 0.5
+    cy = box["y"] + box["height"] * 0.22
+    page.mouse.move(cx, cy)
+    page.mouse.down()
+    page.mouse.move(cx, cy + 30)
+    page.mouse.move(cx, cy + 60)
+    page.mouse.up()
 
     # 3. Bubble and expression immediately update to interrupted flustered state
     expect(speech_bubble).not_to_have_class(re.compile(r"hidden"))
     expect(emotion_tag).to_have_text("KAGET")
-    expect(bubble_text).to_have_text("*dielus kepalanya*")
+    expect(bubble_text).to_have_text("...")
 
     bridge_calls = page.evaluate("window.__bridge_calls || []")
     assert any(c.get("action") == "touch_head" for c in bridge_calls)
@@ -243,13 +249,19 @@ def test_t4_proactive_idle_and_interruption_session(page: Page):
     expect(emotion_tag).to_have_text("LELAH")
     expect(bubble_text).to_have_text("Hoammm... Master sibuk banget ya, aku ngantuk nih...")
 
-    # 2. User wakes companion with headpat quick action
-    headpat_btn = page.locator("button:has-text('💆 Elus Kepala')")
-    headpat_btn.click()
+    # 2. User wakes companion by petting the head with the pointer
+    box = page.locator("#live2d-canvas").bounding_box()
+    cx = box["x"] + box["width"] * 0.5
+    cy = box["y"] + box["height"] * 0.22
+    page.mouse.move(cx, cy)
+    page.mouse.down()
+    page.mouse.move(cx, cy + 30)
+    page.mouse.move(cx, cy + 60)
+    page.mouse.up()
 
     # 3. Companion is startled and switches to awake flustered reaction
     expect(emotion_tag).to_have_text("KAGET")
-    expect(bubble_text).to_have_text("*dielus kepalanya*")
+    expect(bubble_text).to_have_text("...")
 
     bridge_calls = page.evaluate("window.__bridge_calls || []")
     assert any(c.get("action") == "touch_head" for c in bridge_calls)
@@ -257,12 +269,16 @@ def test_t4_proactive_idle_and_interruption_session(page: Page):
 
 def test_t4_full_cli_conversation_session():
     """Tier 4: Full interactive CLI companion session via subprocess."""
+    # Paksa jalur fallback (endpoint mati) supaya sesi CLI cepat & deterministik,
+    # tidak bergantung pada llama-server sungguhan yang sedang berjalan.
+    child_env = dict(os.environ, VTUBER_LLAMA_ENDPOINT="http://127.0.0.1:9/v1")
     proc = subprocess.Popen(
         [sys.executable, MAIN_SCRIPT, "--cli"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        env=child_env,
     )
 
     # Session script: greeting message, then exit

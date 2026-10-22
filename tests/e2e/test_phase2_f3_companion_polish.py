@@ -166,16 +166,3 @@ def test_t2_f3_status_badge_extreme_content(page: Page):
     extreme_status = "⚡ Kizuna: Level 99 • ★★★★★ • 🎮 Mabar Nonstop • (⁠*⁠´⁠ω⁠｀⁠*⁠) • Mode Gamer Malam!"
     page.evaluate(f"window.setKizunaStatus({extreme_status!r});")
     expect(status_badge).to_have_text(extreme_status)
-
-
-def test_t2_f3_quick_action_buttons_no_drag_property(page: Page):
-    """Tier 2: Verify all quick action buttons are clickable and not blocked by drag regions."""
-    quick_buttons = page.locator(".quick-btn")
-    count = quick_buttons.count()
-    assert count >= 3, f"Expected >= 3 quick action buttons, found {count}"
-
-    for i in range(count):
-        btn = quick_buttons.nth(i)
-        expect(btn).to_be_visible()
-        # Verify button is clickable
-        btn.click()
