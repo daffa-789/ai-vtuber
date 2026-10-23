@@ -59,6 +59,11 @@ tools/
 # Otak LLM lokal (llama.cpp + GGUF) — jangan di-commit
 start_llm.bat
 
+# Environment RVC terpisah (suara HuoHuo) — besar & lokal
+rvc-env/
+rvc-wheels/
+start_rvc.bat
+
 # Memori Karakter Pribadi (data sensitif & riwayat Master)
 silver_wolf_memory/
 

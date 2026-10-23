@@ -271,7 +271,11 @@ def test_t4_full_cli_conversation_session():
     """Tier 4: Full interactive CLI companion session via subprocess."""
     # Paksa jalur fallback (endpoint mati) supaya sesi CLI cepat & deterministik,
     # tidak bergantung pada llama-server sungguhan yang sedang berjalan.
-    child_env = dict(os.environ, VTUBER_LLAMA_ENDPOINT="http://127.0.0.1:9/v1")
+    child_env = dict(
+        os.environ,
+        VTUBER_LLAMA_ENDPOINT="http://127.0.0.1:9/v1",
+        VTUBER_RVC="tidak",
+    )
     proc = subprocess.Popen(
         [sys.executable, MAIN_SCRIPT, "--cli"],
         stdin=subprocess.PIPE,

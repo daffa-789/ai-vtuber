@@ -91,13 +91,8 @@ class ProcessUserInteractionUseCase:
         self.vault.save_mood(mood_baru)
         self.vault.record_history(user_text, f"[{final_emotion}] {cleaned_text}")
 
-        # 5. Beri notifikasi ke UI jika port terhubung
-        if self.ui:
-            self.ui.show_bubble(cleaned_text, final_emotion)
-            self.ui.set_expression(final_emotion)
-            self.ui.set_kizuna_status(f"⚡ Kizuna: Level {kizuna_snap.level} • {mood_baru.label}")
-
-        # 6. Sintesis suara & putar audio jika diminta
+        # 5. Siapkan suara DULU (sintesis + konversi RVC) supaya teks & suara
+        #    muncul bersamaan — bukan teks dulu, baru ngomong telat.
         audio_bytes: Optional[bytes] = None
         if request.play_audio and self.tts:
             teks_ucap = TextSpeechService.bersihkan_untuk_tts(cleaned_text)
@@ -105,18 +100,25 @@ class ProcessUserInteractionUseCase:
             if audio_bytes and self.voice_conversion:
                 audio_bytes = self.voice_conversion.convert(audio_bytes) or audio_bytes
 
-            if audio_bytes and self.audio_player:
-                def on_lip(level: float):
-                    if self.ui:
-                        self.ui.set_mouth_open(level)
+        # 6. Baru tampilkan teks + ekspresi + status (sinkron dengan suara).
+        if self.ui:
+            self.ui.show_bubble(cleaned_text, final_emotion)
+            self.ui.set_expression(final_emotion)
+            self.ui.set_kizuna_status(f"⚡ Kizuna: Level {kizuna_snap.level} • {mood_baru.label}")
 
-                if request.blocking_audio:
-                    self.audio_player.play(audio_bytes, on_lip_sync=on_lip, blocking=True)
-                else:
-                    threading.Thread(
-                        target=lambda: self.audio_player.play(audio_bytes, on_lip_sync=on_lip, blocking=False),
-                        daemon=True,
-                    ).start()
+        # 7. Putar audio.
+        if audio_bytes and self.audio_player:
+            def on_lip(level: float):
+                if self.ui:
+                    self.ui.set_mouth_open(level)
+
+            if request.blocking_audio:
+                self.audio_player.play(audio_bytes, on_lip_sync=on_lip, blocking=True)
+            else:
+                threading.Thread(
+                    target=lambda: self.audio_player.play(audio_bytes, on_lip_sync=on_lip, blocking=False),
+                    daemon=True,
+                ).start()
 
         return InteractionResponse(
             raw_reply=raw_reply,

@@ -106,6 +106,9 @@ class AppConfig:
     rvc_filter_radius: int = int(os.getenv("VTUBER_RVC_PENCUCIAN", "3"))
     rvc_rms_mix: float = float(os.getenv("VTUBER_RVC_CAMPUR_RMS", "0.8"))
     rvc_protect: float = float(os.getenv("VTUBER_RVC_PROTEKSI", "0.33"))
+    # Layanan konversi RVC lokal (rvc/rvc_service.py di rvc-env terpisah).
+    rvc_service_url: str = os.getenv("VTUBER_RVC_URL", "http://127.0.0.1:8081")
+    rvc_timeout_detik: int = int(os.getenv("VTUBER_RVC_TIMEOUT_DETIK", "180"))
 
     # ── Masukan Suara (STT + VAD) untuk Voice-to-Voice ──
     voice_in_aktif: bool = os.getenv("VTUBER_VOICE_IN", "tidak").lower() in (

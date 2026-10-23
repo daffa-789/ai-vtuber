@@ -50,11 +50,7 @@ class TouchHeadpatUseCase:
         emotion = "kaget"
         balasan = BALASAN_HEADPAT
 
-        if self.ui:
-            self.ui.show_bubble(balasan, emotion)
-            self.ui.set_expression(emotion)
-            self.ui.set_kizuna_status(f"⚡ Kizuna: Level {snap.level} • Tersipu")
-
+        # Siapkan suara dulu (sintesis + konversi RVC) supaya teks & suara muncul bareng.
         audio_bytes: Optional[bytes] = None
         if play_audio and self.tts:
             teks_ucap = TextSpeechService.bersihkan_untuk_tts(balasan)
@@ -62,18 +58,25 @@ class TouchHeadpatUseCase:
             if audio_bytes and self.voice_conversion:
                 audio_bytes = self.voice_conversion.convert(audio_bytes) or audio_bytes
 
-            if audio_bytes and self.audio_player:
-                def on_lip(level: float):
-                    if self.ui:
-                        self.ui.set_mouth_open(level)
+        # Baru tampilkan teks + ekspresi + status (sinkron dengan suara).
+        if self.ui:
+            self.ui.show_bubble(balasan, emotion)
+            self.ui.set_expression(emotion)
+            self.ui.set_kizuna_status(f"⚡ Kizuna: Level {snap.level} • Tersipu")
 
-                if blocking_audio:
-                    self.audio_player.play(audio_bytes, on_lip_sync=on_lip, blocking=True)
-                else:
-                    threading.Thread(
-                        target=lambda: self.audio_player.play(audio_bytes, on_lip_sync=on_lip, blocking=False),
-                        daemon=True,
-                    ).start()
+        # Putar audio.
+        if audio_bytes and self.audio_player:
+            def on_lip(level: float):
+                if self.ui:
+                    self.ui.set_mouth_open(level)
+
+            if blocking_audio:
+                self.audio_player.play(audio_bytes, on_lip_sync=on_lip, blocking=True)
+            else:
+                threading.Thread(
+                    target=lambda: self.audio_player.play(audio_bytes, on_lip_sync=on_lip, blocking=False),
+                    daemon=True,
+                ).start()
 
         return HeadpatResponse(
             reply_text=balasan,
