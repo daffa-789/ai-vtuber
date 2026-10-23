@@ -125,8 +125,8 @@ class LlamaServerAdapter(LLMInferencePort):
             )
         else:
             balasan = (
-                "[goda] Aku dengar kok Master. Mau hacking sesuatu bareng atau lanjut main game? "
-                "Apa pun yang kamu mau, aku temani sampai tamat!"
+                "[senyum] H-halo Master... A-aku HuoHuo. Ada yang bisa aku bantu, atau... "
+                "kita ngobrol santai aja ya? D-dingin kalau sendirian..."
             )
 
         words = balasan.split(" ")
