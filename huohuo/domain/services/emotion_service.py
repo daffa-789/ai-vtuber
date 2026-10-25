@@ -24,8 +24,11 @@ class EmotionParserService:
 
         if match:
             kandidat = match.group(1).lower()
+            # Buang tag kurung di awal walau tak dikenal (mis. [euforia]) supaya
+            # tidak bocor ke teks; hanya emosi valid yang dikembalikan.
+            teks_bersih = clean[match.end():].strip()
             if kandidat in EmotionTag.valid_tags():
-                teks_bersih = clean[match.end():].strip()
                 return kandidat, teks_bersih
+            return None, teks_bersih
 
         return None, clean

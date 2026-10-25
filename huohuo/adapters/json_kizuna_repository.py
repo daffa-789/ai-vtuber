@@ -53,6 +53,9 @@ class JsonKizunaRepository(KizunaRepositoryPort):
                 total_messages=data.get("total_messages", 0),
                 total_touches=data.get("total_touches", 0),
                 milestones=milestones,
+                energi=data.get("energi", 100),
+                aktivitas=data.get("aktivitas", "mengobrol"),
+                quest=data.get("quest", ""),
             )
             return state
         except Exception:
@@ -71,6 +74,9 @@ class JsonKizunaRepository(KizunaRepositoryPort):
             "daily_interactions": state.daily_interactions,
             "total_messages": state.total_messages,
             "total_touches": state.total_touches,
+            "energi": state.energi,
+            "aktivitas": state.aktivitas,
+            "quest": state.quest,
             "milestones": [
                 {
                     "level": m.level,

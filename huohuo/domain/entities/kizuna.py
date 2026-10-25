@@ -42,6 +42,33 @@ class KizunaState:
     total_messages: int = 0
     total_touches: int = 0
     milestones: list[KizunaMilestone] = field(default_factory=list)
+    # Keadaan "hidup" ala Ryza: energi, aktivitas saat ini, dan quest bareng.
+    energi: int = 100
+    aktivitas: str = "mengobrol"
+    quest: str = ""
+
+    def apply_state(self, state: dict) -> None:
+        """Terapkan blok <state> dari balasan LLM ke keadaan ikatan (fleksibel)."""
+        if not state:
+            return
+        if "energi" in state:
+            self.energi = max(0, min(100, int(state["energi"])))
+        if "aktivitas" in state:
+            self.aktivitas = str(state["aktivitas"])[:60]
+        if "quest" in state:
+            self.quest = str(state["quest"])[:80]
+
+    def hud_text(self, mood_label: str = "") -> str:
+        """Baris status kecil untuk HUD UI (energi + aktivitas + quest)."""
+        bits = [f"⚡ Kizuna: Level {self.level}"]
+        if mood_label:
+            bits.append(mood_label)
+        bits.append(f"🔋 {self.energi}%")
+        if self.aktivitas:
+            bits.append(f"🎯 {self.aktivitas}")
+        if self.quest:
+            bits.append(f"📜 {self.quest}")
+        return " • ".join(bits)
 
     @classmethod
     def create_default(cls) -> KizunaState:

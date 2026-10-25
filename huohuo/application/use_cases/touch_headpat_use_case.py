@@ -45,6 +45,9 @@ class TouchHeadpatUseCase:
     def execute(self, play_audio: bool = True, blocking_audio: bool = False) -> HeadpatResponse:
         kizuna = self.kizuna_repo.load()
         snap = kizuna.record_touch()
+        # Elus kepala bikin HuoHuo senang -> energi naik, lagi "dielus".
+        kizuna.energi = min(100, kizuna.energi + 6)
+        kizuna.aktivitas = "dielus kepalanya"
         self.kizuna_repo.save(kizuna)
 
         emotion = "kaget"
@@ -62,7 +65,7 @@ class TouchHeadpatUseCase:
         if self.ui:
             self.ui.show_bubble(balasan, emotion)
             self.ui.set_expression(emotion)
-            self.ui.set_kizuna_status(f"⚡ Kizuna: Level {snap.level} • Tersipu")
+            self.ui.set_kizuna_status(kizuna.hud_text("Tersipu"))
 
         # Putar audio.
         if audio_bytes and self.audio_player:

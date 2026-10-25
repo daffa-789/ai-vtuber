@@ -26,6 +26,7 @@ from huohuo.domain.ports.tts_port import TTSPort
 from huohuo.domain.ports.voice_conversion_port import VoiceConversionPort
 from huohuo.domain.services.emotion_service import EmotionParserService
 from huohuo.domain.services.prompt_builder_service import PromptBuilderService
+from huohuo.domain.services.state_service import StateParserService
 from huohuo.domain.services.text_speech_service import TextSpeechService
 
 
@@ -65,12 +66,17 @@ class ProcessUserInteractionUseCase:
         fakta = self.vault.load_facts()
         mood = self.vault.load_mood() or MoodState.awal()
 
-        # 2. Susun system prompt & messages
+        # 2. Susun system prompt & messages (sertakan keadaan hidup utk kontinuitas)
+        ctx_ikatan = (
+            kizuna.get_prompt_context()
+            + "\n"
+            + StateParserService.format_for_prompt(kizuna.energi, kizuna.aktivitas, kizuna.quest)
+        )
         sys_prompt = PromptBuilderService.build(
             persona=persona,
             fakta=fakta,
             mood=mood,
-            kizuna_context=kizuna.get_prompt_context(),
+            kizuna_context=ctx_ikatan,
             lokal=True,
         )
 
@@ -83,6 +89,12 @@ class ProcessUserInteractionUseCase:
         emotion, raw_reply = self.llm.generate(messages)
         parsed_emotion, cleaned_text = EmotionParserService.parse(raw_reply)
         final_emotion = parsed_emotion or emotion or "senyum"
+
+        # Ekstrak blok <state> (energi/aktivitas/quest) & perbarui keadaan ikatan.
+        state_baru, cleaned_text = StateParserService.parse(cleaned_text)
+        if state_baru:
+            kizuna.apply_state(state_baru)
+            self.kizuna_repo.save(kizuna)
 
         self.history_buffer.append({"role": "assistant", "content": f"[{final_emotion}] {cleaned_text}"})
 
@@ -104,7 +116,7 @@ class ProcessUserInteractionUseCase:
         if self.ui:
             self.ui.show_bubble(cleaned_text, final_emotion)
             self.ui.set_expression(final_emotion)
-            self.ui.set_kizuna_status(f"⚡ Kizuna: Level {kizuna_snap.level} • {mood_baru.label}")
+            self.ui.set_kizuna_status(kizuna.hud_text(mood_baru.label))
 
         # 7. Putar audio.
         if audio_bytes and self.audio_player:
