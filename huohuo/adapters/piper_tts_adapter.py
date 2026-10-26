@@ -22,8 +22,12 @@ class PiperTTSAdapter(TTSPort):
     def __init__(self, cfg: Optional[AppConfig] = None):
         self.cfg = cfg or config
 
-    def synthesize(self, text: str) -> Optional[bytes]:
-        """Synthesize text into WAV bytes in-memory."""
+    def synthesize(self, text: str, gaya: Optional[str] = None) -> Optional[bytes]:
+        """Synthesize text into WAV bytes in-memory.
+
+        `gaya` diterima supaya cocok dengan TTSPort tapi sengaja diabaikan:
+        Piper tidak punya tuas intonasi. Itu justru alasan backend Gemini ada.
+        """
         cleaned_text = TextSpeechService.bersihkan_untuk_tts(text)
         if not cleaned_text:
             return None

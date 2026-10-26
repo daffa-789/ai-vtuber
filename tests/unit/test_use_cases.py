@@ -75,7 +75,7 @@ class MockTTS(TTSPort):
     def __init__(self):
         self.synthesized_texts = []
 
-    def synthesize(self, text: str) -> Optional[bytes]:
+    def synthesize(self, text: str, gaya: Optional[str] = None) -> Optional[bytes]:
         self.synthesized_texts.append(text)
         return b"RIFFmockwavdata"
 

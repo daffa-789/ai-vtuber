@@ -98,11 +98,12 @@ def pasang(log=print):
         asli = baca_asli(*args, **kwargs)
         if isinstance(asli, IndeksBruteForce):
             return asli
-        try:
-            disambung = IndeksBruteForce(asli)
-        except Exception as galat:  # jangan sampai suara mati total
-            log(f"[index] pembungkus gagal ({galat}); pakai faiss biasa")
-            return asli
+        # Kalau pembungkusnya gagal (mis. RAM tidak cukup untuk menyalin
+        # vektornya), JANGAN kembalikan index faiss mentah: index.search()-nya
+        # justru yang segfault dan akan merobohkan seluruh layanan. Dengan
+        # melempar, pipeline rvc-python menangkap sendiri dan mematikan index
+        # (index = big_npy = None) -- suara tetap keluar, cuma kurang mirip.
+        disambung = IndeksBruteForce(asli)
         log(
             f"[index] brute-force numpy aktif: {disambung.ntotal} vektor "
             f"x {disambung.d} dim, metrik "

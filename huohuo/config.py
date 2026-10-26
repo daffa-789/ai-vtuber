@@ -96,6 +96,23 @@ class AppConfig:
     piper_noise_scale: float = float(os.getenv("VTUBER_TTS_PIPER_NOISE", "0.667"))
     piper_noise_w: float = float(os.getenv("VTUBER_TTS_PIPER_NOISE_W", "0.8"))
 
+    # ── Backend TTS ──
+    # "gemini" memberi intonasi yang bisa diperintah; "piper" tetap dipakai
+    # sebagai cadangan otomatis kalau key tidak ada atau jaringan bermasalah.
+    tts_backend: str = os.getenv("VTUBER_TTS_BACKEND", suara.TTS_BACKEND).lower()
+    tts_rantai: str = os.getenv("VTUBER_TTS_RANTAI", suara.TTS_RANTAI).lower()
+    # Key dibaca dari GOOGLE_API_KEY atau GEMINI_API_KEY. Jangan pernah menulis
+    # nilainya ke berkas yang terlacak -- .env sudah di-gitignore.
+    gemini_api_key: str = (
+        os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
+    )
+    gemini_tts_model: str = os.getenv("VTUBER_GEMINI_TTS_MODEL", suara.GEMINI_TTS_MODEL)
+    gemini_tts_voice: str = os.getenv("VTUBER_GEMINI_TTS_VOICE", suara.GEMINI_TTS_VOICE)
+    gemini_tts_gaya: str = os.getenv("VTUBER_GEMINI_TTS_GAYA", suara.GEMINI_TTS_GAYA)
+    gemini_timeout_detik: int = int(
+        os.getenv("VTUBER_GEMINI_TIMEOUT_DETIK", str(suara.GEMINI_TIMEOUT_DETIK))
+    )
+
     # Suara. Aplikasi HANYA menjadi klien layanan RVC lewat HTTP, jadi di sini
     # cukup alamat dan sakunya. Semua parameter konversi (transpose, index rate,
     # f0, EQ, muat/bongkar model) hidup di rvc/rvc_service.py lewat

@@ -81,12 +81,15 @@ def test_t1_f4_cli_test_voice_execution():
     """Tier 1: Running python main.py --test-voice synthesizes and exits without unhandled exception."""
     # RVC dimatikan supaya tes deterministik & cepat, tidak bergantung pada
     # layanan RVC lokal yang sedang berjalan (kalau aktif, konversi ~15 dtk).
+    # Rantai TTS dipaksa ke Piper juga: backend bawaan sekarang Gemini, yang
+    # memanggil API Google lewat internet (~11 dtk, butuh key, dan bisa gagal
+    # kalau kuota/ jaringan bermasalah). Test tidak boleh menyentuh jaringan.
     result = subprocess.run(
         [sys.executable, MAIN_SCRIPT, "--test-voice"],
         capture_output=True,
         text=True,
         timeout=20,
-        env=dict(os.environ, VTUBER_RVC="tidak"),
+        env=dict(os.environ, VTUBER_RVC="tidak", VTUBER_TTS_RANTAI="piper"),
     )
     assert result.returncode == 0, f"Voice test crashed with code {result.returncode}. Stderr: {result.stderr}"
     assert "sintesis suara" in result.stdout.lower() or "piper tts" in result.stdout.lower()

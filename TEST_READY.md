@@ -156,18 +156,25 @@ All tests are equipped with progressive testability guards:
 
 ### Current Test Run Baseline (26 Okt 2026)
 ```
-tests/e2e/test_companion_e2e.py ......................  5 lulus
-tests/e2e/test_phase2_f1_voice_streaming.py .......... 10 lulus
-tests/e2e/test_phase2_f2_v2v_mic.py .................. 10 lulus
-tests/e2e/test_phase2_f3_companion_polish.py ......... 11 lulus
-tests/e2e/test_phase2_f4_cli_compatibility.py ........ 10 lulus
-tests/e2e/test_phase2_cross_feature_e2e.py ..........  9 lulus
-================================================> 55 lulus dalam 55.35 dtk
-tests/unit/ .......................................... 75 lulus
-================================================> TOTAL 130 lulus, 0 skip
+$ .\.venv\Scripts\python.exe -m pytest tests/ -q
+194 passed, 1 skipped in 83.73s
 ```
-- **Nol kegagalan, nol skip.** Baseline lama (21 Okt) masih mencentang 15 skip
-  "pending M2/M3" untuk F2 dan F3 — keduanya sudah rilis, jadi tidak ada lagi
-  yang menunggu milestone.
+Rincian per berkas (terbanyak dulu): `tests/unit/test_tts_gemini.py` 20 ·
+`tests/unit/test_state_ryza.py` 14 · `tests/unit/test_sentence_splitter.py` 13 ·
+`tests/e2e/test_phase2_f3_companion_polish.py` 11 ·
+`tests/unit/test_voice_to_voice_f2.py` 10 · `tests/test_sentence_splitter_stress.py` 10 ·
+`tests/e2e/test_phase2_f4_cli_compatibility.py` 10 ·
+`tests/e2e/test_phase2_f2_v2v_mic.py` 10 · `tests/e2e/test_phase2_f1_voice_streaming.py` 10 ·
+`tests/unit/test_proactive_companion.py` 9 · `tests/e2e/test_phase2_cross_feature_e2e.py` 9 ·
+`tests/unit/test_rvc_adapter.py` 7 · `tests/test_empirical_m1_voice_streaming.py` 7 ·
+`tests/test_emotion_parser.py` 7 · sisanya 2-6 per berkas.
+
+- **Nol kegagalan.** Satu skip adalah test perangkat keluaran audio yang
+  `skipif` tidak ada output device.
+- **Nol skip warisan.** Baseline lama (21 Okt) masih mencatat 15 skip
+  "pending M2/M3" untuk F2 dan F3 — keduanya sudah rilis.
+- **Test tidak menyentuh jaringan.** Rantai TTS dipaksa `VTUBER_TTS_RANTAI=piper`
+  dan `VTUBER_RVC=tidak` di test yang menjalankan `main.py`, supaya Gemini
+  (API Google) dan layanan RVC lokal tidak ikut terpanggil.
 - **Nol unduhan Playwright Chromium**
 - **100% jalan di Microsoft Edge bawaan sistem (`channel="msedge"`)**

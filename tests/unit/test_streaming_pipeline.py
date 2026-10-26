@@ -52,7 +52,7 @@ class MockTTS(TTSPort):
         self.synth_delay = synth_delay
         self.synthesized_texts: list[str] = []
 
-    def synthesize(self, text: str) -> Optional[bytes]:
+    def synthesize(self, text: str, gaya: Optional[str] = None) -> Optional[bytes]:
         if self.synth_delay > 0:
             time.sleep(self.synth_delay)
         self.synthesized_texts.append(text)

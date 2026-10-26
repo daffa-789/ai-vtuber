@@ -14,7 +14,7 @@ from huohuo.adapters.json_kizuna_repository import JsonKizunaRepository
 from huohuo.adapters.llama_server_adapter import LlamaServerAdapter
 from huohuo.adapters.markdown_vault_repository import MarkdownVaultRepository
 from huohuo.adapters.mock_stt_adapter import MockSTTAdapter
-from huohuo.adapters.piper_tts_adapter import PiperTTSAdapter
+from huohuo.adapters.tts_bertingkat import buat_tts
 from huohuo.adapters.rvc_adapter import RVCAdapter
 from huohuo.adapters.sounddevice_input_adapter import SounddeviceInputAdapter
 from huohuo.adapters.sounddevice_player_adapter import SounddevicePlayerAdapter
@@ -84,7 +84,9 @@ class Container:
 
         # Instantiate adapters or use provided test doubles
         self.llm_port = llm_port or LlamaServerAdapter(cfg=self.cfg)
-        self.tts_port = tts_port or PiperTTSAdapter(cfg=self.cfg)
+        # Rantai TTS (gemini -> piper) dirakit di adapters/tts_bertingkat.py
+        # supaya backend yang tidak siap dilewati, bukan membuat suara mati.
+        self.tts_port = tts_port or buat_tts(self.cfg)
         self.voice_conversion_port = voice_conversion_port or RVCAdapter(cfg=self.cfg)
         self.audio_player_port = audio_player_port or SounddevicePlayerAdapter()
         self.kizuna_repo = kizuna_repo or JsonKizunaRepository(

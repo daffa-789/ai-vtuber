@@ -14,6 +14,8 @@ from typing import Callable, Optional
 from huohuo.domain.ports.audio_player_port import AudioPlayerPort
 from huohuo.domain.ports.tts_port import TTSPort
 from huohuo.domain.ports.voice_conversion_port import VoiceConversionPort
+from huohuo.domain.services.emotion_service import EmotionParserService
+from huohuo.domain.services.gaya_suara import PetaGayaSuara
 from huohuo.domain.services.text_speech_service import TextSpeechService
 
 
@@ -30,13 +32,23 @@ class SynthesizeVoiceUseCase:
         self.voice_conversion = voice_conversion_port
         self.audio_player = audio_player_port
 
-    def synthesize(self, text: str) -> Optional[bytes]:
-        """Synthesize text into in-memory WAV bytes."""
+    def synthesize(self, text: str, gaya: Optional[str] = None) -> Optional[bytes]:
+        """Synthesize text into in-memory WAV bytes.
+
+        Kalau `gaya` tidak diberikan, gaya diambil dari tag emosi di awal teks
+        ([senyum], [goda], [sebal], ...). Emosi itu sudah dihitung LLM untuk
+        menggerakkan wajah Live2D, jadi sayang kalau suaranya tetap datar padahal
+        wajahnya sedang menggoda.
+        """
+        emosi, _ = EmotionParserService.parse(text)
+        if gaya is None:
+            gaya = PetaGayaSuara.gaya_dari_emosi(emosi)
+
         cleaned_text = TextSpeechService.bersihkan_untuk_tts(text)
         if not cleaned_text:
             return None
 
-        wav_bytes = self.tts.synthesize(cleaned_text)
+        wav_bytes = self.tts.synthesize(cleaned_text, gaya=gaya)
         if not wav_bytes:
             return None
 
@@ -52,9 +64,10 @@ class SynthesizeVoiceUseCase:
         text: str,
         on_lip_sync: Optional[Callable[[float], None]] = None,
         blocking: bool = True,
+        gaya: Optional[str] = None,
     ) -> Optional[bytes]:
         """Synthesize text and play to speaker in-memory with optional lip-sync."""
-        wav_bytes = self.synthesize(text)
+        wav_bytes = self.synthesize(text, gaya=gaya)
         if wav_bytes and self.audio_player:
             self.audio_player.play(wav_bytes, on_lip_sync=on_lip_sync, blocking=blocking)
         return wav_bytes

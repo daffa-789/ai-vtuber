@@ -40,9 +40,10 @@ restart `start_rvc.bat`** — layanan RVC memuatnya sekali saat start.
 .\.venv\Scripts\python.exe -m pytest tests/ -v
 ```
 
-Terakhir terukur 130 lulus (75 unit + 55 e2e). CI menjalankan unit + e2e di
-`windows-latest` memakai Microsoft Edge bawaan runner (`channel="msedge"`), jadi
-tidak ada unduhan Chromium.
+Terakhir terukur **194 lulus, 1 skip** untuk `pytest tests/`. Satu-satunya skip
+adalah uji lip-sync nyata yang `skipif` tidak ada perangkat keluar audio. CI
+menjalankan unit + e2e di `windows-latest` memakai Microsoft Edge bawaan runner
+(`channel="msedge"`), jadi tidak ada unduhan Chromium.
 
 ## ⚙️ Batasan perangkat ini (penting sebelum menyentuh performa)
 
@@ -119,3 +120,21 @@ Suara TIDAK lagi diproses di dalam aplikasi. Rantai lamanya (`huohuo.voice`,
 pipeline in-process) sudah dihapus dan digantikan layanan HTTP di `rvc/`,
 karena `rvc-python` membutuhkan Python 3.10 + fairseq yang tidak bisa hidup
 berdampingan dengan dependensi aplikasi utama.
+
+## 🔊 Rantai suara
+
+```
+teks balasan  ->  [gaya dari tag emosi]  ->  Gemini TTS  ->  RVC (timbre HuoHuo)
+                                                     \-> gagal? Piper TTS
+                                                        -> tetap lewat RVC
+```
+
+- **Gaya bicara diambil dari emosi** yang sudah dihitung LLM untuk wajah Live2D,
+  lewat `huohuo/domain/services/gaya_suara.py`. Jadi `[goda]` terdengar menggoda
+  dan `[lelah]` terdengar ngantuk, bukan datar semua.
+- **Piper adalah cadangan otomatis**, bukan pilihan mati: tanpa internet atau
+  tanpa key, suara tetap keluar (cuma datar lagi).
+- Latensi terukur per kalimat, layanan sudah hangat: **~15-17 dtk** untuk rantai
+  Gemini, ~7 dtk untuk Piper. Teks selalu muncul lebih dulu, jadi yang
+  terlambat hanya suaranya.
+- Kalau ingin sepenuhnya offline, set `VTUBER_TTS_RANTAI=piper`.

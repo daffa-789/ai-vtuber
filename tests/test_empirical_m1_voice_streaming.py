@@ -143,7 +143,7 @@ class BenchmarkTTS(TTSPort):
         self.latency = latency_per_chunk
         self.synthesized_clauses: list[str] = []
 
-    def synthesize(self, text: str) -> Optional[bytes]:
+    def synthesize(self, text: str, gaya: Optional[str] = None) -> Optional[bytes]:
         if self.latency > 0:
             time.sleep(self.latency)
         self.synthesized_clauses.append(text)

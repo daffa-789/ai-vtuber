@@ -12,6 +12,12 @@ class TTSPort(ABC):
     """Port abstrak untuk Text-to-Speech synthesis."""
 
     @abstractmethod
-    def synthesize(self, text: str) -> Optional[bytes]:
-        """Menghasilkan audio WAV dalam bentuk bytes dari teks input."""
+    def synthesize(self, text: str, gaya: Optional[str] = None) -> Optional[bytes]:
+        """Menghasilkan audio WAV dalam bentuk bytes dari teks input.
+
+        `gaya` adalah deskripsi gaya/intonasi bicara (mis. "playful and teasing")
+        untuk backend yang mendukungnya. Backend yang tidak mendukung -- seperti
+        Piper -- boleh mengabaikannya begitu saja, jadi pemanggil tidak perlu
+        tahu TTS apa yang sedang dipakai.
+        """
         pass
