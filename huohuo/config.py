@@ -96,16 +96,19 @@ class AppConfig:
     piper_noise_scale: float = float(os.getenv("VTUBER_TTS_PIPER_NOISE", "0.667"))
     piper_noise_w: float = float(os.getenv("VTUBER_TTS_PIPER_NOISE_W", "0.8"))
 
-    # RVC parameter terkunci
+    # Parameter suara. `.env` adalah sumber kebenaran; default di bawah hanya
+    # dipakai kalau kuncinya tidak ada, dan sengaja disamakan dengan profil
+    # HuoHuo hasil tuning 2026-10-26 supaya tidak ada dua angka bertentangan.
+    # Catatan: rvc/rvc_service.py punya salinan default yang sama — ubah berdua.
     rvc_aktif: bool = os.getenv("VTUBER_RVC", "ya").lower() in ("ya", "true", "1", "yes")
     rvc_model_nama: str = os.getenv("VTUBER_RVC_MODEL", "HuoHuo")
     rvc_versi: str = os.getenv("VTUBER_RVC_VERSI", "v2")
-    rvc_transpose: int = int(os.getenv("VTUBER_RVC_TRANSPOSE", "0"))
+    rvc_transpose: int = int(os.getenv("VTUBER_RVC_TRANSPOSE", "-2"))
     rvc_index_rate: float = float(os.getenv("VTUBER_RVC_INDEKS_LAJU", "0.6"))
     rvc_f0: str = os.getenv("VTUBER_RVC_F0", "rmvpe")
     rvc_filter_radius: int = int(os.getenv("VTUBER_RVC_PENCUCIAN", "3"))
     rvc_rms_mix: float = float(os.getenv("VTUBER_RVC_CAMPUR_RMS", "0.8"))
-    rvc_protect: float = float(os.getenv("VTUBER_RVC_PROTEKSI", "0.33"))
+    rvc_protect: float = float(os.getenv("VTUBER_RVC_PROTEKSI", "0.6"))
     # Layanan konversi RVC lokal (rvc/rvc_service.py di rvc-env terpisah).
     rvc_service_url: str = os.getenv("VTUBER_RVC_URL", "http://127.0.0.1:8081")
     rvc_timeout_detik: int = int(os.getenv("VTUBER_RVC_TIMEOUT_DETIK", "180"))
@@ -136,6 +139,11 @@ class AppConfig:
     ui_width: int = int(os.getenv("VTUBER_UI_WIDTH", "480"))
     ui_height: int = int(os.getenv("VTUBER_UI_HEIGHT", "780"))
     ui_fps: int = int(os.getenv("VTUBER_UI_FPS", "60"))
+    # Ikon jendela/taskbar. Berkas boleh tidak ada (mis. clone tanpa aset) —
+    # pemanggil memeriksa is_file() sebelum memakainya.
+    window_icon_path: Path = field(
+        default_factory=lambda: resolve_path(ROOT_DIR / "assets" / "ikon" / "icon.ico")
+    )
 
     # ── Proactive Companion (F3) ──
     proactive_aktif: bool = os.getenv("VTUBER_PROACTIVE", "ya").lower() in ("ya", "true", "1", "yes")

@@ -138,6 +138,13 @@ class CompanionApi:
         if self._window:
             self._window.destroy()
 
+    def minimize_window(self):
+        """Kecilkan ke taskbar. Jendela frameless tidak punya titlebar, jadi
+        tombol ini satu-satunya jalan untuk menyingkirkan avatar sementara.
+        Klik ikon taskbar untuk memulihkan."""
+        if self._window:
+            self._window.minimize()
+
     def send_message(self, text: str):
         """Menerima input pesan pengguna, menghasilkan respons via use case."""
         self._signal_interaction()
@@ -311,5 +318,7 @@ def start_companion(port: int = 8990, container: Optional[Container] = None):
         pass
 
     print("[Companion] Membuka jendela desktop HuoHuo...")
-    webview.start(debug=False)
+    # pywebview menyetel ikon native saat start(), jadi jalurnya harus siap di sini.
+    ikon = str(config.window_icon_path) if config.window_icon_path.is_file() else None
+    webview.start(debug=False, icon=ikon)
     server.shutdown()

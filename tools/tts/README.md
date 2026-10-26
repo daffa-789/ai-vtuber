@@ -13,36 +13,74 @@ WinUI 3 (lihat "Yang belum dikerjakan" di bawah).
 
 ---
 
-## 🔒 PROFIL SUARA DIKUNCI — jangan diubah tanpa persetujuan
+## 🔒 PROFIL SUARA — HuoHuo (dituning ulang 2026-10-26)
 
-Profil ini dipilih Master dan **tidak boleh diubah**. Hasil acuannya:
-
-```
-contoh/04-transpose-3.wav        (F0 median 218,8 Hz)
-```
+Profil ini atas permintaan Master ("suaranya cempreng, tuning biar seperti suara
+aslinya"). Angka sebelumnya diwarisi dari **Silver Wolf**, karakter dewasa, dan
+sejak model pindah ke HuoHuo tidak pernah dicari ulang.
 
 Semua angkanya hidup di **`.env`** di akar repo — itu **satu-satunya sumber
-kebenaran**. Skrip di folder ini membacanya, jadi tidak mungkin ada dua angka
-yang berbeda antara skrip dan aplikasi.
+kebenaran**. Skrip di folder ini dan `rvc/rvc_service.py` sama-sama membacanya.
 
-| Parameter | Kunci `.env` | Nilai terkunci |
+> Perbaikan penting 2026-10-26: layanan RVC **tidak pernah** membaca `.env`
+> (python-dotenv tidak terpasang di `rvc-env`), jadi selama ini ia diam-diam
+> memakai default di dalam kode dan mengubah `.env` tidak berdampak pada suara.
+> Sekarang `rvc_service.py` memuat `.env` sendiri dengan parser stdlib.
+> **Setelah mengubah `.env`, restart layanan `start_rvc.bat`.**
+
+| Parameter | Kunci `.env` | Nilai | Dasar ukur |
+|---|---|---|---|
+| Model RVC | `VTUBER_RVC_MODEL` | `HuoHuo` | anak perempuan, bukan Silver Wolf |
+| Versi | `VTUBER_RVC_VERSI` | `v2` | |
+| **Transpose** | `VTUBER_RVC_TRANSPOSE` | **`-2`** | F0 233,2 Hz; `-3` = 218,8 Hz terlalu dewasa |
+| **Index rate** | `VTUBER_RVC_INDEKS_LAJU` | **`0,6`** | lihat catatan index di bawah |
+| Metode pitch | `VTUBER_RVC_F0` | `rmvpe` | `harvest` justru lebih kasar (>6k 2,27%) |
+| Proteksi | `VTUBER_RVC_PROTEKSI` | **`0,6`** | 0,33 → energi >6 kHz 2,12%; 0,6 → 1,72% |
+| Pencucian | `VTUBER_RVC_PENCUCIAN` | `3` | |
+| Campur RMS | `VTUBER_RVC_CAMPUR_RMS` | `0,8` | |
+| Panjang Piper | `VTUBER_TTS_PIPER_PANJANG` | `0.9` | |
+
+### Penyebab "cempreng" dan koreksinya
+
+Terukur pada kalimat uji yang sama (librosa, FFT 2048):
+
+| Metrik | sumber Piper | RVC lama | RVC baru |
+|---|---|---|---|
+| F0 median | 261,7 Hz | 220,1 Hz | 233,2 Hz |
+| Centroid spektrum | 631 Hz | **851 Hz** | 609 Hz |
+| Energi > 6 kHz | 0,13 % | **2,04 %** | 0,17 % |
+| Energi 3–6 kHz (kehadiran) | 0,21 % | 0,69 % | 0,47 % |
+
+Vocoder RVC menaikkan energi frekuensi tinggi **~16 kali** dibanding sumbernya —
+itulah logam/cempreng yang terdengar. Karena itu ditambahkan **koreksi nada di
+layanan**, bukan hanya menyetel parameter RVC:
+
+| Kunci `.env` | Nilai | Arti |
 |---|---|---|
-| Model RVC | `VTUBER_RVC_MODEL` | `SilverWolfJP` |
-| Versi | `VTUBER_RVC_VERSI` | `v2` |
-| **Transpose** | `VTUBER_RVC_TRANSPOSE` | **`-3`** |
-| **Index rate** | `VTUBER_RVC_INDEKS_LAJU` | **`0.6`** |
-| Metode pitch | `VTUBER_RVC_F0` | `rmvpe` |
-| Proteksi | `VTUBER_RVC_PROTEKSI` | `0.33` |
-| Pencucian | `VTUBER_RVC_PENCUCIAN` | `3` |
-| Campur RMS | `VTUBER_RVC_CAMPUR_RMS` | `0.8` |
-| Panjang Piper | `VTUBER_TTS_PIPER_PANJANG` | `0.9` |
+| `VTUBER_RVC_EQ` | `ya` | matikan dengan `tidak` untuk membandingkan |
+| `VTUBER_RVC_EQ_TINGGI_HZ` | `6000` | titik potong shelf tinggi |
+| `VTUBER_RVC_EQ_TINGGI_DB` | `-12` | masih cempreng → `-16`; terlalu mendengung → `-8` |
+| `VTUBER_RVC_EQ_RENDAH_HZ` | `200` | badan suara |
+| `VTUBER_RVC_EQ_RENDAH_DB` | `1.5` | naikkan kalau terdengar tipis |
 
-Diverifikasi ulang pada 2026-10-08: menjalankan `buat_suara.py` **tanpa argumen
-apa pun** menghasilkan F0 median **220,1 Hz** — setara acuan 218,8 Hz (selisih
-kecil hanya dari penyampelan derau Piper).
+Level akhir disamakan dengan sebelum EQ, jadi koreksi ini tidak mengubah volume.
+
+### Index retrieval akhirnya dipakai
+
+`added_IVF273_Flat_nprobe_1_HuoHuo_v2.index` membuat **faiss-cpu 1.8.0 segfault**
+pada `index.search()` — bahkan untuk masukan float32 contiguous yang ukurannya
+benar, jadi bukan salah pemakaian. Karena itu layanan dulu melewatkan index
+sama sekali (`index_rate=0.0`), padahal README ini menyebutnya "satu-satunya tuas
+yang membuat hasilnya terdengar seperti karakter".
+
+`rvc/indeks_brute.py` mengambil vektor penyimpanan index (`IVF*,Flat` memang
+menyimpan vektor mentah) lalu mencari tetangga terdekat dengan numpy. Hasilnya
+bahkan lebih tepat daripada IVF `nprobe=1` yang hanya menelusuri 1 dari 273
+klaster. Biaya tambahan kecil (10.647 vektor × 768 dim).
 
 Argumen CLI (`--transpose`, `--index-rate`, …) tetap bisa menimpa untuk
 eksperimen, tetapi **nilai bawaan selalu mengikuti `.env`**.
+
 
 ## Rantai
 

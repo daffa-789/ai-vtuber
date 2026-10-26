@@ -114,7 +114,9 @@ The Phase 2 E2E testing suite is structured around a 4-Tier Opaque-Box Methodolo
 | **F2** | Tier 2 | `test_t2_f2_mic_error_status_display` | Displaying audio error strings in status badge | F2.5 |
 | **F2** | Tier 2 | `test_t2_f2_mic_status_xss_sanitization` | Script tags in status badge escape safely | F2.5 |
 | **F3** | Tier 1 | `test_t1_f3_header_drag_region` | `.header-bar` has `pywebview-drag-region` | F3.2 |
-| **F3** | Tier 1 | `test_t1_f3_header_controls_clickable` | Window close `.btn-ctrl` emits `close_window` | F3.2 |
+| **F3** | Tier 1 | `test_t1_f3_header_controls_clickable` | Window close `.btn-ctrl-close` emits `close_window` | F3.2 |
+| **F3** | Tier 1 | `test_t1_f3_minimize_control_clickable` | Window minimize `.btn-ctrl-minimize` emits `minimize_window` | F3.2 |
+| **F3** | Tier 1 | `test_t1_f3_window_controls_outside_drag_region` | `.window-controls` sits outside `.pywebview-drag-region` so clicks do not drag | F3.2 |
 | **F3** | Tier 1 | `test_t1_f3_live2d_all_nine_expressions` | All 9 Live2D expressions activate cleanly | F3.3 |
 | **F3** | Tier 1 | `test_t1_f3_live2d_motion_api` | `window.setMotion` plays `isyarat:0` to `isyarat:3` | F3.3 |
 | **F3** | Tier 1 | `test_t1_f3_kizuna_status_badge_multistage` | Multi-stage Kizuna milestone badges | F3.3 |

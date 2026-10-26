@@ -74,6 +74,9 @@ def page(context: BrowserContext, live_server_url: str) -> Generator[Page, None,
                 close_window: function() {
                     window.__bridge_calls.push({ action: 'close_window' });
                 },
+                minimize_window: function() {
+                    window.__bridge_calls.push({ action: 'minimize_window' });
+                },
                 toggle_voice_input: function() {
                     window.__bridge_calls.push({ action: 'toggle_voice_input' });
                     return { active: true };

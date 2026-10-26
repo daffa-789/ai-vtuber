@@ -3,15 +3,14 @@
 Skrip ini mengubah WAV apa pun (mis. hasil Piper Indonesia) menjadi suara
 HuoHuo memakai checkpoint RVC v2 milik proyek ini:
 
-    assets/rvc/HuoHuoJP/HuoHuoJP.pth
-    assets/rvc/HuoHuoJP/added_IVF1442_Flat_nprobe_1_HuoHuoJP_v2.index
+    assets/rvc/HuoHuo/HuoHuo.pth
+    assets/rvc/HuoHuo/added_IVF273_Flat_nprobe_1_HuoHuo_v2.index
 
-PROFIL SUARA DIKUNCI
+PROFIL SUARA
 Semua nilai bawaan dibaca dari `.env` di akar repo, bukan ditulis ulang di sini.
 `.env` adalah satu-satunya sumber kebenaran, supaya skrip ini dan aplikasi tidak
-pernah memakai angka yang berbeda. Hasil acuan profil terkunci:
-
-    tools/tts/contoh/04-transpose-3.wav   (transpose -3, index_rate 0,6)
+pernah memakai angka yang berbeda. Profil saat ini dan dasar pengukurannya
+dicatat di `tools/tts/README.md`.
 
 Kunci `.env` yang dibaca:
     VTUBER_RVC_MODEL, VTUBER_RVC_VERSI, VTUBER_RVC_F0,
@@ -145,6 +144,14 @@ def konversi(
     print(f"[rvc] transpose   : {transpose:+d} semitone  (.env VTUBER_RVC_TRANSPOSE)")
     print(f"[rvc] index_rate  : {index_rate}  (.env VTUBER_RVC_INDEKS_LAJU)")
     print(f"[rvc] f0          : {f0}")
+
+    # faiss-cpu 1.8.0 segfault saat index.search() pada .index milik proyek ini;
+    # pencarian tetangga terdekat dipindah ke numpy. Lihat rvc/indeks_brute.py.
+    if str(AKAR) not in sys.path:
+        sys.path.insert(0, str(AKAR))
+    from rvc.indeks_brute import pasang
+
+    pasang()
 
     rvc = RVCInference(
         device=device,

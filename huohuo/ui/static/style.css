@@ -65,8 +65,13 @@ html, body {
 }
 
 .window-controls {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 11;
   display: flex;
   gap: 8px;
+  pointer-events: auto;
 }
 
 .btn-ctrl {
@@ -81,14 +86,19 @@ html, body {
   align-items: center;
   justify-content: center;
   font-size: 14px;
+  line-height: 1;
   transition: all 0.2s;
   pointer-events: auto;
   -webkit-app-region: no-drag;
 }
 
 .btn-ctrl:hover {
-  background: rgba(239, 68, 68, 0.8);
+  background: rgba(139, 92, 246, 0.75);
   color: white;
+}
+
+.btn-ctrl-close:hover {
+  background: rgba(239, 68, 68, 0.8);
 }
 
 /* Dialog Subtitle Balloon */

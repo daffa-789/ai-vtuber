@@ -14,9 +14,13 @@
     <!-- Header Bar -->
     <div class="header-bar pywebview-drag-region">
       <div id="status-badge" class="status-badge">⚡ Kizuna: Siap • Mood: Ceria</div>
-      <div class="window-controls">
-        <button class="btn-ctrl" onclick="window.pywebview?.api?.close_window()" title="Tutup">✕</button>
-      </div>
+    </div>
+
+    <!-- Kontrol jendela: di luar .pywebview-drag-region supaya klik tidak
+         ikut menyeret jendela (pywebview menelusuri induk saat mendeteksi drag) -->
+    <div class="window-controls">
+      <button class="btn-ctrl btn-ctrl-minimize" onclick="window.pywebview?.api?.minimize_window()" title="Minimize ke taskbar">−</button>
+      <button class="btn-ctrl btn-ctrl-close" onclick="window.pywebview?.api?.close_window()" title="Tutup">✕</button>
     </div>
 
     <!-- Speech Subtitle Balloon -->

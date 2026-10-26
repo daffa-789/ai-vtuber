@@ -30,15 +30,42 @@ def test_t1_f3_header_drag_region(page: Page):
 
 
 def test_t1_f3_header_controls_clickable(page: Page):
-    """Tier 1: Verify window close control button (.btn-ctrl) is clickable and emits bridge event."""
-    btn_ctrl = page.locator(".btn-ctrl")
+    """Tier 1: Verify window close control button is clickable and emits bridge event."""
+    btn_ctrl = page.locator(".btn-ctrl-close")
     expect(btn_ctrl).to_be_visible()
 
     btn_ctrl.click()
 
     bridge_calls = page.evaluate("window.__bridge_calls || []")
     close_calls = [c for c in bridge_calls if c.get("action") == "close_window"]
-    assert len(close_calls) >= 1, "Expected close_window bridge call upon clicking .btn-ctrl"
+    assert len(close_calls) >= 1, "Expected close_window bridge call upon clicking .btn-ctrl-close"
+
+
+def test_t1_f3_minimize_control_clickable(page: Page):
+    """Tier 1: Tombol minimize memanggil bridge minimize_window."""
+    btn = page.locator(".btn-ctrl-minimize")
+    expect(btn).to_be_visible()
+
+    btn.click()
+
+    bridge_calls = page.evaluate("window.__bridge_calls || []")
+    calls = [c for c in bridge_calls if c.get("action") == "minimize_window"]
+    assert len(calls) >= 1, "Expected minimize_window bridge call upon clicking .btn-ctrl-minimize"
+
+
+def test_t1_f3_window_controls_outside_drag_region(page: Page):
+    """Tier 1: Kontrol jendela bukan turunan .pywebview-drag-region.
+
+    pywebview menelusuri induk dari target klik, jadi tombol yang berada di
+    dalam region drag akan ikut menyeret jendela setiap kali diklik.
+    """
+    di_dalam_drag = page.evaluate(
+        """() => {
+            const el = document.querySelector('.window-controls');
+            return !!el && !!el.closest('.pywebview-drag-region');
+        }"""
+    )
+    assert not di_dalam_drag, ".window-controls tidak boleh berada di dalam region drag"
 
 
 def test_t1_f3_live2d_all_nine_expressions(page: Page):
