@@ -87,7 +87,8 @@ Layanan RVC menahan **~2,5 GB** saat aktif. Mesin pengembangan hanya 16 GB dan
 tidak punya GPU diskrit, jadi menahannya terus-menerus membuat `llama-server`
 paging (gen turun ke ~2,5 tok/s) dan seluruh stack berulang kali kena OOM.
 
-**Yang dicoba dan GAGAL** (26 Okt, `tmp-ukur/uji_trim2.py`): melepas model dari
+**Yang dicoba dan GAGAL** (26 Okt, bisa diulang dengan
+`rvc-env\Scripts\python.exe rvc\ukur_memori.py gc`): melepas model dari
 dalam proses. Setelah dua kali konversi jejaknya 1,33 GB; `del` + `gc.collect()`
 memulihkan **-0,02 GB** (nol, malah naik sedikit), dan
 `SetProcessWorkingSetSizeEx` hanya menambah **0,35 GB**. Halaman torch/CRT tetap
@@ -97,6 +98,13 @@ memori ke sistem.
 **Yang BEKERJA**: layanan **berhenti total** setelah menganggur
 `VTUBER_RVC_IDLE_HAPUS` detik, dan `RVCAdapter` menyalakannya lagi saat butuh.
 Terukur RAM bebas naik dari 2,31 ke **4,85 GB (+2,53 GB)**.
+
+Kedua temuan itu bisa direproduksi sendiri lewat diagnostik yang ikut dilacak:
+
+```powershell
+rvc-env\Scripts\python.exe rvc\ukur_memori.py gc       # buktikan gc+trim tidak cukup
+rvc-env\Scripts\python.exe rvc\ukur_memori.py          # buktikan berhenti-diri mengembalikan RAM
+```
 
 | peristiwa | waktu terukur |
 |---|---|
