@@ -14,6 +14,8 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
+from . import profil_suara as suara
+
 
 def _app_root() -> Path:
     """Akar path: folder bundle saat dibekukan (PyInstaller), selain itu root repo."""
@@ -70,13 +72,11 @@ class AppConfig:
         ROOT_DIR / "AI Vtuber WINUI3" / "silver_wolf_memory",
     ))
 
-    # ── Model GGUF / LLM ──
-    model_path: Path = field(default_factory=lambda: resolve_path(
-        os.getenv("VTUBER_LOCAL_MODEL_PATH", ""),
-        ROOT_DIR / "model" / "Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-Q4_K_P.gguf",
-        ROOT_DIR / "AI Vtuber WINUI3" / "model" / "Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-Q4_K_P.gguf",
-        require_file=True,
-    ))
+    # ── LLM ──
+    # Aplikasi hanya menjadi KLIEN server OpenAI-compatible di luar proses ini
+    # (llama-server, dinyalakan lewat start_llm.bat). Jalur "aplikasi memilih
+    # dan memuat berkas GGUF sendiri" sudah lama tidak ada, jadi tidak ada lagi
+    # config.model_path di sini -- dulu menunjuk berkas Gemma yang sudah dihapus.
     llama_endpoint: str = os.getenv("VTUBER_LLAMA_ENDPOINT", "http://127.0.0.1:8080/v1")
     llama_timeout_detik: int = int(os.getenv("VTUBER_LLAMA_TIMEOUT_DETIK", "120"))
 
@@ -96,22 +96,15 @@ class AppConfig:
     piper_noise_scale: float = float(os.getenv("VTUBER_TTS_PIPER_NOISE", "0.667"))
     piper_noise_w: float = float(os.getenv("VTUBER_TTS_PIPER_NOISE_W", "0.8"))
 
-    # Parameter suara. `.env` adalah sumber kebenaran; default di bawah hanya
-    # dipakai kalau kuncinya tidak ada, dan sengaja disamakan dengan profil
-    # HuoHuo hasil tuning 2026-10-26 supaya tidak ada dua angka bertentangan.
-    # Catatan: rvc/rvc_service.py punya salinan default yang sama — ubah berdua.
-    rvc_aktif: bool = os.getenv("VTUBER_RVC", "ya").lower() in ("ya", "true", "1", "yes")
-    rvc_model_nama: str = os.getenv("VTUBER_RVC_MODEL", "HuoHuo")
-    rvc_versi: str = os.getenv("VTUBER_RVC_VERSI", "v2")
-    rvc_transpose: int = int(os.getenv("VTUBER_RVC_TRANSPOSE", "-2"))
-    rvc_index_rate: float = float(os.getenv("VTUBER_RVC_INDEKS_LAJU", "0.6"))
-    rvc_f0: str = os.getenv("VTUBER_RVC_F0", "rmvpe")
-    rvc_filter_radius: int = int(os.getenv("VTUBER_RVC_PENCUCIAN", "3"))
-    rvc_rms_mix: float = float(os.getenv("VTUBER_RVC_CAMPUR_RMS", "0.8"))
-    rvc_protect: float = float(os.getenv("VTUBER_RVC_PROTEKSI", "0.6"))
-    # Layanan konversi RVC lokal (rvc/rvc_service.py di rvc-env terpisah).
-    rvc_service_url: str = os.getenv("VTUBER_RVC_URL", "http://127.0.0.1:8081")
-    rvc_timeout_detik: int = int(os.getenv("VTUBER_RVC_TIMEOUT_DETIK", "180"))
+    # Suara. Aplikasi HANYA menjadi klien layanan RVC lewat HTTP, jadi di sini
+    # cukup alamat dan sakunya. Semua parameter konversi (transpose, index rate,
+    # f0, EQ, muat/bongkar model) hidup di rvc/rvc_service.py lewat
+    # huohuo/profil_suara.py — tidak diduplikasi di sini lagi.
+    rvc_aktif: bool = suara.ya(os.getenv("VTUBER_RVC"), True)
+    rvc_service_url: str = os.getenv("VTUBER_RVC_URL", suara.URL_LAYANAN)
+    rvc_timeout_detik: int = int(
+        os.getenv("VTUBER_RVC_TIMEOUT_DETIK", str(suara.WAKTU_HUBUNG_DETIK))
+    )
 
     # ── Masukan Suara (STT + VAD) untuk Voice-to-Voice ──
     voice_in_aktif: bool = os.getenv("VTUBER_VOICE_IN", "tidak").lower() in (

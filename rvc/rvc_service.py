@@ -1,10 +1,16 @@
 """RVC inference service — jalan di `rvc-env` (Python 3.10 + fairseq + rvc-python).
 
-Membuat model suara HuoHuo (HuoHuo.pth + .index) SEKALI saat start, lalu melayani
-konversi timbre lewat HTTP supaya tiap panggilan cepat (nggak reload model).
+Melayani konversi timbre suara HuoHuo lewat HTTP (HuoHuo.pth + .index).
+
+Model makan ~2,4 GB RAM dan mesin ini hanya punya 16 GB tanpa GPU diskrit, jadi
+model dimuat saat dibutuhkan dan DIBONGKAR lagi setelah layanan menganggur
+`VTUBER_RVC_IDLE_HAPUS` detik. Selama ngobrol kalimat datang beruntun sehingga
+model tetap terpasang; saat Master diam, RAM dikembalikan ke sistem.
 
 Akses:
-  GET  /health   -> "ok"
+  GET  /health   -> selalu 200 selama proses hidup; body "siap" kalau model sudah
+                    terpasang, "muat" kalau belum (permintaan pertama lebih lambat)
+  GET  /status   -> JSON: model_termuat, idle_hapus_detik, muat_boot, idle_terakhir_detik
   POST /convert  -> body = bytes WAV sumber,  return = bytes WAV hasil (timbre HuoHuo)
 
 Jalankan:  rvc-env\\Scripts\\python.exe rvc/rvc_service.py
@@ -12,10 +18,14 @@ Jalankan:  rvc-env\\Scripts\\python.exe rvc/rvc_service.py
 
 from __future__ import annotations
 
+import gc
 import io
+import json
 import os
 import sys
 import tempfile
+import threading
+import time
 import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -52,31 +62,57 @@ def _muat_env() -> None:
 
 _muat_env()
 
-MODEL_DIR = Path(os.getenv("VTUBER_RVC_DIR", str(ROOT / "assets" / "rvc" / "HuoHuo")))
-MODEL_NAME = os.getenv("VTUBER_RVC_MODEL", "HuoHuo")
-VERSION = os.getenv("VTUBER_RVC_VERSI", "v2")
-F0_UP = int(os.getenv("VTUBER_RVC_TRANSPOSE", "-2"))
-INDEX_RATE = float(os.getenv("VTUBER_RVC_INDEKS_LAJU", "0.6"))
-F0_METHOD = os.getenv("VTUBER_RVC_F0", "rmvpe")
-FILTER_RADIUS = int(os.getenv("VTUBER_RVC_PENCUCIAN", "3"))
-RMS_MIX = float(os.getenv("VTUBER_RVC_CAMPUR_RMS", "0.8"))
-PROTECT = float(os.getenv("VTUBER_RVC_PROTEKSI", "0.6"))
-PORT = int(os.getenv("VTUBER_RVC_PORT", "8081"))
+# Default dibaca dari huohuo/profil_suara.py — modul yang sama dipakai
+# huohuo/config.py. `huohuo/__init__.py` sengaja kosong, jadi impor ini aman
+# di rvc-env walau huohuo/config.py sendiri tidak bisa dimuat di sana.
+from huohuo import profil_suara as suara  # noqa: E402
+
+MODEL_DIR = Path(
+    os.getenv("VTUBER_RVC_DIR", str(ROOT / "assets" / "rvc" / suara.MODEL_NAMA))
+)
+MODEL_NAME = os.getenv("VTUBER_RVC_MODEL", suara.MODEL_NAMA)
+VERSION = os.getenv("VTUBER_RVC_VERSI", suara.VERSI)
+F0_UP = int(os.getenv("VTUBER_RVC_TRANSPOSE", str(suara.TRANSPOSE)))
+INDEX_RATE = float(os.getenv("VTUBER_RVC_INDEKS_LAJU", str(suara.INDEKS_LAJU)))
+F0_METHOD = os.getenv("VTUBER_RVC_F0", suara.METODE_F0)
+FILTER_RADIUS = int(os.getenv("VTUBER_RVC_PENCUCIAN", str(suara.PENCUCIAN)))
+RMS_MIX = float(os.getenv("VTUBER_RVC_CAMPUR_RMS", str(suara.CAMPUR_RMS)))
+PROTECT = float(os.getenv("VTUBER_RVC_PROTEKSI", str(suara.PROTEKSI)))
+PORT = int(os.getenv("VTUBER_RVC_PORT", str(suara.PORT)))
 
 # ── Koreksi nada keluaran ────────────────────────────────────────────────────
-# Keluaran RVC menaikkan energi >6 kHz dari ~0,13% (sumber Piper) jadi ~1,9%
+# Keluaran RVC menaikkan energi >6 kHz dari ~0,13% (sumber Piper) jadi ~2%
 # — itulah "cempreng"/logam yang terdengar. Shelf di bawah menurunkannya lagi.
-EQ_AKTIF = os.getenv("VTUBER_RVC_EQ", "ya").lower() in ("ya", "true", "1", "yes")
-EQ_TINGGI_HZ = float(os.getenv("VTUBER_RVC_EQ_TINGGI_HZ", "6000"))
-EQ_TINGGI_DB = float(os.getenv("VTUBER_RVC_EQ_TINGGI_DB", "-12"))
-EQ_RENDAH_HZ = float(os.getenv("VTUBER_RVC_EQ_RENDAH_HZ", "200"))
-EQ_RENDAH_DB = float(os.getenv("VTUBER_RVC_EQ_RENDAH_DB", "1.5"))
+EQ_AKTIF = suara.ya(os.getenv("VTUBER_RVC_EQ"), suara.EQ_AKTIF)
+EQ_TINGGI_HZ = float(os.getenv("VTUBER_RVC_EQ_TINGGI_HZ", str(suara.EQ_TINGGI_HZ)))
+EQ_TINGGI_DB = float(os.getenv("VTUBER_RVC_EQ_TINGGI_DB", str(suara.EQ_TINGGI_DB)))
+EQ_RENDAH_HZ = float(os.getenv("VTUBER_RVC_EQ_RENDAH_HZ", str(suara.EQ_RENDAH_HZ)))
+EQ_RENDAH_DB = float(os.getenv("VTUBER_RVC_EQ_RENDAH_DB", str(suara.EQ_RENDAH_DB)))
+
+# ── Pengaturan muat/bongkar model (hemat RAM) ────────────────────────────────
+# Muat saat boot? Kalau tidak, model baru dimuat pada permintaan pertama.
+MUAT_BOOT = suara.ya(os.getenv("VTUBER_RVC_MUAT_BOOT"), suara.MUAT_BOOT)
+# Bongkar model setelah menganggur sekian detik. 0 = jangan pernah bongkar
+# (perilaku lama: model menempel terus dan memakan 2,4 GB).
+IDLE_HAPUS_DETIK = float(os.getenv("VTUBER_RVC_IDLE_HAPUS", str(suara.IDLE_HAPUS_DETIK)))
 
 _rvc = None
+# ThreadingHTTPServer melayani tiap koneksi di utas sendiri, sedangkan modelnya
+# satu dan tidak tahan dipakai serentak. Lock ini juga mencegah watchdog
+# membongkar model di tengah konversi.
+_gembok = threading.RLock()
+# Dimulai dari "sekarang", bukan 0. Kalau mulai dari 0, kombinasi
+# MUAT_BOOT=ya + IDLE_HAPUS>0 akan langsung membongkar model yang baru dimuat
+# karena selisih waktunya terlihat sangat besar.
+_aktivitas_akhir = time.time()
 
 
-def _load():
+def _muat_model():
+    """Muat RVCInference. Panggil hanya dengan `_gembok` tergenggam."""
     global _rvc
+    if _rvc is not None:
+        return
+
     from rvc_python.infer import RVCInference
 
     model_path = MODEL_DIR / f"{MODEL_NAME}.pth"
@@ -99,8 +135,9 @@ def _load():
         f"(index={'ada' if indeks else 'tidak'}, f0={F0_METHOD}) ...",
         flush=True,
     )
+    awal = time.time()
     _rvc = RVCInference(
-        device="cpu",
+        device=suara.SUBFER,
         model_path=str(model_path),
         index_path=str(indeks) if indeks else "",
         version=VERSION,
@@ -114,7 +151,30 @@ def _load():
         protect=PROTECT,
         resample_sr=0,
     )
-    print("[RVC] Model siap.", flush=True)
+    print(f"[RVC] Model siap dalam {time.time() - awal:.1f} dtk.", flush=True)
+
+
+def _bongkar_model():
+    """Lepas model dari RAM. Panggil hanya dengan `_gembok` tergenggam."""
+    global _rvc
+    if _rvc is None:
+        return
+    _rvc = None
+    gc.collect()
+    print("[RVC] Model dibongkar, RAM dikembalikan.", flush=True)
+
+
+def _penjaga_idle():
+    """Utas watchdog: bongkar model kalau lama tidak ada permintaan."""
+    while True:
+        time.sleep(min(15.0, max(1.0, IDLE_HAPUS_DETIK / 4)))
+        if IDLE_HAPUS_DETIK <= 0:
+            continue
+        if time.time() - _aktivitas_akhir < IDLE_HAPUS_DETIK:
+            continue
+        with _gembok:
+            if time.time() - _aktivitas_akhir >= IDLE_HAPUS_DETIK:
+                _bongkar_model()
 
 
 def _baca_wav(b: bytes):
@@ -188,22 +248,29 @@ def _perbaiki_nada(b: bytes) -> bytes:
 
 
 def _convert(wav_bytes: bytes) -> bytes:
+    global _aktivitas_akhir
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as fin, \
          tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as fout:
         in_path, out_path = Path(fin.name), Path(fout.name)
-    try:
-        in_path.write_bytes(wav_bytes)
-        _rvc.infer_file(str(in_path), str(out_path))
-        if out_path.is_file() and out_path.stat().st_size > 0:
-            hasil = out_path.read_bytes()
-            return _perbaiki_nada(hasil) if EQ_AKTIF else hasil
-        return wav_bytes  # gagal -> kembalikan asli
-    finally:
-        for p in (in_path, out_path):
-            try:
-                p.unlink()
-            except OSError:
-                pass
+    # Jam aktivitas dipasang di awal DAN di akhir: konversi panjang tidak boleh
+    # dianggap "menganggur" lalu modelnya dibongkar di tengah jalan.
+    with _gembok:
+        _aktivitas_akhir = time.time()
+        _muat_model()
+        try:
+            in_path.write_bytes(wav_bytes)
+            _rvc.infer_file(str(in_path), str(out_path))
+            if out_path.is_file() and out_path.stat().st_size > 0:
+                hasil = out_path.read_bytes()
+                return _perbaiki_nada(hasil) if EQ_AKTIF else hasil
+            return wav_bytes  # gagal -> kembalikan asli
+        finally:
+            _aktivitas_akhir = time.time()
+            for p in (in_path, out_path):
+                try:
+                    p.unlink()
+                except OSError:
+                    pass
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -212,9 +279,25 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/health":
-            body = b"ok" if _rvc is not None else b"loading"
+            # Selalu 200 selama proses hidup. "muat" berarti siap menerima tapi
+            # model belum terpasang, jadi /convert pertama akan lebih lambat.
+            body = b"siap" if _rvc is not None else b"muat"
             self.send_response(200)
             self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        elif self.path == "/status":
+            body = json.dumps(
+                {
+                    "model_termuat": _rvc is not None,
+                    "idle_hapus_detik": IDLE_HAPUS_DETIK,
+                    "muat_boot": MUAT_BOOT,
+                    "idle_terakhir_detik": round(time.time() - _aktivitas_akhir, 1),
+                }
+            ).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -244,7 +327,15 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    _load()
+    if MUAT_BOOT:
+        with _gembok:
+            _muat_model()
+    else:
+        print("[RVC] Model akan dimuat pada permintaan pertama.", flush=True)
+    if IDLE_HAPUS_DETIK > 0:
+        print(f"[RVC] Model dibongkar kalau menganggur > {IDLE_HAPUS_DETIK:.0f} dtk.", flush=True)
+    threading.Thread(target=_penjaga_idle, daemon=True).start()
+
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     print(f"[RVC] Layanan konversi suara berjalan di http://127.0.0.1:{PORT}", flush=True)
     srv.serve_forever()

@@ -7,7 +7,7 @@ deterministik. Helper posisi jendela diuji dengan filesystem sementara.
 from __future__ import annotations
 
 from huohuo.domain.services.proactive_idle_service import ProactiveIdleService
-from huohuo.ui.app import _load_window_position, _save_window_position
+from huohuo.ui.posisi import baca_posisi, simpan_posisi
 
 VALID_EMOTIONS = {
     "senyum", "goda", "sebal", "kaget", "bingung", "lelah",
@@ -54,15 +54,15 @@ def test_deterministic_with_seeded_rng():
 # ── Window position persistence ──────────────────────────────────────────────
 def test_save_and_load_position_roundtrip(tmp_path):
     f = tmp_path / "window_position.json"
-    _save_window_position(f, 120, 340)
-    assert _load_window_position(f) == (120, 340)
+    simpan_posisi(f, 120, 340)
+    assert baca_posisi(f) == (120, 340)
 
 
 def test_load_missing_file_returns_none(tmp_path):
-    assert _load_window_position(tmp_path / "absen.json") == (None, None)
+    assert baca_posisi(tmp_path / "absen.json") == (None, None)
 
 
 def test_load_negative_coords_treated_as_unset(tmp_path):
     f = tmp_path / "p.json"
     f.write_text('{"x": -1, "y": 10}', encoding="utf-8")
-    assert _load_window_position(f) == (None, None)
+    assert baca_posisi(f) == (None, None)

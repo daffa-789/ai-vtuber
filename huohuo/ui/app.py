@@ -3,20 +3,19 @@
 Menjalankan jendela transparan, frameless, dan always-on-top yang merender
 avatar Live2D Cubism Web dengan pelacakan kursor, sinkronisasi bibir (lip-sync),
 reaksi ekspresi emosi, dan gelembung chat interaktif.
+
+Bagian yang sudah dipisah supaya tiap modul punya satu tanggung jawab:
+  * `huohuo.ui.server_statis` — handler HTTP berkas UI + aset Live2D
+  * `huohuo.ui.posisi`        — simpan/pulihkan koordinat jendela
 """
 
 from __future__ import annotations
 
-import json
-import mimetypes
-import os
-import sys
 import threading
 import time
 from datetime import datetime
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
-from typing import Optional, Tuple
+from http.server import ThreadingHTTPServer
+from typing import Optional
 
 import webview
 
@@ -25,62 +24,8 @@ from huohuo.config import config
 from huohuo.domain.services.proactive_idle_service import ProactiveIdleService
 from huohuo.infrastructure.container import Container, create_container
 
-if getattr(sys, "frozen", False):
-    STATIC_DIR = Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent)) / "static"
-else:
-    STATIC_DIR = Path(__file__).resolve().parent / "static"
-
-
-def _load_window_position(path) -> Tuple[Optional[int], Optional[int]]:
-    """Baca koordinat jendela terakhir; kembalikan (None, None) bila tidak ada/invalid."""
-    try:
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
-        x, y = int(data["x"]), int(data["y"])
-        return (x, y) if x >= 0 and y >= 0 else (None, None)
-    except Exception:
-        return (None, None)
-
-
-def _save_window_position(path, x, y) -> None:
-    """Simpan koordinat jendela terakhir ke berkas konfigurasi lokal."""
-    try:
-        p = Path(path)
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(json.dumps({"x": int(x), "y": int(y)}), encoding="utf-8")
-    except Exception:
-        pass
-
-
-class StaticAndAssetHandler(SimpleHTTPRequestHandler):
-    """HTTP Handler yang melayani berkas UI statis sekaligus aset Live2D model."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=str(STATIC_DIR), **kwargs)
-
-    def do_GET(self):
-        # Berkas model Live2D dan tekstur diarahkan ke folder aset
-        if self.path.startswith("/api/") or self.path.startswith("/models/") or "huohuo" in self.path:
-            clean_name = self.path.split("?")[0].replace("/api/", "").replace("/models/", "").lstrip("/")
-            if clean_name.endswith(".model3.json") or clean_name == "model3.json":
-                target = config.live2d_model_path
-            else:
-                target = config.live2d_model_path.parent / clean_name
-
-            if target.is_file():
-                self.send_response(200)
-                mime, _ = mimetypes.guess_type(str(target))
-                self.send_header("Content-Type", mime or "application/octet-stream")
-                self.send_header("Access-Control-Allow-Origin", "*")
-                self.send_header("Content-Length", str(target.stat().st_size))
-                self.end_headers()
-                self.wfile.write(target.read_bytes())
-                return
-
-        return super().do_GET()
-
-    def log_message(self, format, *args):
-        # Senyapkan log akses HTTP agar konsol tetap bersih
-        pass
+from .posisi import baca_posisi, simpan_posisi
+from .server_statis import StaticAndAssetHandler
 
 
 class CompanionApi:
@@ -286,7 +231,7 @@ def start_companion(port: int = 8990, container: Optional[Container] = None):
     api = CompanionApi(container=app_container)
 
     # Pulihkan posisi jendela terakhir (Window Drag & Position Memory - F3)
-    saved_x, saved_y = _load_window_position(config.window_position_file)
+    saved_x, saved_y = baca_posisi(config.window_position_file)
 
     # Buat jendela pywebview transparan & frameless
     window = webview.create_window(
@@ -307,7 +252,7 @@ def start_companion(port: int = 8990, container: Optional[Container] = None):
     def _persist_position(*_args):
         try:
             if window.x is not None and window.y is not None:
-                _save_window_position(config.window_position_file, window.x, window.y)
+                simpan_posisi(config.window_position_file, window.x, window.y)
         except Exception:
             pass
 

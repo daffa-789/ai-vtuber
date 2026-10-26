@@ -56,13 +56,15 @@ assets/whisper/
 bin/
 tools/
 
-# Otak LLM lokal (llama.cpp + GGUF) — jangan di-commit
-start_llm.bat
-
 # Environment RVC terpisah (suara HuoHuo) — besar & lokal
 rvc-env/
 rvc-wheels/
-start_rvc.bat
+
+# Yang TIDAK jadi di-ignore: start_llm.bat dan start_rvc.bat.
+# Binari llama.cpp dan berkas GGUF tetap tidak masuk (folder tools/ dan model/
+# sudah di-ignore), jadi launcher-nya aman dilacak: isinya cuma %~dp0 +
+# parameter, tanpa rahasia dan tanpa path spesifik mesin. Cara menyalakan
+# stack harus tercatat di repo, bukan cuma di laptop.
 
 # Memori Karakter Pribadi (data sensitif & riwayat Master)
 silver_wolf_memory/

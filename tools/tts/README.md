@@ -81,6 +81,50 @@ klaster. Biaya tambahan kecil (10.647 vektor × 768 dim).
 Argumen CLI (`--transpose`, `--index-rate`, …) tetap bisa menimpa untuk
 eksperimen, tetapi **nilai bawaan selalu mengikuti `.env`**.
 
+### Siklus hidup model dan RAM
+
+Model RVC memakan **~2,4 GB**. Mesin pengembangan hanya punya 16 GB dan tidak
+ada GPU diskrit, jadi menahan model terus-menerus membuat `llama-server` mulai
+paging (~2,5 tok/s) dan seluruh stack berulang kali kena OOM.
+
+Sejak 2026-10-26 `rvc/rvc_service.py` memuat model secara **malas** dan
+membongkar kembali setelah menganggur `VTUBER_RVC_IDLE_HAPUS` detik (bawaan
+180). Selama kalimat datang beruntun model tetap terpasang, jadi obrolan normal
+tidak terpengaruh; yang membayar adalah kalimat pertama setelah diam lama
+(~12–20 dtk memuat ulang — teks tetap cepat, hanya suaranya yang terlambat).
+
+| Kunci `.env` | Efek |
+|---|---|
+| `VTUBER_RVC_MUAT_BOOT=ya` | muat segera saat layanan start; respons pertama selalu cepat, RAM terpakai terus |
+| `VTUBER_RVC_IDLE_HAPUS=0` | jangan pernah bongkar (perilaku lama) |
+
+Cek keadaan runtime lewat `GET http://127.0.0.1:8081/status` — mengembalikan
+`model_termuat`, `idle_hapus_detik`, `muat_boot`, dan `idle_terakhir_detik`.
+`GET /health` selalu 200 selama proses hidup; body `siap` berarti model sudah
+terpasang, `muat` berarti belum.
+
+**Layanan memuat `.env` hanya saat ia start.** Mengubah `.env` tanpa
+merestart `start_rvc.bat` tidak mengubah apa pun — dan inilah sebabnya tuning
+suara dulu terasa "tidak berpengaruh" padahal angkanya sudah diedit.
+
+### Cara mengukur ulang
+
+Jangan menyetel dengan telinga saja. Pola yang dipakai 26 Okt:
+
+1. Sintesis satu kalimat uji lewat Piper -> `tmp-ukur/piper_raw.wav`.
+2. Muat `RVCInference` **sekali**, lalu `set_params` + `infer_file` per varian
+   (varian berikutnya ~2 dtk, bukan reload model penuh).
+3. Ukur tiap keluaran dengan `librosa.pyin` (F0 median) dan energi pita FFT
+   2048: `<1k`, `3-6k`, `>6k`, plus centroid spektrum.
+4. Bandingkan terhadap sumber Piper. Acuan "cempreng sudah hilang" = energi
+   `>6k` kembali ke kisaran 0,1–0,2 % tanpa menjatuhkan pita `3-6k`
+   (itu kejelasan konsonan; kalau ikut turun, suaranya jadi mendengung).
+
+Temuan yang melawan intuisi dan perlu diingat: **menurunkan transpose membuat
+keluaran lebih TERANG**, bukan lebih gelap (centroid 653 Hz di `0` naik ke
+917 Hz di `-8`). Jadi mencari suara "lebih dewasa" dengan transpose negatif
+justru menambah kasar.
+
 
 ## Rantai
 
