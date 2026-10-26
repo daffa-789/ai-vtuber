@@ -81,27 +81,45 @@ klaster. Biaya tambahan kecil (10.647 vektor × 768 dim).
 Argumen CLI (`--transpose`, `--index-rate`, …) tetap bisa menimpa untuk
 eksperimen, tetapi **nilai bawaan selalu mengikuti `.env`**.
 
-### Siklus hidup model dan RAM
+### Siklus hidup layanan dan RAM
 
-Model RVC memakan **~2,4 GB**. Mesin pengembangan hanya punya 16 GB dan tidak
-ada GPU diskrit, jadi menahan model terus-menerus membuat `llama-server` mulai
-paging (~2,5 tok/s) dan seluruh stack berulang kali kena OOM.
+Layanan RVC menahan **~2,5 GB** saat aktif. Mesin pengembangan hanya 16 GB dan
+tidak punya GPU diskrit, jadi menahannya terus-menerus membuat `llama-server`
+paging (gen turun ke ~2,5 tok/s) dan seluruh stack berulang kali kena OOM.
 
-Sejak 2026-10-26 `rvc/rvc_service.py` memuat model secara **malas** dan
-membongkar kembali setelah menganggur `VTUBER_RVC_IDLE_HAPUS` detik (bawaan
-180). Selama kalimat datang beruntun model tetap terpasang, jadi obrolan normal
-tidak terpengaruh; yang membayar adalah kalimat pertama setelah diam lama
-(~12–20 dtk memuat ulang — teks tetap cepat, hanya suaranya yang terlambat).
+**Yang dicoba dan GAGAL** (26 Okt, `tmp-ukur/uji_trim2.py`): melepas model dari
+dalam proses. Setelah dua kali konversi jejaknya 1,33 GB; `del` + `gc.collect()`
+memulihkan **-0,02 GB** (nol, malah naik sedikit), dan
+`SetProcessWorkingSetSizeEx` hanya menambah **0,35 GB**. Halaman torch/CRT tetap
+dikandung proses — menghapus referensi objek tidak sama dengan mengembalikan
+memori ke sistem.
+
+**Yang BEKERJA**: layanan **berhenti total** setelah menganggur
+`VTUBER_RVC_IDLE_HAPUS` detik, dan `RVCAdapter` menyalakannya lagi saat butuh.
+Terukur RAM bebas naik dari 2,31 ke **4,85 GB (+2,53 GB)**.
+
+| peristiwa | waktu terukur |
+|---|---|
+| kalimat pertama setelah idle (proses mati → hidup) | 28,8 dtk |
+| kalimat berikutnya (layanan sudah hidup) | **6,4 dtk** |
+| watchdog melepas (idle 20 dtk) | proses keluar, RAM kembali |
+| panggilan berikutnya (hidup ulang penuh) | 37,5 dtk |
+
+Jadi obrolan beruntun tidak terpengaruh; yang membayar adalah kalimat pertama
+setelah diam lama — dan teks selalu muncul lebih dulu, sehingga yang terlambat
+hanya suaranya.
 
 | Kunci `.env` | Efek |
 |---|---|
-| `VTUBER_RVC_MUAT_BOOT=ya` | muat segera saat layanan start; respons pertama selalu cepat, RAM terpakai terus |
-| `VTUBER_RVC_IDLE_HAPUS=0` | jangan pernah bongkar (perilaku lama) |
+| `VTUBER_RVC_MUAT_BOOT=ya` | muat segera saat layanan start; kalimat pertama selalu cepat, RAM terpakai terus |
+| `VTUBER_RVC_IDLE_HAPUS=0` | layanan tidak pernah berhenti (perilaku lama) |
+| `VTUBER_RVC_IDLE_HAPUS=600` | jeda lebih panjang sebelum berhenti |
+| `VTUBER_RVC_AUTO_MULAI=tidak` | adapter tidak boleh menyalakan layanan sendiri |
 
 Cek keadaan runtime lewat `GET http://127.0.0.1:8081/status` — mengembalikan
-`model_termuat`, `idle_hapus_detik`, `muat_boot`, dan `idle_terakhir_detik`.
+`model_termuat`, `idle_hapus_detik`, `muat_boot`, `idle_terakhir_detik`.
 `GET /health` selalu 200 selama proses hidup; body `siap` berarti model sudah
-terpasang, `muat` berarti belum.
+terpasang, `muat` berarti belum (kalimat berikutnya akan lebih lambat).
 
 **Layanan memuat `.env` hanya saat ia start.** Mengubah `.env` tanpa
 merestart `start_rvc.bat` tidak mengubah apa pun — dan inilah sebabnya tuning

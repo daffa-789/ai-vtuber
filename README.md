@@ -13,11 +13,13 @@ hidup lebih dulu, jadi urutannya penting:
 | # | Perintah | Menyediakan | Alamat |
 |---|---|---|---|
 | 1 | `.\start_llm.bat` | otak LLM (`llama-server`) | `127.0.0.1:8080` |
-| 2 | `.\start_rvc.bat` | timbre suara HuoHuo (RVC) | `127.0.0.1:8081` |
+| 2 | *(opsional)* `.\start_rvc.bat` | timbre suara HuoHuo (RVC) | `127.0.0.1:8081` |
 | 3 | `.\.venv\Scripts\python.exe main.py` | jendela avatar | `127.0.0.1:8990` |
 
-Tanpa langkah 1 balasan jatuh ke mode fallback; tanpa langkah 2 suara masih
-keluar tapi jadi suara Piper generik, bukan HuoHuo.
+Tanpa langkah 1 balasan jatuh ke mode fallback. Langkah 2 tidak wajib: aplikasi
+menyalakan layanan RVC sendiri saat pertama kali butuh (`VTUBER_RVC_AUTO_MULAI`),
+dan layanan itu berhenti sendiri saat menganggur supaya RAM lepas. Menjalankan
+`start_rvc.bat` tetap berguna kalau ingin suaranya siap seketika.
 
 Mode lain:
 
@@ -38,7 +40,7 @@ restart `start_rvc.bat`** — layanan RVC memuatnya sekali saat start.
 .\.venv\Scripts\python.exe -m pytest tests/ -v
 ```
 
-Terakhir terukur 123 lulus (68 unit + 55 e2e). CI menjalankan unit + e2e di
+Terakhir terukur 130 lulus (75 unit + 55 e2e). CI menjalankan unit + e2e di
 `windows-latest` memakai Microsoft Edge bawaan runner (`channel="msedge"`), jadi
 tidak ada unduhan Chromium.
 
@@ -57,28 +59,36 @@ VRAM diskrit**. Konsekuensinya, dan ini sering salah dipahami:
   WebView2. Itu sudah melewati sisa RAM kalau browser tetap terbuka, dan
   gejalanya bukan crash, melainkan **paging** — token/detik turun ke ~2,5 dan
   proses bisa kena OOM tanpa pesan.
-- Karena itu model RVC dimuat malas dan **dibongkar otomatis** setelah
-  menganggur (`VTUBER_RVC_IDLE_HAPUS`, bawaan 180 dtk) supaya RAM kembali ke
-  sistem saat tidak dipakai mengobrol.
+- Karena itu layanan RVC **mengundurkan diri** setelah menganggur
+  (`VTUBER_RVC_IDLE_HAPUS`, bawaan 180 dtk) dan dihidupkan lagi oleh adapter saat
+  dibutuhkan. Melepas model dari dalam proses bukan solusinya — itu sudah dicoba
+  dan terbukti hanya mengembalikan 0,06 GB; hanya proses yang mati mengembalikan
+  seluruh ~2,5 GB.
 
-### Kalau mau mencoba offload GPU (belum terukur)
+### Offload GPU (Vulkan) sudah diuji dan KALAH — jangan diulang
 
-`start_llm.bat` sudah bisa diarahkan ke build lain tanpa disunting:
+Diukur 26 Okt memakai build resmi versi SAMA (`llama-b11822-bin-win-vulkan-x64`)
+dengan `-ngl 99`, dibandingkan build CPU pada model, prompt persona asli
+(814 token), dan kondisi mesin yang sama:
 
-```powershell
-# unduh llama-b<ver>-bin-win-vulkan-x64.zip, ekstrak ke tools\llama.cpp-vulkan
-set VTUBER_LLAMA_DIR=E:\AI Vtuber Project\tools\llama.cpp-vulkan
-set VTUBER_LLAMA_NGL=99
-.\start_llm.bat
-```
+| metrik | CPU `-ngl 0` | Vulkan `-ngl 99` |
+|---|---|---|
+| gen tok/s | **5,2 / 4,5 / 5,6** | 4,4 / 3,7 / 4,3 |
+| balasan utuh | **31,6 / 17,1 / 12,6 dtk** | 36,2 / 23,7 / 19,6 dtk |
+| prompt eval dingin | 35,0 tok/s | **45,1 tok/s** |
+| RAM private terkomit | **2.622 MB** | 4.262 MB (+1,6 GB) |
 
-Jalankan dengan `-ngl 0` lebih dulu untuk memastikan build-nya hidup, baru
-naikkan `VTUBER_LLAMA_NGL`. Yang diawasi: `Vulkan0` harus muncul di log
-`--list-devices`, dan RAM bebas tidak boleh jatuh di bawah ~1 GB. Kalau muncul
-`OutOfDeviceMemory` atau balasan malah melambat, kembalikan ke build CPU dengan
-mengosongkan `VTUBER_LLAMA_DIR` — tidak ada yang perlu dikutak-atik di repo.
+Decode — bagian yang menentukan rasa cepat saat mengobrol — justru melambat
+sekitar 20 %, dan bobot di iGPU menambah **1,6 GB memori terkomit** karena
+memori Vulkan dipinjam dari 16 GB yang sama. Prefill memang 29 % lebih cepat,
+tapi itu hampir tidak pernah terbayar: dengan `keep_alive=-1` sistem prompt
+sudah ter-cache (796 dari 814 token), jadi prompt eval berikutnya nyaris gratis.
 
-Belum pernah diukur pada mesin ini, jadi jangan anggap lebih cepat.
+Kesimpulan: `-ngl 0` pada build CPU adalah konfigurasi terbaik untuk perangkat
+ini, dan itu sudah jadi bawaan `start_llm.bat`. Kalau nanti ada versi llama.cpp
+yang mau dicoba ulang, tinggal unduh
+`llama-b<versi>-bin-win-vulkan-x64.zip` ke `tools\`, lalu
+`set VTUBER_LLAMA_DIR=...\tools\llama.cpp-vulkan` — launcher sudah mendukungnya.
 
 ## 📂 Struktur
 

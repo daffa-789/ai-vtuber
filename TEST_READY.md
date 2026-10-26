@@ -154,17 +154,20 @@ All tests are equipped with progressive testability guards:
 - As each milestone lands (`worker_m1`, `worker_m2`, `worker_m3`), the corresponding test cases automatically activate and assert the requirements.
 - At Milestone M5, 100% of the 53 test cases run to completion.
 
-### Current Test Run Baseline (Oct 21, 2026)
+### Current Test Run Baseline (26 Okt 2026)
 ```
-collected 53 items
-tests/e2e/test_companion_e2e.py ....                                     [ 4 PASSED]
-tests/e2e/test_phase2_f1_voice_streaming.py ..........                   [10 PASSED]
-tests/e2e/test_phase2_f2_v2v_mic.py ssssssssss                           [10 SKIPPED (pending M2)]
-tests/e2e/test_phase2_f3_companion_polish.py s..s..s...                  [ 7 PASSED, 3 SKIPPED (pending M3)]
-tests/e2e/test_phase2_f4_cli_compatibility.py .........s                 [ 9 PASSED, 1 SKIPPED (pending M2)]
-tests/e2e/test_phase2_cross_feature_e2e.py ......s..                     [ 8 PASSED, 1 SKIPPED (pending M2)]
-======================= 38 passed, 15 skipped in 50.19s =======================
+tests/e2e/test_companion_e2e.py ......................  5 lulus
+tests/e2e/test_phase2_f1_voice_streaming.py .......... 10 lulus
+tests/e2e/test_phase2_f2_v2v_mic.py .................. 10 lulus
+tests/e2e/test_phase2_f3_companion_polish.py ......... 11 lulus
+tests/e2e/test_phase2_f4_cli_compatibility.py ........ 10 lulus
+tests/e2e/test_phase2_cross_feature_e2e.py ..........  9 lulus
+================================================> 55 lulus dalam 55.35 dtk
+tests/unit/ .......................................... 75 lulus
+================================================> TOTAL 130 lulus, 0 skip
 ```
-- **Zero test failures**
-- **Zero Playwright Chromium downloads**
-- **100% execution on system Microsoft Edge (`channel="msedge"`)**
+- **Nol kegagalan, nol skip.** Baseline lama (21 Okt) masih mencentang 15 skip
+  "pending M2/M3" untuk F2 dan F3 — keduanya sudah rilis, jadi tidak ada lagi
+  yang menunggu milestone.
+- **Nol unduhan Playwright Chromium**
+- **100% jalan di Microsoft Edge bawaan sistem (`channel="msedge"`)**

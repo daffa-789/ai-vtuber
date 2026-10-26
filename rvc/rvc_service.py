@@ -2,10 +2,13 @@
 
 Melayani konversi timbre suara HuoHuo lewat HTTP (HuoHuo.pth + .index).
 
-Model makan ~2,4 GB RAM dan mesin ini hanya punya 16 GB tanpa GPU diskrit, jadi
-model dimuat saat dibutuhkan dan DIBONGKAR lagi setelah layanan menganggur
-`VTUBER_RVC_IDLE_HAPUS` detik. Selama ngobrol kalimat datang beruntun sehingga
-model tetap terpasang; saat Master diam, RAM dikembalikan ke sistem.
+Model makan ~1,3-2,5 GB RAM dan mesin ini hanya punya 16 GB tanpa GPU diskrit.
+Melepas model dari dalam proses TIDAK mengembalikan memori (sudah diukur: gc +
+trim working set hanya memulihkan 0,06 GB), jadi yang dilakukan adalah layanan
+INI BERHENTI SENDIRI setelah menganggur `VTUBER_RVC_IDLE_HAPUS` detik -- hanya
+proses yang mati benar-benar mengembalikan RAM. `RVCAdapter` di sisi aplikasi
+menyalakannya kembali saat dibutuhkan, jadi tidak ada yang perlu dinyalakan
+tangan. Selama ngobrol beruntun layanan tetap hidup dan konversi tetap cepat.
 
 Akses:
   GET  /health   -> selalu 200 selama proses hidup; body "siap" kalau model sudah
@@ -155,17 +158,45 @@ def _muat_model():
 
 
 def _bongkar_model():
-    """Lepas model dari RAM. Panggil hanya dengan `_gembok` tergenggam."""
+    """Lepas model dari RAM.
+
+    PENTING — ini TIDAK cukup untuk mengembalikan memori, dan itu sudah diukur
+    (26 Okt, tmp-ukur/uji_trim2.py): setelah dua kali konversi jejak layanan
+    1,33 GB; `del` + `gc.collect()` memulihkan -0,02 GB (nol), dan
+    `SetProcessWorkingSetSizeEx` hanya menambah 0,35 GB. Halaman torch/CRT tetap
+    dikandung proses. Satu-satunya cara yang terbukti mengembalikan SELURUHNYA
+    adalah prosesnya benar-benar berhenti (RAM bebas naik dari 3,82 ke 6,18 GB).
+
+    Karena itu watchdog memanggil `_berhenti()` yang keluar dari proses, bukan
+    fungsi ini. Fungsi ini dipertahankan hanya untuk jalur darurat (mis. model
+    rusak dan kita ingin mencoba memuat ulang di dalam proses yang sama).
+    """
     global _rvc
     if _rvc is None:
         return
     _rvc = None
     gc.collect()
-    print("[RVC] Model dibongkar, RAM dikembalikan.", flush=True)
+    print("[RVC] Model dilepas dari memori (proses tetap hidup).", flush=True)
+
+
+def _berhenti(pesan: str) -> None:
+    """Keluar dari proses supaya OS mengambil kembali seluruh memorinya."""
+    print(f"[RVC] {pesan} — layanan berhenti.", flush=True)
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except Exception:
+        pass
+    os._exit(0)
 
 
 def _penjaga_idle():
-    """Utas watchdog: bongkar model kalau lama tidak ada permintaan."""
+    """Utas watchdog: berhenti total kalau lama tidak ada permintaan.
+
+    Berhenti = proses exit, bukan sekadar melepas model. RVCAdapter akan
+    menyalakan ulang layanan ini saat butuh, jadi dari sisi aplikasi tidak
+    ada yang berubah kecuali kalimat pertama setelah idle lebih lambat.
+    """
     while True:
         time.sleep(min(15.0, max(1.0, IDLE_HAPUS_DETIK / 4)))
         if IDLE_HAPUS_DETIK <= 0:
@@ -174,7 +205,7 @@ def _penjaga_idle():
             continue
         with _gembok:
             if time.time() - _aktivitas_akhir >= IDLE_HAPUS_DETIK:
-                _bongkar_model()
+                _berhenti(f"menganggur {IDLE_HAPUS_DETIK:.0f} dtk")
 
 
 def _baca_wav(b: bytes):

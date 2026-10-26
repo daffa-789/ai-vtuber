@@ -46,8 +46,10 @@ WAKTU_HUBUNG_DETIK = 180
 
 # Muat model saat layanan start? False = malas, dimuat pada permintaan pertama.
 MUAT_BOOT = False
-# Bongkar model setelah menganggur sekian detik supaya RAM 2,4 GB kembali ke
-# sistem. 0 berarti jangan pernah bongkar.
+# Berhenti total setelah menganggur sekian detik. Hanya proses yang mati bisa
+# mengembalikan RAM-nya (melepas model di dalam proses terbukti cuma memulihkan
+# 0,06 GB), jadi ini "keluar dari proses", bukan "lepaskan model". RVCAdapter
+# menyalakan ulang layanan ini saat dibutuhkan. 0 = jangan pernah berhenti.
 IDLE_HAPUS_DETIK = 180.0
 
 

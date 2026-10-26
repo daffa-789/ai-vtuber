@@ -105,6 +105,22 @@ class AppConfig:
     rvc_timeout_detik: int = int(
         os.getenv("VTUBER_RVC_TIMEOUT_DETIK", str(suara.WAKTU_HUBUNG_DETIK))
     )
+    # Layanan RVC menahan ~2,5 GB dan mengundurkan diri saat menganggur, karena
+    # hanya proses yang mati benar-benar mengembalikan RAM (melepas model di
+    # dalam proses sudah diukur: gc + trim hanya memulihkan 0,06 GB). Adapter
+    # menyalakannya kembali saat butuh, jadi start_rvc.bat tidak perlu dijalankan
+    # tangan setiap kali.
+    rvc_auto_mulai: bool = suara.ya(os.getenv("VTUBER_RVC_AUTO_MULAI"), True)
+    rvc_siap_detik: int = int(os.getenv("VTUBER_RVC_SIAP_DETIK", "90"))
+    rvc_python: Path = field(default_factory=lambda: resolve_path(
+        os.getenv("VTUBER_RVC_PYTHON", ""),
+        ROOT_DIR / "rvc-env" / "Scripts" / "python.exe",
+        require_file=True,
+    ))
+    rvc_skrip: Path = field(default_factory=lambda: resolve_path(
+        ROOT_DIR / "rvc" / "rvc_service.py",
+        require_file=True,
+    ))
 
     # ── Masukan Suara (STT + VAD) untuk Voice-to-Voice ──
     voice_in_aktif: bool = os.getenv("VTUBER_VOICE_IN", "tidak").lower() in (

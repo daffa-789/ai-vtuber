@@ -9,10 +9,13 @@ REM  Layanan ini MEMBACA .env di akar repo sendiri, jadi semua parameter suara
 REM  (VTUBER_RVC_TRANSPOSE, VTUBER_RVC_PROTEKSI, VTUBER_RVC_EQ*, dll) diubah di
 REM  .env -- lalu restart berkas ini.
 REM
-REM  Soal RAM: model makan ~2,4 GB. Secara bawaan ia dimuat malas dan DIBONGKAR
-REM  lagi setelah menganggur 180 detik (VTUBER_RVC_IDLE_HAPUS), supaya RAM
-REM  kembali ke sistem saat tidak ngobrol. Set VTUBER_RVC_IDLE_HAPUS=0 untuk
-REM  menahan model terus seperti dulu.
+REM  Soal RAM: layanan menahan ~2,5 GB saat aktif. Melepas model dari DALAM
+REM  proses terbukti tidak mengembalikan memori (gc + trim hanya 0,06 GB), jadi
+REM  ia MENGUNDURKAN DIRI -- prosesnya keluar -- setelah menganggur
+REM  VTUBER_RVC_IDLE_HAPUS detik (bawaan 180; 0 = jangan pernah berhenti).
+REM  Tidak perlu menyalakannya lagi dengan tangan: RVCAdapter di aplikasi
+REM  menyalakan ulang layanan ini begitu butuh. Set VTUBER_RVC_AUTO_MULAI=tidak
+REM  kalau kamu lebih suka mengendalikan proses ini sepenuhnya.
 REM
 REM  NOTE: butuh llama-server (otak) + Piper sudah aktif untuk suara penuh.
 REM ==========================================================================
