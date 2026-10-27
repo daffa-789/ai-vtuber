@@ -2,10 +2,8 @@
 
 Menjalankan beberapa backend TTS berurutan dan memakai yang pertama berhasil.
 
-Kenapa perlu: Gemini memberi intonasi yang jauh lebih hidup, tapi ia layanan
-internet. Tanpa lapisan ini, koneksi putus berarti HuoHuo diam total -- padahal
-sudah ada Piper yang offline dan selalu jalan. Urutan dibaca dari
-`VTUBER_TTS_RANTAI` (bawaan "gemini,piper").
+Kenapa perlu: backend bisa dipilih lewat `VTUBER_TTS_RANTAI`. Bawaan proyek
+sekarang Piper offline; Gemini tetap tersedia sebagai pilihan manual.
 
 Ini juga tempat yang tepat untuk menambah backend baru nanti: cukup daftarkan
 pabriknya di _CALON, tidak perlu menyentuh use case atau container.

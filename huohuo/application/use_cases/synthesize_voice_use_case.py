@@ -53,9 +53,12 @@ class SynthesizeVoiceUseCase:
             return None
 
         if self.voice_conversion:
-            converted = self.voice_conversion.convert(wav_bytes)
-            if converted:
-                return converted
+            konversi_emosi = getattr(
+                self.voice_conversion, "convert_with_emotion", None
+            )
+            if callable(konversi_emosi):
+                return konversi_emosi(wav_bytes, emosi or "netral")
+            return self.voice_conversion.convert(wav_bytes)
 
         return wav_bytes
 

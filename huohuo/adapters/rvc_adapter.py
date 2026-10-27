@@ -8,9 +8,9 @@ terbukti mengembalikan ~1,3 GB memorinya adalah prosesnya berhenti (melepas
 model di dalam proses tidak mengembalikan apa pun — diukur 26 Okt). Jadi adapter
 ini juga bertugas MENYALAKANNYA KEMBALI saat dibutuhkan, lalu menunggu siap.
 
-Kalau RVC nonaktif, rvc-env tidak ada, atau layanan tidak bisa dinyalakan,
-audio asli (Piper) dikembalikan apa adanya supaya TTS tetap jalan — fallback
-mulus, bukan error.
+Kalau RVC sengaja dinonaktifkan, audio asli boleh dipakai. Jika RVC aktif tetapi
+gagal, adapter mengembalikan None agar aplikasi menahan teks sampai konversi
+benar-benar selesai.
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ import httpx
 
 from huohuo.config import AppConfig, config
 from huohuo.domain.ports.voice_conversion_port import VoiceConversionPort
+from huohuo.infrastructure.audio_artifacts import simpan_wav
 
 # Hanya satu utas boleh mencoba menyalakan layanan pada satu waktu, supaya
 # balasan multi-kalimat tidak melahirkan beberapa proses sekaligus.
@@ -93,26 +94,43 @@ class RVCAdapter(VoiceConversionPort):
     # ── konversi ─────────────────────────────────────────────────────────────
 
     def convert(self, wav_bytes: bytes) -> Optional[bytes]:
-        """Konversi timbre WAV ke suara HuoHuo; kembalikan audio asli bila gagal."""
-        if not wav_bytes or not self.cfg.rvc_aktif:
+        """Konversi WAV; hasil mentah hanya dipakai kalau RVC sengaja dimatikan."""
+        return self.convert_with_emotion(wav_bytes)
+
+    def convert_with_emotion(
+        self, wav_bytes: bytes, emotion: Optional[str] = None
+    ) -> Optional[bytes]:
+        """Konversi WAV, membawa emosi untuk koreksi F0 per balasan."""
+        if not wav_bytes:
+            return None
+        if not self.cfg.rvc_aktif:
             return wav_bytes
 
         if not self._pastikan_hidup():
-            return wav_bytes
+            return None
 
         url = self._url("/convert")
         for percobaan in (1, 2):
             try:
                 with httpx.Client(timeout=self.cfg.rvc_timeout_detik) as client:
                     res = client.post(url, content=wav_bytes,
-                                      headers={"Content-Type": "audio/wav"})
-                if res.status_code == 200 and len(res.content) > 0:
+                                      headers={
+                                          "Content-Type": "audio/wav",
+                                          "X-Emotion": (emotion or "netral").lower(),
+                                      })
+                if res.status_code == 200 and res.content.startswith(b"RIFF"):
+                    simpan_wav(
+                        getattr(self.cfg, "audio_output_dir", config.audio_output_dir),
+                        "rvc",
+                        res.content,
+                        (emotion or "netral").lower(),
+                    )
                     return res.content
-                return wav_bytes
+                return None
             except Exception:
                 # Layanan mungkin baru saja berhenti karena idle tepat saat kita
-                # memanggil. Coba nyalakan lagi sekali, lalu serahkan ke Piper.
+                # memanggil. Coba nyalakan lagi sekali sebelum menahan balasan.
                 if percobaan == 1 and self._pastikan_hidup():
                     continue
-                return wav_bytes
-        return wav_bytes
+                return None
+        return None

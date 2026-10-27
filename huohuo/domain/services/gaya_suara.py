@@ -1,17 +1,16 @@
 """Domain Service: PetaGayaSuara.
 
-Menerjemahkan emosi resmi HuoHuo menjadi deskripsi gaya bicara untuk TTS yang
-mendukung instruksi gaya (mis. Gemini native TTS lewat `speech_metadata.style`).
+Menerjemahkan emosi resmi HuoHuo menjadi deskripsi gaya bicara. TTS generatif
+memakai deskripsi itu langsung; adapter Piper mengubahnya menjadi preset prosodi
+terbatas dan RVC memberi koreksi pitch ringan.
 
 Kenapa ini penting: keluhan utama suara HuoHuo bukan timbre-nya (itu sudah
-dibetulkan RVC) tapi **intonasinya yang datar**. Piper tidak punya tuas untuk
-itu sama sekali. Dengan memetakan emosi yang SUDAH dihitung LLM ke gaya bicara,
-satu kata "hah?" jadi terdengar kesal dan bukan datar.
+dibetulkan RVC) tapi **intonasinya yang datar**. Piper tidak punya kontrol akting
+tingkat tinggi, tetapi tempo dan variasi artikulasinya bisa diatur. Dengan
+memetakan emosi yang SUDAH dihitung LLM, tiap emosi mendapat prosodi yang sesuai.
 
-Ini murni pemetaan teks: tanpa jaringan, tanpa dependensi adapter, jadi bisa
-diuji dan dipakai ulang oleh backend TTS apa pun yang kelak punya kontrol gaya.
-Deskripsi ditulis dalam Bahasa Inggris karena model TTS-nya dilatih dengan
-instruksi gaya berbahasa Inggris.
+Peta ini murni logika teks; tidak memerlukan jaringan atau library audio.
+Deskripsi berbahasa Inggris dipakai oleh backend yang menerima instruksi gaya.
 """
 
 from __future__ import annotations

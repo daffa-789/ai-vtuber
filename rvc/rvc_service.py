@@ -98,6 +98,9 @@ MUAT_BOOT = suara.ya(os.getenv("VTUBER_RVC_MUAT_BOOT"), suara.MUAT_BOOT)
 # Bongkar model setelah menganggur sekian detik. 0 = jangan pernah bongkar
 # (perilaku lama: model menempel terus dan memakan 2,4 GB).
 IDLE_HAPUS_DETIK = float(os.getenv("VTUBER_RVC_IDLE_HAPUS", str(suara.IDLE_HAPUS_DETIK)))
+CPU_THREADS = max(1, int(os.getenv(
+    "VTUBER_RVC_CPU_THREADS", str(min(4, os.cpu_count() or 4))
+)))
 
 _rvc = None
 # ThreadingHTTPServer melayani tiap koneksi di utas sendiri, sedangkan modelnya
@@ -115,6 +118,15 @@ def _muat_model():
     global _rvc
     if _rvc is not None:
         return
+
+    import torch
+
+    torch.set_num_threads(CPU_THREADS)
+    try:
+        torch.set_num_interop_threads(1)
+    except RuntimeError:
+        # Runtime dapat sudah menginisialisasi pool inter-op saat impor lain.
+        pass
 
     from rvc_python.infer import RVCInference
 
@@ -278,7 +290,7 @@ def _perbaiki_nada(b: bytes) -> bytes:
     return _tulis_wav(y, sr, tipe)
 
 
-def _convert(wav_bytes: bytes) -> bytes:
+def _convert(wav_bytes: bytes, emotion: str = "netral") -> bytes:
     global _aktivitas_akhir
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as fin, \
          tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as fout:
@@ -287,15 +299,20 @@ def _convert(wav_bytes: bytes) -> bytes:
     # dianggap "menganggur" lalu modelnya dibongkar di tengah jalan.
     with _gembok:
         _aktivitas_akhir = time.time()
-        _muat_model()
         try:
+            _muat_model()
+            kunci_emosi = (emotion or "netral").strip().lower()
+            transpose = F0_UP + suara.TRANSPOSE_PER_EMOSI.get(kunci_emosi, 0)
+            _rvc.set_params(f0up_key=transpose)
             in_path.write_bytes(wav_bytes)
             _rvc.infer_file(str(in_path), str(out_path))
             if out_path.is_file() and out_path.stat().st_size > 0:
                 hasil = out_path.read_bytes()
                 return _perbaiki_nada(hasil) if EQ_AKTIF else hasil
-            return wav_bytes  # gagal -> kembalikan asli
+            raise RuntimeError("RVC tidak menghasilkan berkas audio keluaran")
         finally:
+            if _rvc is not None:
+                _rvc.set_params(f0up_key=F0_UP)
             _aktivitas_akhir = time.time()
             for p in (in_path, out_path):
                 try:
@@ -344,7 +361,7 @@ class Handler(BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length", 0))
         data = self.rfile.read(n)
         try:
-            out = _convert(data)
+            out = _convert(data, self.headers.get("X-Emotion", "netral"))
             self.send_response(200)
             self.send_header("Content-Type", "audio/wav")
             self.send_header("Content-Length", str(len(out)))

@@ -116,25 +116,27 @@ E:\AI Vtuber Project\
   └── pyproject.toml         # Konfigurasi paket Python
 ```
 
-Suara TIDAK lagi diproses di dalam aplikasi. Rantai lamanya (`huohuo.voice`,
-pipeline in-process) sudah dihapus dan digantikan layanan HTTP di `rvc/`,
-karena `rvc-python` membutuhkan Python 3.10 + fairseq yang tidak bisa hidup
-berdampingan dengan dependensi aplikasi utama.
+Konversi RVC berjalan sebagai layanan HTTP terpisah di `rvc/`, karena
+`rvc-python` membutuhkan Python 3.10 + fairseq yang tidak bisa berdampingan
+dengan dependensi aplikasi utama. Sintesis Piper tetap lokal di adapter aplikasi.
 
 ## 🔊 Rantai suara
 
 ```
-teks balasan  ->  [gaya dari tag emosi]  ->  Gemini TTS  ->  RVC (timbre HuoHuo)
-                                                     \-> gagal? Piper TTS
-                                                        -> tetap lewat RVC
+teks balasan -> Piper offline -> outputs/audio/raw/*.wav -> RVC HuoHuo
+             -> outputs/audio/rvc/*.wav -> tampilkan balon + putar suara
 ```
 
-- **Gaya bicara diambil dari emosi** yang sudah dihitung LLM untuk wajah Live2D,
-  lewat `huohuo/domain/services/gaya_suara.py`. Jadi `[goda]` terdengar menggoda
-  dan `[lelah]` terdengar ngantuk, bukan datar semua.
-- **Piper adalah cadangan otomatis**, bukan pilihan mati: tanpa internet atau
-  tanpa key, suara tetap keluar (cuma datar lagi).
-- Latensi terukur per kalimat, layanan sudah hangat: **~15-17 dtk** untuk rantai
-  Gemini, ~7 dtk untuk Piper. Teks selalu muncul lebih dulu, jadi yang
-  terlambat hanya suaranya.
-- Kalau ingin sepenuhnya offline, set `VTUBER_TTS_RANTAI=piper`.
+- Piper Indonesia `id_ID-news_tts-medium` berjalan lokal tanpa internet. Tiap
+  emosi mengatur tempo/variasi Piper; RVC menambahkan pitch ringan untuk sembilan
+  emosi dan membentuk timbre HuoHuo.
+- WAV sumber dan hasil RVC disimpan terpisah di `outputs/audio/raw/` dan
+  `outputs/audio/rvc/`. Jika RVC aktif tetapi gagal, balasan ditahan; UI baru
+  menampilkan teks setelah WAV hasil konversi siap.
+- Piper bukan TTS akting generatif: perbedaan emosi berupa prosodi terukur,
+  bukan ekspresi suara manusia yang bebas. RVC mengubah timbre dan pitch, bukan
+  menggantikan prosodi sumber.
+- Layanan RVC memakai empat thread CPU secara bawaan agar laptop Iris Xe tetap
+  responsif; atur `VTUBER_RVC_CPU_THREADS` bila perangkat berbeda. Pengukuran
+  proyek menunjukkan offload ke GPU terintegrasi lebih lambat, jadi jalur CPU
+  tetap dipakai.

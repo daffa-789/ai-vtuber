@@ -84,7 +84,7 @@ class Container:
 
         # Instantiate adapters or use provided test doubles
         self.llm_port = llm_port or LlamaServerAdapter(cfg=self.cfg)
-        # Rantai TTS (gemini -> piper) dirakit di adapters/tts_bertingkat.py
+        # Rantai TTS (Piper offline secara bawaan) dirakit di adapters/tts_bertingkat.py
         # supaya backend yang tidak siap dilewati, bukan membuat suara mati.
         self.tts_port = tts_port or buat_tts(self.cfg)
         self.voice_conversion_port = voice_conversion_port or RVCAdapter(cfg=self.cfg)

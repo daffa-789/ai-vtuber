@@ -40,14 +40,10 @@ EQ_RENDAH_HZ = 200.0
 EQ_RENDAH_DB = 1.5
 
 # ── Backend TTS (sumber audio SEBELUM RVC) ───────────────────────────────────
-# "gemini" = intonasi hidup + bisa diperintah gaya bicara, tapi butuh internet
-#            dan API key. "piper" = offline, datar, dan memang tidak ada pilihan
-#            voice Indonesia lain di Piper (diverifikasi 26 Okt di registry
-#            rhasspy/piper-voices maupun piper1-gpl).
-# Kalau gemini gagal/tanpa key, aplikasi jatuh ke Piper, bukan diam.
-TTS_BACKEND = "gemini"
-# Rantai backend yang dicoba berurutan. "piper" saja = sepenuhnya offline.
-TTS_RANTAI = "gemini,piper"
+# Piper dipilih sebagai bawaan agar jawaban suara sepenuhnya lokal dan offline.
+# Model Indonesia yang tersedia di proyek adalah id_ID-news_tts-medium.
+TTS_BACKEND = "piper"
+TTS_RANTAI = "piper"
 GEMINI_TTS_MODEL = "gemini-3.8-flash-tts"
 # Kore = nama dewi Yunani; termasuk kelompok suara perempuan dari daftar resmi.
 # Audisi dulu lewat tools sebelum yakin -- suara ini yang menentukan kesan umur.
@@ -55,6 +51,20 @@ GEMINI_TTS_VOICE = "Kore"
 # Gaya bawaan kalau teks tidak membawa tag emosi.
 GEMINI_TTS_GAYA = "calm and natural"
 GEMINI_TIMEOUT_DETIK = 60
+
+# Koreksi kecil F0 di RVC per emosi (semitone), di atas TRANSPOSE dasar.
+# Rentang sengaja sempit supaya karakter tetap terdengar seperti Huohuo.
+TRANSPOSE_PER_EMOSI = {
+    "netral": 0,
+    "senyum": 1,
+    "semangat": 2,
+    "kaget": 2,
+    "bingung": 1,
+    "lelah": -2,
+    "goda": 1,
+    "sebal": -1,
+    "sedih": -2,
+}
 
 # ── Layanan HTTP ─────────────────────────────────────────────────────────────
 PORT = 8081

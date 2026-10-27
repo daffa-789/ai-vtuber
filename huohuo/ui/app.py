@@ -47,6 +47,9 @@ class CompanionApi:
         self._voice_thread: Optional[threading.Thread] = None
         self._voice_stop = threading.Event()
         self._voice_lock = threading.Lock()
+        # Serialisasi chat menjaga urutan riwayat dan mencegah beberapa inferensi
+        # suara berebut RAM/CPU pada mesin dengan memori bersama.
+        self._chat_lock = threading.Lock()
         # Proactive idle (F3) state
         self._last_interaction = time.monotonic()
         self._idle_stop = threading.Event()
@@ -97,8 +100,23 @@ class CompanionApi:
             return
 
         def _worker():
-            req = UserInteractionRequest(text=text, play_audio=True, blocking_audio=False)
-            self.container.process_interaction_use_case.execute(req)
+            with self._chat_lock:
+                self._eval_js("window.setVoiceStatus('Menyiapkan suara HuoHuo…');")
+                req = UserInteractionRequest(
+                    text=text, play_audio=True, blocking_audio=False
+                )
+                try:
+                    hasil = self.container.process_interaction_use_case.execute(req)
+                except Exception as exc:
+                    print(f"[Chat] Interaksi gagal ({type(exc).__name__})")
+                    self._eval_js(
+                        "window.setVoiceStatus('Suara belum siap; balasan ditahan.');"
+                    )
+                    return
+                if not hasil.audio_bytes:
+                    self._eval_js(
+                        "window.setVoiceStatus('Suara RVC belum siap; balasan ditahan.');"
+                    )
 
         threading.Thread(target=_worker, daemon=True).start()
 

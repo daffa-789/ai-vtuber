@@ -29,6 +29,7 @@ from huohuo.domain.ports.memory_vault_port import MemoryVaultPort
 from huohuo.domain.ports.tts_port import TTSPort
 from huohuo.domain.ports.voice_conversion_port import VoiceConversionPort
 from huohuo.domain.services.prompt_builder_service import PromptBuilderService
+from huohuo.domain.services.gaya_suara import PetaGayaSuara
 from huohuo.domain.services.sentence_splitter_service import SentenceSplitterService
 from huohuo.domain.services.text_speech_service import TextSpeechService
 
@@ -158,11 +159,27 @@ class StreamUserInteractionUseCase:
                     wav_bytes: Optional[bytes] = None
                     if request.play_audio and self.tts and clean_for_speech.strip():
                         try:
-                            wav_bytes = self.tts.synthesize(clean_for_speech)
+                            try:
+                                wav_bytes = self.tts.synthesize(
+                                    clean_for_speech,
+                                    gaya=PetaGayaSuara.gaya_dari_emosi(emotion),
+                                )
+                            except TypeError:
+                                wav_bytes = self.tts.synthesize(clean_for_speech)
                             if wav_bytes and self.voice_conversion:
-                                wav_bytes = self.voice_conversion.convert(wav_bytes) or wav_bytes
+                                konversi_emosi = getattr(
+                                    self.voice_conversion, "convert_with_emotion", None
+                                )
+                                if callable(konversi_emosi):
+                                    wav_bytes = konversi_emosi(wav_bytes, emotion)
+                                else:
+                                    wav_bytes = self.voice_conversion.convert(wav_bytes)
                         except Exception:
                             wav_bytes = None
+
+                    # Jangan tampilkan potongan jawaban jika proses suara gagal.
+                    if request.play_audio and not wav_bytes:
+                        continue
 
                     if wav_bytes and not first_audio_bytes:
                         first_audio_bytes.append(wav_bytes)

@@ -206,8 +206,8 @@ function setupHeadPat() {
 // khusus memakai wajah dasar (reset) supaya tidak salah tempel efek aneh.
 const HUOHUO_EXPR = {
   sebal: "angry", sedih: "cry", kaget: "white_eyes", bingung: "baozhen",
-  semangat: "qizi2",
-  senyum: "wajah", goda: "wajah", lelah: "wajah", netral: "wajah",
+  semangat: "qizi2", senyum: "qizi2", goda: "qizi1",
+  lelah: "wajah", netral: "wajah",
 };
 const HUOHUO_MOTION = {
   kaget: "head", semangat: "greeting", senyum: "greeting",

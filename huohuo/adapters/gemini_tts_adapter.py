@@ -1,10 +1,7 @@
 """Adapter: GeminiTTSAdapter.
 
-Sintesis suara lewat Gemini native TTS. Dipilih karena satu-satunya jalur yang
-memberi intonasi bagus untuk Bahasa Indonesia DI MESIN INI sambil tetap
-mengembalikan byte audio -- syarat supaya RVC dan lip-sync tidak ikut mati.
-(edge-tts juga mengembalikan byte, tapi butuh internet tanpa kontrol gaya;
-Piper offline tapi datar dan tidak ada voice Indonesia lain.)
+Sintesis suara opsional lewat Gemini native TTS. Backend ini masih dapat dipilih
+manual; konfigurasi bawaan proyek memakai Piper lokal agar tetap offline.
 
 Aturan penting:
   * Key dibaca dari environment, TIDAK PERNAH masuk log maupun pesan error.

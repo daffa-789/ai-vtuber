@@ -25,6 +25,7 @@ from huohuo.domain.ports.memory_vault_port import MemoryVaultPort
 from huohuo.domain.ports.tts_port import TTSPort
 from huohuo.domain.ports.voice_conversion_port import VoiceConversionPort
 from huohuo.domain.services.emotion_service import EmotionParserService
+from huohuo.domain.services.gaya_suara import PetaGayaSuara
 from huohuo.domain.services.prompt_builder_service import PromptBuilderService
 from huohuo.domain.services.state_service import StateParserService
 from huohuo.domain.services.text_speech_service import TextSpeechService
@@ -90,27 +91,59 @@ class ProcessUserInteractionUseCase:
         parsed_emotion, cleaned_text = EmotionParserService.parse(raw_reply)
         final_emotion = parsed_emotion or emotion or "senyum"
 
-        # Ekstrak blok <state> (energi/aktivitas/quest) & perbarui keadaan ikatan.
+        # Ekstrak dulu blok keadaan; perubahan baru disimpan setelah suara siap.
         state_baru, cleaned_text = StateParserService.parse(cleaned_text)
+        # Sintesis dan konversi selesai sebelum balon chat boleh ditampilkan.
+        audio_bytes: Optional[bytes] = None
+        if request.play_audio and self.tts:
+            teks_ucap = TextSpeechService.bersihkan_untuk_tts(cleaned_text)
+            if teks_ucap:
+                try:
+                    audio_raw = self.tts.synthesize(
+                        teks_ucap,
+                        gaya=PetaGayaSuara.gaya_dari_emosi(final_emotion),
+                    )
+                except TypeError:
+                    # Jaga kompatibilitas dengan backend lama tanpa argumen gaya.
+                    audio_raw = self.tts.synthesize(teks_ucap)
+
+                if audio_raw:
+                    if self.voice_conversion:
+                        konversi_emosi = getattr(
+                            self.voice_conversion, "convert_with_emotion", None
+                        )
+                        if callable(konversi_emosi):
+                            audio_bytes = konversi_emosi(audio_raw, final_emotion)
+                        else:
+                            audio_bytes = self.voice_conversion.convert(audio_raw)
+                    else:
+                        audio_bytes = audio_raw
+
+        # Jika suara diminta tetapi Piper/RVC gagal, tahan jawaban dan jangan
+        # memasukkan teks yang tidak terlihat/terdengar ke riwayat percakapan.
+        if request.play_audio and not audio_bytes:
+            return InteractionResponse(
+                raw_reply=raw_reply,
+                cleaned_reply=cleaned_text,
+                emotion=final_emotion,
+                kizuna_level=kizuna_snap.level,
+                kizuna_stage=kizuna_snap.stage,
+                mood_label=mood.label,
+                audio_bytes=None,
+            )
+
         if state_baru:
             kizuna.apply_state(state_baru)
             self.kizuna_repo.save(kizuna)
 
-        self.history_buffer.append({"role": "assistant", "content": f"[{final_emotion}] {cleaned_text}"})
+        self.history_buffer.append(
+            {"role": "assistant", "content": f"[{final_emotion}] {cleaned_text}"}
+        )
 
-        # 4. Perbarui Mood & Riwayat
+        # Simpan mood dan riwayat jawaban yang benar-benar siap ditampilkan.
         mood_baru = MoodState.perbarui(mood, final_emotion)
         self.vault.save_mood(mood_baru)
         self.vault.record_history(user_text, f"[{final_emotion}] {cleaned_text}")
-
-        # 5. Siapkan suara DULU (sintesis + konversi RVC) supaya teks & suara
-        #    muncul bersamaan — bukan teks dulu, baru ngomong telat.
-        audio_bytes: Optional[bytes] = None
-        if request.play_audio and self.tts:
-            teks_ucap = TextSpeechService.bersihkan_untuk_tts(cleaned_text)
-            audio_bytes = self.tts.synthesize(teks_ucap)
-            if audio_bytes and self.voice_conversion:
-                audio_bytes = self.voice_conversion.convert(audio_bytes) or audio_bytes
 
         # 6. Baru tampilkan teks + ekspresi + status (sinkron dengan suara).
         if self.ui:

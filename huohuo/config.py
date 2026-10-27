@@ -95,10 +95,12 @@ class AppConfig:
     piper_length_scale: float = float(os.getenv("VTUBER_TTS_PIPER_PANJANG", "0.9"))
     piper_noise_scale: float = float(os.getenv("VTUBER_TTS_PIPER_NOISE", "0.667"))
     piper_noise_w: float = float(os.getenv("VTUBER_TTS_PIPER_NOISE_W", "0.8"))
+    audio_output_dir: Path = field(default_factory=lambda: resolve_path(
+        os.getenv("VTUBER_AUDIO_OUTPUT_DIR", ROOT_DIR / "outputs" / "audio")
+    ))
 
     # ── Backend TTS ──
-    # "gemini" memberi intonasi yang bisa diperintah; "piper" tetap dipakai
-    # sebagai cadangan otomatis kalau key tidak ada atau jaringan bermasalah.
+    # Piper menjadi pilihan offline bawaan. Gemini tersedia bila dipilih manual.
     tts_backend: str = os.getenv("VTUBER_TTS_BACKEND", suara.TTS_BACKEND).lower()
     tts_rantai: str = os.getenv("VTUBER_TTS_RANTAI", suara.TTS_RANTAI).lower()
     # Key dibaca dari GOOGLE_API_KEY atau GEMINI_API_KEY. Jangan pernah menulis
