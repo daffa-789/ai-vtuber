@@ -159,7 +159,7 @@ All tests are equipped with progressive testability guards:
 $ .\.venv\Scripts\python.exe -m pytest tests/ -q
 194 passed, 1 skipped in 83.73s
 ```
-Rincian per berkas (terbanyak dulu): `tests/unit/test_tts_gemini.py` 20 ·
+Rincian historis per berkas (terbanyak dulu): `tests/unit/test_tts_gemini.py` 20 ·
 `tests/unit/test_state_ryza.py` 14 · `tests/unit/test_sentence_splitter.py` 13 ·
 `tests/e2e/test_phase2_f3_companion_polish.py` 11 ·
 `tests/unit/test_voice_to_voice_f2.py` 10 · `tests/test_sentence_splitter_stress.py` 10 ·
@@ -169,12 +169,13 @@ Rincian per berkas (terbanyak dulu): `tests/unit/test_tts_gemini.py` 20 ·
 `tests/unit/test_rvc_adapter.py` 7 · `tests/test_empirical_m1_voice_streaming.py` 7 ·
 `tests/test_emotion_parser.py` 7 · sisanya 2-6 per berkas.
 
-- **Nol kegagalan.** Satu skip adalah test perangkat keluaran audio yang
-  `skipif` tidak ada output device.
+- **Nol kegagalan pada saat itu.** Satu skip adalah test perangkat keluaran
+  audio yang `skipif` tidak ada output device.
 - **Nol skip warisan.** Baseline lama (21 Okt) masih mencatat 15 skip
   "pending M2/M3" untuk F2 dan F3 — keduanya sudah rilis.
-- **Test tidak menyentuh jaringan.** Rantai TTS dipaksa `VTUBER_TTS_RANTAI=piper`
-  dan `VTUBER_RVC=tidak` di test yang menjalankan `main.py`, supaya Gemini
-  (API Google) dan layanan RVC lokal tidak ikut terpanggil.
+- **Baseline ini mendahului penghapusan Gemini TTS.** Test TTS Gemini lama
+  sudah dihapus; angka di atas hanya catatan historis, bukan status verifikasi kini.
+- Test yang menjalankan `main.py` memaksa `VTUBER_TTS_RANTAI=piper` dan
+  `VTUBER_RVC=tidak` agar tidak mengunduh model TTS atau memanggil layanan RVC.
 - **Nol unduhan Playwright Chromium**
 - **100% jalan di Microsoft Edge bawaan sistem (`channel="msedge"`)**

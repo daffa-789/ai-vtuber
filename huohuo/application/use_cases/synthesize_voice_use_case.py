@@ -2,7 +2,7 @@
 
 Manages in-memory voice synthesis pipeline:
 1. Normalizes text for speech (stripping markdown, stage directions, emotion brackets).
-2. Synthesizes base WAV audio via TTSPort (Piper TTS).
+2. Synthesizes base WAV audio via TTSPort (Supertonic/Piper TTS).
 3. Optionally converts voice timbre via VoiceConversionPort (RVC).
 4. Optionally outputs audio via AudioPlayerPort with lip-sync callbacks.
 All audio processing is strictly in-memory without persistent disk pollution.

@@ -1,12 +1,12 @@
 """Domain Service: PetaGayaSuara.
 
-Menerjemahkan emosi resmi HuoHuo menjadi deskripsi gaya bicara. TTS generatif
-memakai deskripsi itu langsung; adapter Piper mengubahnya menjadi preset prosodi
-terbatas dan RVC memberi koreksi pitch ringan.
+Menerjemahkan emosi resmi HuoHuo menjadi deskripsi gaya bicara. Adapter
+Supertonic mengubahnya menjadi ekspresi dan tempo; adapter Piper mengubahnya
+menjadi preset prosodi terbatas dan RVC memberi koreksi pitch ringan.
 
 Kenapa ini penting: keluhan utama suara HuoHuo bukan timbre-nya (itu sudah
-dibetulkan RVC) tapi **intonasinya yang datar**. Piper tidak punya kontrol akting
-tingkat tinggi, tetapi tempo dan variasi artikulasinya bisa diatur. Dengan
+dibetulkan RVC) tapi **intonasinya yang datar**. TTS mengatur tempo dan variasi
+artikulasi sesuai keterbatasan model. Dengan
 memetakan emosi yang SUDAH dihitung LLM, tiap emosi mendapat prosodi yang sesuai.
 
 Peta ini murni logika teks; tidak memerlukan jaringan atau library audio.
@@ -29,6 +29,9 @@ _GAYA = {
     EmotionTag.LELAH: "tired and sleepy, speaking slowly",
     EmotionTag.SEMANGAT: "excited and energetic",
     EmotionTag.SEDIH: "sad and melancholic",
+    EmotionTag.MALU: "embarrassed and hesitant",
+    EmotionTag.GUGUP: "nervous and timid, slightly shaky",
+    EmotionTag.TAKUT: "frightened and anxious, speaking softly",
     EmotionTag.NETRAL: "calm and natural",
 }
 

@@ -207,11 +207,13 @@ function setupHeadPat() {
 const HUOHUO_EXPR = {
   sebal: "angry", sedih: "cry", kaget: "white_eyes", bingung: "baozhen",
   semangat: "qizi2", senyum: "qizi2", goda: "qizi1",
+  malu: "qizi2", gugup: "white_eyes", takut: "white_eyes",
   lelah: "wajah", netral: "wajah",
 };
 const HUOHUO_MOTION = {
   kaget: "head", semangat: "greeting", senyum: "greeting",
-  goda: "curious", bingung: "curious", lelah: "sleepy", sedih: "spirit",
+  goda: "curious", bingung: "curious", malu: "curious", gugup: "head",
+  takut: "spirit", lelah: "sleepy", sedih: "spirit",
 };
 
 window.setExpression = function(name) {

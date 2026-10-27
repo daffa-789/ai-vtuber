@@ -3,7 +3,7 @@
 Menjalankan beberapa backend TTS berurutan dan memakai yang pertama berhasil.
 
 Kenapa perlu: backend bisa dipilih lewat `VTUBER_TTS_RANTAI`. Bawaan proyek
-sekarang Piper offline; Gemini tetap tersedia sebagai pilihan manual.
+Supertonic 3 offline, dengan Piper sebagai cadangan lokal.
 
 Ini juga tempat yang tepat untuk menambah backend baru nanti: cukup daftarkan
 pabriknya di _CALON, tidak perlu menyentuh use case atau container.
@@ -53,14 +53,14 @@ def _daftarkan_calon() -> None:
     """Import malas supaya adapter yang tidak dipakai tidak ikut dimuat."""
     if _CALON:
         return
-    from huohuo.adapters.gemini_tts_adapter import GeminiTTSAdapter
     from huohuo.adapters.piper_tts_adapter import PiperTTSAdapter
+    from huohuo.adapters.supertonic_tts_adapter import SupertonicTTSAdapter
 
-    def _gemini(cfg: AppConfig) -> Optional[TTSPort]:
-        ad = GeminiTTSAdapter(cfg=cfg)
+    def _supertonic(cfg: AppConfig) -> Optional[TTSPort]:
+        ad = SupertonicTTSAdapter(cfg=cfg)
         return ad if ad.tersedia else None
 
-    _CALON["gemini"] = _gemini
+    _CALON["supertonic"] = _supertonic
     _CALON["piper"] = lambda cfg: PiperTTSAdapter(cfg=cfg)
 
 
@@ -69,7 +69,7 @@ def buat_tts(cfg: Optional[AppConfig] = None) -> TTSPort:
     cfg = cfg or config
     _daftarkan_calon()
 
-    # VTUBER_TTS_BACKEND tunggal tetap dihormati ("piper" saja, "gemini" saja).
+    # VTUBER_TTS_BACKEND tunggal tetap dihormati (mis. "piper" saja).
     rantai = cfg.tts_rantai or cfg.tts_backend
     tingkatan: list[TTSPort] = []
     dipakai: list[str] = []
@@ -86,8 +86,8 @@ def buat_tts(cfg: Optional[AppConfig] = None) -> TTSPort:
         dipakai.append(nama)
 
     if not tingkatan:
-        # Jangan pernah mengembalikan rantai kosong: Piper selalu jadi jaring
-        # pengaman terakhir, bahkan tanpa key.
+        # Jangan pernah mengembalikan rantai kosong: Piper menjadi jaring
+        # pengaman terakhir bila paket atau model Supertonic belum ada.
         from huohuo.adapters.piper_tts_adapter import PiperTTSAdapter
 
         tingkatan = [PiperTTSAdapter(cfg=cfg)]

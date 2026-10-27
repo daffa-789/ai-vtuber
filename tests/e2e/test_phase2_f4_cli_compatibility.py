@@ -81,7 +81,7 @@ def test_t1_f4_cli_test_voice_execution():
     """Tier 1: Running python main.py --test-voice synthesizes and exits without unhandled exception."""
     # RVC dimatikan supaya tes deterministik & cepat, tidak bergantung pada
     # layanan RVC lokal yang sedang berjalan (kalau aktif, konversi ~15 dtk).
-    # Rantai TTS dipaksa ke Piper juga: backend bawaan sekarang Gemini, yang
+    # Rantai TTS dipaksa ke Piper juga: backend bawaan membutuhkan model lokal, yang
     # memanggil API Google lewat internet (~11 dtk, butuh key, dan bisa gagal
     # kalau kuota/ jaringan bermasalah). Test tidak boleh menyentuh jaringan.
     result = subprocess.run(

@@ -2,7 +2,7 @@
 
 Implements a 3-stage asynchronous pipelined streaming architecture:
 Stage 1: LLM token stream -> SentenceSplitterService (produces complete clauses/sentences)
-Stage 2: Sentence queue -> PiperTTS / RVC synthesis worker (produces audio chunks)
+Stage 2: Sentence queue -> TTS / RVC synthesis worker (produces audio chunks)
 Stage 3: Audio queue -> Sounddevice continuous player & UI bubble / lip-sync streaming
 
 Achieves sub-second first-audio playback (< 1s) and continuous lip-sync without mouth reset.
@@ -129,7 +129,7 @@ class StreamUserInteractionUseCase:
                 except Exception:
                     pass
 
-        # Stage 2: Sentence queue -> PiperTTS & RVC synthesis
+        # Stage 2: Sentence queue -> TTS & RVC synthesis
         def _stage2_synthesis_worker() -> None:
             chunk_id = 0
             pending_chunk: Optional[StreamChunkDTO] = None

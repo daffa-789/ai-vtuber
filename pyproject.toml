@@ -16,6 +16,7 @@ dependencies = [
     "numpy>=1.24.0",
     "pywebview>=5.0.0",
     "requests>=2.31.0",
+    "supertonic @ git+https://github.com/supertone-oss-archive/supertonic-py.git@df0f9686dac7fbbde391b759e2ee5286a3737622",
 ]
 
 [project.optional-dependencies]

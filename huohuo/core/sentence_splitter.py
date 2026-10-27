@@ -1,7 +1,7 @@
 """Port SentenceSplitter dari C# HuoHuo.Core.Text.SentenceSplitter.
 
 Memecah balasan LLM menjadi kalimat-kalimat utuh secara streaming untuk
-disintesis oleh pipeline suara (Piper + RVC).
+disintesis oleh pipeline suara (Supertonic/Piper + RVC).
 """
 
 from __future__ import annotations

@@ -23,7 +23,7 @@ VERSI = "v2"
 SUBFER = "cpu"
 
 # ── Parameter konversi ───────────────────────────────────────────────────────
-TRANSPOSE = -2          # semitone; F0 hasil 233,2 Hz (lihat README tools/tts)
+TRANSPOSE = -2          # semitone; titik awal lama dari Piper, dapat diatur lewat .env
 INDEKS_LAJU = 0.6       # bobot retrieval index; 0 = timbre hanya dari .pth
 METODE_F0 = "rmvpe"     # `harvest` terukur justru lebih kasar
 PENCUCIAN = 3           # filter_radius: pembesaran median pada kontur pitch
@@ -31,8 +31,8 @@ CAMPUR_RMS = 0.8        # rms_mix_rate
 PROTEKSI = 0.6          # proteksi konsonan; 0,33 -> lebih banyak artefak logam
 
 # ── Koreksi nada pasca-konversi ──────────────────────────────────────────────
-# Vocoder RVC menaikkan energi >6 kHz dari 0,13% (sumber Piper) jadi ~2%.
-# Shelf tinggi memotong zona itu, shelf rendah mengembalikan badan suara.
+# EQ pasca-RVC mengikuti pengukuran keluaran model HuoHuo dari pipeline lama.
+# Shelf tinggi memotong zona tajam, shelf rendah mengembalikan badan suara.
 EQ_AKTIF = True
 EQ_TINGGI_HZ = 6000.0
 EQ_TINGGI_DB = -12.0
@@ -40,17 +40,13 @@ EQ_RENDAH_HZ = 200.0
 EQ_RENDAH_DB = 1.5
 
 # ── Backend TTS (sumber audio SEBELUM RVC) ───────────────────────────────────
-# Piper dipilih sebagai bawaan agar jawaban suara sepenuhnya lokal dan offline.
-# Model Indonesia yang tersedia di proyek adalah id_ID-news_tts-medium.
-TTS_BACKEND = "piper"
-TTS_RANTAI = "piper"
-GEMINI_TTS_MODEL = "gemini-3.8-flash-tts"
-# Kore = nama dewi Yunani; termasuk kelompok suara perempuan dari daftar resmi.
-# Audisi dulu lewat tools sebelum yakin -- suara ini yang menentukan kesan umur.
-GEMINI_TTS_VOICE = "Kore"
-# Gaya bawaan kalau teks tidak membawa tag emosi.
-GEMINI_TTS_GAYA = "calm and natural"
-GEMINI_TIMEOUT_DETIK = 60
+# Supertonic 3: lokal, mendukung Bahasa Indonesia, dan punya tag napas/sigh.
+# Piper tetap jadi cadangan lokal bila model Supertonic belum tersedia.
+TTS_RANTAI = "supertonic,piper"
+SUPERTONIC_MODEL_DIR = "assets/supertonic-3"
+SUPERTONIC_VOICE = "F2"
+SUPERTONIC_STEPS = 8
+SUPERTONIC_SPEED = 0.94
 
 # Koreksi kecil F0 di RVC per emosi (semitone), di atas TRANSPOSE dasar.
 # Rentang sengaja sempit supaya karakter tetap terdengar seperti Huohuo.
@@ -60,6 +56,9 @@ TRANSPOSE_PER_EMOSI = {
     "semangat": 2,
     "kaget": 2,
     "bingung": 1,
+    "malu": 1,
+    "gugup": 1,
+    "takut": 2,
     "lelah": -2,
     "goda": 1,
     "sebal": -1,

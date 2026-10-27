@@ -17,7 +17,7 @@ class TTSPort(ABC):
 
         `gaya` adalah deskripsi gaya/intonasi bicara (mis. "playful and teasing")
         untuk backend yang mendukungnya. Backend yang tidak mendukung -- seperti
-        Piper -- boleh mengabaikannya begitu saja, jadi pemanggil tidak perlu
+        Backend sederhana seperti Piper boleh mengabaikannya, jadi pemanggil tidak perlu
         tahu TTS apa yang sedang dipakai.
         """
         pass

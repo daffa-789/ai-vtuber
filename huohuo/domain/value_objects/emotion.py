@@ -17,6 +17,9 @@ class EmotionTag(str, Enum):
     LELAH = "lelah"
     SEMANGAT = "semangat"
     SEDIH = "sedih"
+    MALU = "malu"
+    GUGUP = "gugup"
+    TAKUT = "takut"
     NETRAL = "netral"
 
     @classmethod

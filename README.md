@@ -21,11 +21,24 @@ menyalakan layanan RVC sendiri saat pertama kali butuh (`VTUBER_RVC_AUTO_MULAI`)
 dan layanan itu berhenti sendiri saat menganggur supaya RAM lepas. Menjalankan
 `start_rvc.bat` tetap berguna kalau ingin suaranya siap seketika.
 
+### Setup TTS offline (sekali saja)
+
+Pasang dependensi proyek lalu unduh model Supertonic 3 sekitar 415 MB. Setelah
+unduhan pertama selesai, sintesis berjalan sepenuhnya lokal tanpa Gemini,
+kuota TTS, atau koneksi internet.
+
+```powershell
+uv pip install --python .\.venv\Scripts\python.exe -e .
+.\.venv\Scripts\python.exe scripts\download_supertonic3.py
+```
+
+Jika model belum tersedia, aplikasi otomatis mencoba Piper sebagai cadangan.
+
 Mode lain:
 
 ```powershell
 .\.venv\Scripts\python.exe main.py --cli          # obrolan di terminal, tanpa jendela
-.\.venv\Scripts\python.exe main.py --test-voice   # uji Piper -> RVC -> speaker
+.\.venv\Scripts\python.exe main.py --test-voice   # uji TTS -> RVC -> speaker
 .\.venv\Scripts\python.exe main.py --voice-in     # jawab satu ujaran dari mikrofon
 .\.venv\Scripts\python.exe main.py --voice-loop   # terus mendengarkan mikrofon
 ```
@@ -40,10 +53,9 @@ restart `start_rvc.bat`** — layanan RVC memuatnya sekali saat start.
 .\.venv\Scripts\python.exe -m pytest tests/ -v
 ```
 
-Terakhir terukur **194 lulus, 1 skip** untuk `pytest tests/`. Satu-satunya skip
-adalah uji lip-sync nyata yang `skipif` tidak ada perangkat keluar audio. CI
-menjalankan unit + e2e di `windows-latest` memakai Microsoft Edge bawaan runner
-(`channel="msedge"`), jadi tidak ada unduhan Chromium.
+Catatan historis sebelum penghapusan Gemini TTS: 194 lulus, 1 skip. Angka itu
+bukan hasil verifikasi versi saat ini. CI menjalankan unit + e2e di
+`windows-latest` memakai Microsoft Edge bawaan runner (`channel="msedge"`).
 
 ## ⚙️ Batasan perangkat ini (penting sebelum menyentuh performa)
 
@@ -95,16 +107,17 @@ yang mau dicoba ulang, tinggal unduh
 
 ```text
 E:\AI Vtuber Project\
-  ├── assets/                # Live2D, model Piper, checkpoint RVC (sebagian gitignored)
+  ├── assets/                # Live2D, model TTS, checkpoint RVC (sebagian gitignored)
   ├── model/                 # GGUF untuk llama-server (Qwen3.5-4B, gitignored)
-  ├── tools/                 # Skrip diagnostik & TTS (gitignored, kecuali yang dilacak)
+  ├── tools/                 # Skrip diagnostik (gitignored, kecuali yang dilacak)
   ├── rvc/                   # Layanan konversi suara (jalan di rvc-env, BUKAN .venv)
   │     ├── rvc_service.py   # HTTP :8081, muat/bongkar model, koreksi nada
   │     └── indeks_brute.py  # pencarian tetangga terdekat pengganti faiss
+  ├── scripts/               # Unduh model Supertonic 3
   ├── huohuo/                # Modul Python HuoHuo
   │     ├── core/            # Parser emosi, normalisasi teks, persona, kizuna
   │     ├── profil_suara.py  # SATU sumber kebenaran default parameter suara
-  │     ├── adapters/        # Implementasi port: llama, piper, RVC(HTTP), STT, UI
+  │     ├── adapters/        # Implementasi port: llama, Supertonic, Piper, RVC, STT, UI
   │     ├── application/     # Use cases (process_interaction, synthesize_voice, ...)
   │     ├── domain/          # Entitas, port, dan service murni
   │     ├── infrastructure/  # Container dependency injection
@@ -118,24 +131,29 @@ E:\AI Vtuber Project\
 
 Konversi RVC berjalan sebagai layanan HTTP terpisah di `rvc/`, karena
 `rvc-python` membutuhkan Python 3.10 + fairseq yang tidak bisa berdampingan
-dengan dependensi aplikasi utama. Sintesis Piper tetap lokal di adapter aplikasi.
+dengan dependensi aplikasi utama. Sintesis TTS tetap lokal di adapter aplikasi.
 
 ## 🔊 Rantai suara
 
 ```
-teks balasan -> Piper offline -> outputs/audio/raw/*.wav -> RVC HuoHuo
+teks balasan -> Supertonic 3 offline -> outputs/audio/raw/*.wav -> RVC HuoHuo
              -> outputs/audio/rvc/*.wav -> tampilkan balon + putar suara
 ```
 
-- Piper Indonesia `id_ID-news_tts-medium` berjalan lokal tanpa internet. Tiap
-  emosi mengatur tempo/variasi Piper; RVC menambahkan pitch ringan untuk sembilan
-  emosi dan membentuk timbre HuoHuo.
+- Supertonic 3 mendukung Bahasa Indonesia dan berjalan lokal melalui ONNX. Model
+  preset F2 dipakai sebagai sumber sebelum RVC membentuk timbre HuoHuo. Emosi
+  malu/gugup/takut memakai napas dan tempo lebih lambat; sedih/lelah memakai
+  sigh dan tempo lambat; emosi lain mengatur tempo secara terpisah.
+- Piper `id_ID-news_tts-medium` tetap tersedia sebagai fallback offline jika
+  model Supertonic atau dependensinya tidak ada.
 - WAV sumber dan hasil RVC disimpan terpisah di `outputs/audio/raw/` dan
   `outputs/audio/rvc/`. Jika RVC aktif tetapi gagal, balasan ditahan; UI baru
   menampilkan teks setelah WAV hasil konversi siap.
-- Piper bukan TTS akting generatif: perbedaan emosi berupa prosodi terukur,
-  bukan ekspresi suara manusia yang bebas. RVC mengubah timbre dan pitch, bukan
-  menggantikan prosodi sumber.
+- Supertonic mendukung tag ekspresi sederhana, tetapi belum memberi kontrol
+  akting bebas untuk Bahasa Indonesia. Gagap, elipsis, persona HuoHuo, dan tag
+  emosi dari LLM ikut membentuk cara bicara; RVC mengubah timbre dan pitch.
+- Proyek resmi Supertonic diarsipkan; versi SDK dan snapshot model dipin supaya
+  instalasi konsisten. Berkas model tidak masuk GitHub.
 - Layanan RVC memakai empat thread CPU secara bawaan agar laptop Iris Xe tetap
   responsif; atur `VTUBER_RVC_CPU_THREADS` bila perangkat berbeda. Pengukuran
   proyek menunjukkan offload ke GPU terintegrasi lebih lambat, jadi jalur CPU

@@ -48,6 +48,7 @@ model/
 
 # Aset biner & proprietary
 assets/piper/*.onnx
+assets/supertonic-3/
 assets/rvc/
 assets/voices/
 assets/live2d/

@@ -80,7 +80,7 @@ class AppConfig:
     llama_endpoint: str = os.getenv("VTUBER_LLAMA_ENDPOINT", "http://127.0.0.1:8080/v1")
     llama_timeout_detik: int = int(os.getenv("VTUBER_LLAMA_TIMEOUT_DETIK", "120"))
 
-    # ── Suara (Piper TTS + RVC) ──
+    # ── Suara (Supertonic/Piper TTS + RVC) ──
     piper_exe: Path = field(default_factory=lambda: resolve_path(
         os.getenv("VTUBER_PIPER_PATH", ""),
         Path(os.path.expanduser("~")) / ".workbuddy-ai" / "binaries" / "python" / "envs" / "default" / "Scripts" / "piper.exe",
@@ -99,21 +99,17 @@ class AppConfig:
         os.getenv("VTUBER_AUDIO_OUTPUT_DIR", ROOT_DIR / "outputs" / "audio")
     ))
 
-    # ── Backend TTS ──
-    # Piper menjadi pilihan offline bawaan. Gemini tersedia bila dipilih manual.
-    tts_backend: str = os.getenv("VTUBER_TTS_BACKEND", suara.TTS_BACKEND).lower()
+    # ── Backend TTS offline ──
+    # Supertonic utama; Piper cadangan lokal tanpa kuota atau panggilan cloud.
+    tts_backend: str = os.getenv("VTUBER_TTS_BACKEND", "supertonic").lower()
     tts_rantai: str = os.getenv("VTUBER_TTS_RANTAI", suara.TTS_RANTAI).lower()
-    # Key dibaca dari GOOGLE_API_KEY atau GEMINI_API_KEY. Jangan pernah menulis
-    # nilainya ke berkas yang terlacak -- .env sudah di-gitignore.
-    gemini_api_key: str = (
-        os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
-    )
-    gemini_tts_model: str = os.getenv("VTUBER_GEMINI_TTS_MODEL", suara.GEMINI_TTS_MODEL)
-    gemini_tts_voice: str = os.getenv("VTUBER_GEMINI_TTS_VOICE", suara.GEMINI_TTS_VOICE)
-    gemini_tts_gaya: str = os.getenv("VTUBER_GEMINI_TTS_GAYA", suara.GEMINI_TTS_GAYA)
-    gemini_timeout_detik: int = int(
-        os.getenv("VTUBER_GEMINI_TIMEOUT_DETIK", str(suara.GEMINI_TIMEOUT_DETIK))
-    )
+    supertonic_model_dir: Path = field(default_factory=lambda: resolve_path(
+        ROOT_DIR / suara.SUPERTONIC_MODEL_DIR,
+        ROOT_DIR / "AI Vtuber WINUI3" / suara.SUPERTONIC_MODEL_DIR,
+    ))
+    supertonic_voice: str = os.getenv("VTUBER_SUPERTONIC_VOICE", suara.SUPERTONIC_VOICE)
+    supertonic_steps: int = int(os.getenv("VTUBER_SUPERTONIC_STEPS", str(suara.SUPERTONIC_STEPS)))
+    supertonic_speed: float = float(os.getenv("VTUBER_SUPERTONIC_SPEED", str(suara.SUPERTONIC_SPEED)))
 
     # Suara. Aplikasi HANYA menjadi klien layanan RVC lewat HTTP, jadi di sini
     # cukup alamat dan sakunya. Semua parameter konversi (transpose, index rate,

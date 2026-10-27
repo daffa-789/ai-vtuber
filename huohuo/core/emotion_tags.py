@@ -8,7 +8,8 @@ from __future__ import annotations
 from typing import Optional, Set
 
 SEMUA = [
-    "netral", "senyum", "semangat", "kaget", "bingung", "lelah", "goda", "sebal", "sedih"
+    "netral", "senyum", "semangat", "kaget", "bingung", "lelah", "goda", "sebal",
+    "sedih", "malu", "gugup", "takut",
 ]
 
 _DIKENAL: Set[str] = {t.lower() for t in SEMUA}
